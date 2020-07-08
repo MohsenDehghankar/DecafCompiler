@@ -1,0 +1,98 @@
+start: decl+
+
+decl : variabledec | funcdec | classdec | interfacedec | COMMENT
+
+//------variable dec-----------
+variabledec: variable";"
+
+variable : type IDENT 
+        | type IDENT ","
+
+type : "int" | "double" | "bool" | "string" | IDENT | type "[]"
+
+//--------function dec--------
+funcdec : type IDENT "("formal")" stmtblock
+        | "void" IDENT "("formal")" stmtblock
+
+formal : variable*
+
+stmtblock : "{"variabledec* stmt* COMMENT*"}"
+
+stmt : [expr]";" | stmtblock | if | while 
+    | for | return | print | "break" ";"
+
+// -------expression---------
+expr : assignment
+
+assignment : assignment "=" logical_expr_1 
+        | logical_expr_1
+
+logical_expr_1 : logical_expr_1 "||" logical_expr_2 
+        | logical_expr_2
+
+logical_expr_2 : logical_expr_2 "&&" equlaity_expr 
+        | equlaity_expr
+
+equlaity_expr : equlaity_expr "==" compare_expr 
+        | equlaity_expr "!=" compare_expr
+        | compare_expr
+
+compare_expr : compare_expr "<" math_expr_1 
+        | compare_expr "<=" math_expr_1 
+        | compare_expr ">" math_expr_1 
+        | compare_expr ">=" math_expr_1 
+        | math_expr_1
+
+math_expr_1 : math_expr_1 "+" math_expr_2 
+        | math_expr_1 "-" math_expr_2 
+        | math_expr_2
+
+math_expr_2 : math_expr_2 "*" one_operand_expr 
+        | math_expr_2 "/" one_operand_expr 
+        | math_expr_2 "%" one_operand_expr 
+        | one_operand_expr
+
+one_operand_expr : "!"one_operand_expr | "-"one_operand_expr | paranthes
+paranthes : "("expr")" | high_proior
+high_proior : high_proior "." IDENT ("("actual?")")? | high_proior"["expr"]" | "new" IDENT
+        | call
+call : IDENT"("actual?")" | IDENT | constants
+
+constants : constant | "ReadLine()" |  "NewArray("expr","type")" | "ReadInteger()" | "this"
+
+actual : actual","expr | expr
+
+constant : HEX_NUMBER | NUMBER | BOOL | STRING_CONSTANT | "null"
+
+//------special statements----------
+if : "if" "(" expr ")" stmt ("else" stmt)?
+while : "while" "(" expr ")" stmt
+for : "for" "("[expr]";"expr";"[expr]")" stmt
+return : "return" [expr] ";"
+print : "Print" "("actual")" ";"
+
+//---------class dec----------
+classdec : "class" IDENT ["extends" IDENT] ["implements" (IDENT | IDENT",")+] "{"field*"}"
+field : variabledec | funcdec
+
+//--------interface dec--------
+interfacedec : "interface" IDENT "{" prototype* "}"
+prototype : type IDENT "(" formal ")" ";"
+    | "void" IDENT "(" formal ")" ";"
+
+
+STRING_CONSTANT : /"[^"^\n]*"/
+COMMENT : "//" /[^\n]*/
+        | "/*" /(.|\n)+/ "*/"
+BOOL : "true" | "false"
+IDENT : /[a-zA-Z]([\w]|[_]){0,30}/
+HEX_NUMBER.2: /0x[\da-f]*/
+
+
+%import common.ESCAPED_STRING
+%import common._STRING_ESC_INNER
+%import common.NUMBER
+%import common.WS
+
+%ignore WS
+%ignore COMMENT
