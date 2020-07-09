@@ -3,12 +3,17 @@ start: decl+
 decl : variabledec | funcdec | classdec | interfacedec | COMMENT
 
 //------variable dec-----------
-variabledec: variable";"
+variabledec: variable";" -> variable_declare
 
 variable : type IDENT 
         | type IDENT ","
 
-type : "int" | "double" | "bool" | "string" | IDENT | type "[]"
+type : "int"            -> int_variable
+        | "double" 
+        | "bool" 
+        | "string" 
+        | IDENT 
+        | type "[]"
 
 //--------function dec--------
 funcdec : type IDENT "("formal")" stmtblock
@@ -58,9 +63,14 @@ high_proior : high_proior "." IDENT ("("actual?")")? | high_proior"["expr"]" | "
         | call
 call : IDENT"("actual?")" | IDENT | constants
 
-constants : constant | "ReadLine()" |  "NewArray("expr","type")" | "ReadInteger()" | "this"
+constants : constant 
+        | "ReadLine()" 
+        | "NewArray("expr","type")" 
+        | "ReadInteger()"
+        | "this"
 
-actual : actual","expr | expr
+actual : actual","expr 
+        | expr
 
 constant : HEX_NUMBER | NUMBER | BOOL | STRING_CONSTANT | "null"
 
@@ -69,7 +79,7 @@ if : "if" "(" expr ")" stmt ("else" stmt)?
 while : "while" "(" expr ")" stmt
 for : "for" "("[expr]";"expr";"[expr]")" stmt
 return : "return" [expr] ";"
-print : "Print" "("actual")" ";"
+print : ("Print"|"print") "("actual")" ";" -> print
 
 //---------class dec----------
 classdec : "class" IDENT ["extends" IDENT] ["implements" (IDENT | IDENT",")+] "{"field*"}"

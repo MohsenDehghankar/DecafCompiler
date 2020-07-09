@@ -40,11 +40,16 @@ def main(argv):
     #     output_file.write(result)
 
     print("Parse Tree:")
-    print(parser.parse("""
+    
+    tree = parser.parse("""
     int main(){
-        int z;
+        int x;
+        x = 2;
+        print(x);
     }
-    """).pretty())
+    """)
+    
+    # print(tree.pretty())
 
     print("MIPS:")
     print(codeGen.mips_code)
