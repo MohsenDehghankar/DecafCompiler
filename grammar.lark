@@ -27,58 +27,70 @@ stmt : [expr]";" | stmtblock | if | while
     | for | return | print | "break" ";"
 
 // -------expression---------
-expr : assignment
+expr : assignment                       -> exp_calculated
 
 assignment : lvalue "=" assignment       -> assignment_calculated
-        | logical_expr_1
+        | logical_expr                  -> pass_assignment
 
-lvalue : logical_expr_1                 -> lvalue_calculated
+lvalue : logical_expr                 -> lvalue_calculated
 
-logical_expr_1 : logical_expr_1 "||" logical_expr_2 
-        | logical_expr_2
+// logical_expr_1 : logical_expr_1 "||" logical_expr_2 
+//         | logical_expr_2
 
-logical_expr_2 : logical_expr_2 "&&" equlaity_expr 
-        | equlaity_expr
+// logical_expr_2 : logical_expr_2 "&&" equlaity_expr 
+//         | equlaity_expr
+
+logical_expr : logical_expr "||" equlaity_expr
+        | logical_expr "&&" equlaity_expr
+        | equlaity_expr                                 -> pass_logic
 
 equlaity_expr : equlaity_expr "==" compare_expr 
         | equlaity_expr "!=" compare_expr
-        | compare_expr
+        | compare_expr                                  -> pass_equality
 
 compare_expr : compare_expr "<" math_expr_1 
         | compare_expr "<=" math_expr_1 
         | compare_expr ">" math_expr_1 
         | compare_expr ">=" math_expr_1 
-        | math_expr_1
+        | math_expr_1                                   -> pass_compare
 
-math_expr_1 : math_expr_1 "+" math_expr_2 
-        | math_expr_1 "-" math_expr_2 
-        | math_expr_2
+math_expr_1 : math_expr_1 "+" math_expr_2               -> add
+        | math_expr_1 "-" math_expr_2                   -> sub
+        | math_expr_2                                   -> pass_math_expr1
 
-math_expr_2 : math_expr_2 "*" one_operand_expr 
-        | math_expr_2 "/" one_operand_expr 
-        | math_expr_2 "%" one_operand_expr 
-        | one_operand_expr
+math_expr_2 : math_expr_2 "*" one_operand_expr          -> multiply
+        | math_expr_2 "/" one_operand_expr              -> divide
+        | math_expr_2 "%" one_operand_expr              -> mod
+        | one_operand_expr                              -> pass_math_expr2
 
-one_operand_expr : "!"one_operand_expr | "-"one_operand_expr | paranthes
+// from here to above, we have Registers or Variable or Immediate
 
-paranthes : "("expr")" | high_proior
+one_operand_expr : "!"one_operand_expr  -> not_statement
+        | "-"one_operand_expr   -> minus
+        | paranthes             -> pass_one_operand_calculation  
+
+// from here to above, we have Variable or Immediate
+
+paranthes : "("expr")" 
+        | high_proior           -> token_to_var       
 
 high_proior : high_proior "." IDENT ("("actual?")")? 
         | high_proior"["expr"]" 
         | "new" IDENT
-        | call
-        | IDENT                 -> identifier_in_expression
-        | constants
+        | call                  -> call_action
+        | constants             -> constant_operand
 
 call : IDENT"("actual?")" 
         | "ReadLine()"          -> read_line
         | "NewArray("expr","type")" 
-        | "ReadInteger()"       
+        | "ReadInteger()"   
+        | IDENT                 -> identifier_in_expression    
 
-constants : "this" | constant
+constants : "this" 
+        | constant              -> pass_constant
 
 actual : actual","expr 
-        | expr
+        | expr                  -> exp_to_actual
 
 constant : HEX_NUMBER | NUMBER | BOOL | STRING_CONSTANT | "null"
 

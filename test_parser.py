@@ -39,20 +39,26 @@ def main(argv):
     # with open("out/" + outputfile, "w") as output_file:
     #     output_file.write(result)
 
+    codeGen.create_data_segment()
+
     print("Parse Tree:")
     
     tree = parser.parse("""
-    int a;
-    string b;
-    double x;
-    double r;
+    int main(){
+        int x;
+        int y;
+        x = 10;
+        y = 20;
+        x = y + 2 * 8 + x;
+        Print(x);
+    }
     """)
     
     # print(tree.pretty())
 
     # add var declarations
     # codeGen.generate_variable_declaration_codes()
-    codeGen.create_data_segment()
+    
 
     print("symbol table: ")
     for var in codeGen.symbol_table.keys():
