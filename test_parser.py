@@ -42,14 +42,22 @@ def main(argv):
     print("Parse Tree:")
     
     tree = parser.parse("""
-    int main(){
-        int x;
-        x = 2;
-        print(x);
-    }
+    int a;
+    string b;
+    double x;
+    double r;
     """)
     
     # print(tree.pretty())
+
+    # add var declarations
+    # codeGen.generate_variable_declaration_codes()
+    codeGen.create_data_segment()
+
+    print("symbol table: ")
+    for var in codeGen.symbol_table.keys():
+        var = codeGen.symbol_table[var]
+        print("name: {}, offset: {}, size: {}".format(var.name, var.address_offset, var.size))
 
     print("MIPS:")
     print(codeGen.mips_code)

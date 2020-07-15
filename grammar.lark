@@ -8,10 +8,10 @@ variabledec: variable";" -> variable_declare
 variable : type IDENT 
         | type IDENT ","
 
-type : "int"            -> int_variable
-        | "double" 
-        | "bool" 
-        | "string" 
+type : "int"            -> int_variable_declaraion
+        | "double"      -> double_variable_declaration
+        | "bool"        -> bool_variable_declaration
+        | "string"      -> string_variable_declaration
         | IDENT 
         | type "[]"
 
@@ -29,8 +29,10 @@ stmt : [expr]";" | stmtblock | if | while
 // -------expression---------
 expr : assignment
 
-assignment : assignment "=" logical_expr_1 
+assignment : lvalue "=" assignment       -> assignment_calculated
         | logical_expr_1
+
+lvalue : logical_expr_1                 -> lvalue_calculated
 
 logical_expr_1 : logical_expr_1 "||" logical_expr_2 
         | logical_expr_2
@@ -58,16 +60,22 @@ math_expr_2 : math_expr_2 "*" one_operand_expr
         | one_operand_expr
 
 one_operand_expr : "!"one_operand_expr | "-"one_operand_expr | paranthes
-paranthes : "("expr")" | high_proior
-high_proior : high_proior "." IDENT ("("actual?")")? | high_proior"["expr"]" | "new" IDENT
-        | call
-call : IDENT"("actual?")" | IDENT | constants
 
-constants : constant 
-        | "ReadLine()" 
+paranthes : "("expr")" | high_proior
+
+high_proior : high_proior "." IDENT ("("actual?")")? 
+        | high_proior"["expr"]" 
+        | "new" IDENT
+        | call
+        | IDENT                 -> identifier_in_expression
+        | constants
+
+call : IDENT"("actual?")" 
+        | "ReadLine()"          -> read_line
         | "NewArray("expr","type")" 
-        | "ReadInteger()"
-        | "this"
+        | "ReadInteger()"       
+
+constants : "this" | constant
 
 actual : actual","expr 
         | expr
@@ -97,6 +105,7 @@ COMMENT : "//" /[^\n]*/
 BOOL : "true" | "false"
 IDENT : /[a-zA-Z]([\w]|[_]){0,30}/
 HEX_NUMBER.2: /0x[\da-f]*/
+READLINE.4: "ReadLine()"
 
 
 %import common.ESCAPED_STRING
