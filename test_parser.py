@@ -7,6 +7,7 @@ grammar = open("grammar.lark", 'r')
 codeGen = CodeGenerator()
 parser = Lark(grammar, parser='lalr', transformer=codeGen, debug=True)
 
+
 def test(decaf_text):
     try:
         parser.parse(decaf_text).pretty()
@@ -42,33 +43,41 @@ def main(argv):
     codeGen.create_data_segment()
 
     print("Parse Tree:")
-    
+
+    # tree = parser.parse("""
+    # int main(){
+    #     int x;
+    #     int y;
+    #     x = 10;
+    #     y = 20;
+    #     x = y + 2 * 8 + x;
+    #     Print(x);
+    # }
+    # """)
+
     tree = parser.parse("""
     int main(){
         int x;
-        int y;
-        x = 10;
-        y = 20;
-        x = y + 2 * 8 + x;
-        Print(x);
+        if (3 <= 4)
+            x = 3;
+         else
+            x = 2;
     }
     """)
-    
+
     # print(tree.pretty())
 
     # add var declarations
     # codeGen.generate_variable_declaration_codes()
-    
 
     print("symbol table: ")
     for var in codeGen.symbol_table.keys():
         var = codeGen.symbol_table[var]
-        print("name: {}, offset: {}, size: {}".format(var.name, var.address_offset, var.size))
+        print("name: {}, offset: {}, size: {}".format(
+            var.name, var.address_offset, var.size))
 
     print("MIPS:")
     print(codeGen.mips_code)
-    
-  
 
 
 if __name__ == "__main__":

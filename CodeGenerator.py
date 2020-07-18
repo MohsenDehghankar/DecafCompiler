@@ -240,7 +240,7 @@ li $t{}, {};
 lw $t{}, frame_pointer($t{});
                     """.format(t1, opr1.address_offset, t1, t1))
                 else:
-                    pass # type checking
+                    pass  # type checking
             elif isinstance(opr1, Immediate):
                 self.write_code("""
 li $t{}, {};
@@ -250,7 +250,7 @@ li $t{}, {};
 move $t{}, ${};
                 """.format(t1, opr1.type + str(opr1.number)))
             else:
-                pass # other things
+                pass  # other things
             if isinstance(opr2, Variable):
                 if opr2.type == "int":
                     self.write_code("""
@@ -258,7 +258,7 @@ li $t{}, {};
 lw $t{}, frame_pointer($t{});
                     """.format(t2, opr2.address_offset, t2, t2))
                 else:
-                    pass # type checking
+                    pass  # type checking
             elif isinstance(opr2, Immediate):
                 self.write_code("""
 li $t{}, {};
@@ -268,8 +268,8 @@ li $t{}, {};
 move $t{}, ${};
                 """.format(t2, opr2.type + str(opr2.number)))
             else:
-                pass # other things
-            
+                pass  # other things
+
             self.write_code("""
 mult $t{}, $t{};
 mflo $t{};
@@ -296,7 +296,7 @@ li $t{}, {};
 lw $t{}, frame_pointer($t{});
                     """.format(t1, opr1.address_offset, t1, t1))
                 else:
-                    pass # type checking
+                    pass  # type checking
             elif isinstance(opr1, Immediate):
                 self.write_code("""
 li $t{}, {};
@@ -306,7 +306,7 @@ li $t{}, {};
 move $t{}, ${};
                 """.format(t1, opr1.type + str(opr1.number)))
             else:
-                pass # other things
+                pass  # other things
             if isinstance(opr2, Variable):
                 if opr2.type == "int":
                     self.write_code("""
@@ -314,7 +314,7 @@ li $t{}, {};
 lw $t{}, frame_pointer($t{});
                     """.format(t2, opr2.address_offset, t2, t2))
                 else:
-                    pass # type checking
+                    pass  # type checking
             elif isinstance(opr2, Immediate):
                 self.write_code("""
 li $t{}, {};
@@ -324,8 +324,8 @@ li $t{}, {};
 move $t{}, ${};
                 """.format(t2, opr2.type + str(opr2.number)))
             else:
-                pass # other things
-            
+                pass  # other things
+
             self.write_code("""
 div $t{}, $t{};
 mflo $t{};
@@ -352,7 +352,7 @@ li $t{}, {};
 lw $t{}, frame_pointer($t{});
                     """.format(t1, opr1.address_offset, t1, t1))
                 else:
-                    pass # type checking
+                    pass  # type checking
             elif isinstance(opr1, Immediate):
                 self.write_code("""
 li $t{}, {};
@@ -362,7 +362,7 @@ li $t{}, {};
 move $t{}, ${};
                 """.format(t1, opr1.type + str(opr1.number)))
             else:
-                pass # other things
+                pass  # other things
             if isinstance(opr2, Variable):
                 if opr2.type == "int":
                     self.write_code("""
@@ -370,7 +370,7 @@ li $t{}, {};
 lw $t{}, frame_pointer($t{});
                     """.format(t2, opr2.address_offset, t2, t2))
                 else:
-                    pass # type checking
+                    pass  # type checking
             elif isinstance(opr2, Immediate):
                 self.write_code("""
 li $t{}, {};
@@ -380,8 +380,8 @@ li $t{}, {};
 move $t{}, ${};
                 """.format(t2, opr2.type + str(opr2.number)))
             else:
-                pass # other things
-            
+                pass  # other things
+
             self.write_code("""
 div $t{}, $t{};
 mfhi $t{};
@@ -409,7 +409,7 @@ mfhi $t{};
 
     def add(self, args):
         # print("add")
-        # print(args)
+        print(args)
         opr1 = args[0]
         opr2 = args[1]
         t1 = self.get_a_free_t_register()
@@ -431,7 +431,7 @@ lw $t{}, frame_pointer($t{});
 li $t{}, {};
             """.format(t1, opr1.value))
         else:
-            pass # other types
+            pass  # other types
         if isinstance(opr2, Register):
             self.write_code("""
 move $t{}, ${};
@@ -448,7 +448,7 @@ lw $t{}, frame_pointer($t{});
 li $t{}, {};
             """.format(t2, opr2.value))
         else:
-            pass # other types
+            pass  # other types
         self.write_code("""
 add $t{}, $t{}, $t{}
         """.format(t1, t1, t2))
@@ -479,7 +479,7 @@ lw $t{}, frame_pointer($t{});
 li $t{}, {};
             """.format(t1, opr1.value))
         else:
-            pass # other types
+            pass  # other types
         if isinstance(opr2, Register):
             self.write_code("""
 move $t{}, ${};
@@ -496,18 +496,111 @@ lw $t{}, frame_pointer($t{});
 li $t{}, {};
             """.format(t2, opr2.value))
         else:
-            pass # other types
+            pass  # other types
         self.write_code("""
 sub $t{}. $t{}, $t{}
         """.format(t1, t1, t2))
 
         return Register("t", t1)
 
+    def write_conditional_expr(self, opr1, opr2):
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+        t2 = self.get_a_free_t_register()
+        if isinstance(opr1, Register):
+            self.write_code("""
+move $t{}, ${};
+            """.format(t1, opr1.type + str(opr1.number)))
+            if opr1.type == "t":
+                self.t_registers[opr1.number] = False
+        elif isinstance(opr1, Variable):
+            self.write_code("""
+li $t{}, {};
+lw $t{}, frame_pointer($t{});
+            """.format(t1, opr1.address_offset, t1, t1))
+        elif isinstance(opr1, Immediate):
+            self.write_code("""
+li $t{}, {};
+            """.format(t1, opr1.value))
+        else:
+            pass  # other types
+        if isinstance(opr2, Register):
+            self.write_code("""
+move $t{}, ${};
+            """.format(t2, opr2.type + str(opr2.number)))
+            if opr2.type == "t":
+                self.t_registers[opr2.number] = False
+        elif isinstance(opr2, Variable):
+            self.write_code("""
+li $t{}, {};
+lw $t{}, frame_pointer($t{});
+            """.format(t2, opr2.address_offset, t2, t2))
+        elif isinstance(opr2, Immediate):
+            self.write_code("""
+li $t{}, {};
+            """.format(t2, opr2.value))
+        else:
+            pass  # other types
+
+        return (t1, t2)
+
+    def less_than(self, args):
+        # print(args, 'less')
+        opr1 = args[0]
+        opr2 = args[1]
+        t1, t2 = self.write_conditional_expr(opr1, opr2)
+        self.write_code("""
+bge $t{}, $t{}, label{}
+        """.format(t1, t2, 1))  # todo: label number
+        return 1
+
+    def less_equal(self, args):
+        opr1 = args[0]
+        opr2 = args[1]
+        t1, t2 = self.write_conditional_expr(opr1, opr2)
+        self.write_code("""
+bgt $t{}, $t{}, label{}
+        """.format(t1, t2, 1))  # todo: label number
+        return 1
+
+    def grater_than(self, args):
+        opr1 = args[0]
+        opr2 = args[1]
+        t1, t2 = self.write_conditional_expr(opr1, opr2)
+        self.write_code("""
+ble $t{}, $t{}, label{}
+        """.format(t1, t2, 1))  # todo: label number
+        return 1
+
+    def grater_equal(self, args):
+        opr1 = args[0]
+        opr2 = args[1]
+        t1, t2 = self.write_conditional_expr(opr1, opr2)
+        self.write_code("""
+blt $t{}, $t{}, label{}
+        """.format(t1, t2, 1))  # todo: label number
+        return 1
+
+    def _if(self, args):
+        label_number = args[0]
+        self.write_code("""
+label{}:
+        """.format(label_number))
+
     def pass_compare(self, args):
+        print(args[0].value)
         return args[0]
 
     def pass_equality(self, args):
         return args[0]
+
+    def stmt_block(self, args):
+        # print(args, 'stmt_block')
+        return args
+
+    def pass_stmt(self, args):
+        print(args, 'pass_stmt')
+        return args
 
     def pass_logic(self, args):
         return args[0]
@@ -523,12 +616,11 @@ sub $t{}. $t{}, $t{}
         if isinstance(args[0], Token) and args[0].type == "NUMBER":
             return Immediate(args[0].value)
         return args
-    
+
     def pass_constant(self, args):
         # print("pass constants")
         # print(args)
         return args[0].children[0]
-
 
     def call_action(self, args):
         # print("call")
@@ -567,9 +659,9 @@ syscall
             elif args[0].type == "bool":
                 pass
             else:
-                pass # other types
+                pass  # other types
         else:
-            pass # other types
+            pass  # other types
         return args
 
 
@@ -617,6 +709,7 @@ class Register:
     def __init__(self, typ, number):
         self.type = typ  # s, v, a, t
         self.number = number
+
 
 class Immediate:
     def __init__(self, value):
