@@ -21,24 +21,18 @@ funcdec : type IDENT "("formal")" stmtblock
 
 formal : variable*
 
-stmtblock : "{"variabledec* stmt* COMMENT*"}" -> stmt_block
+stmtblock : "{" (variabledec|stmt|COMMENT)* "}" -> stmt_block
 
 stmt : [expr]";" | stmtblock | if_stmt | while 
     | for | return | print | "break" ";"        -> pass_stmt
 
 // -------expression---------
-expr : assignment                       -> exp_calculated
+expr : assignment                                       -> exp_calculated
 
-assignment : lvalue "=" assignment       -> assignment_calculated
-        | logical_expr                  -> pass_assignment
+assignment : lvalue "=" assignment                      -> assignment_calculated       // todo: assignment as assignment
+        | logical_expr                                  -> pass_assignment
 
-lvalue : logical_expr                 -> lvalue_calculated
-
-// logical_expr_1 : logical_expr_1 "||" logical_expr_2 
-//         | logical_expr_2
-
-// logical_expr_2 : logical_expr_2 "&&" equlaity_expr 
-//         | equlaity_expr
+lvalue : logical_expr                                   -> lvalue_calculated
 
 logical_expr : logical_expr "||" equlaity_expr
         | logical_expr "&&" equlaity_expr
@@ -71,7 +65,7 @@ one_operand_expr : "!"one_operand_expr  -> not_statement
 
 // from here to above, we have Variable or Immediate
 
-paranthes : "("expr")" 
+paranthes : "("expr")"          -> paranthes_action
         | high_proior           -> token_to_var       
 
 high_proior : high_proior "." IDENT ("("actual?")")? 
