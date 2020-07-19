@@ -168,12 +168,12 @@ li $t{}, {};
 sw $t{}, frame_pointer($t{});
             """.format(t2, left_value.address_offset, t1, t2))
         self.t_registers[t1] = False
+
         # return something for nested equalities
-        return args
+        return args[0] # after assignment, the left value will be returned for other assignment (nested)
 
     def lvalue_calculated(self, args):
         # print("lvalue calculated")
-        # self.lvalue_stack.append(args[0])
         # print(args)
         return args[0]
 
@@ -411,7 +411,7 @@ mfhi $t{};
 
     def add(self, args):
         # print("add")
-        print(args)
+        # print(args)
         opr1 = args[0]
         opr2 = args[1]
         t1 = self.get_a_free_t_register()
@@ -683,6 +683,13 @@ b {} ;
 
     # [Tree(math_expr_1, [Tree(math_expr_2, [<CodeGenerator.Variable object at 0x000001B9FBB3B308>])]), Tree(math_expr_2, [<CodeGenerator.Variable object at 0x000001B9FBB3B548>])]
     # [Tree(math_expr_1, [Tree(math_expr_2, [<CodeGenerator.Variable object at 0x000001F904ADA708>])]), <CodeGenerator.Register object at 0x000001F904ADAB48>]
+    
+    def paranthes_action(self, args):
+        # print("paranethesis")
+        # print(args)
+        return args[0]
+
+
     '''
     Print
     '''
@@ -693,6 +700,8 @@ b {} ;
         return args[0]
 
     def exp_calculated(self, args):
+        # print("exp calculated")
+        # print(args)
         return args[0]
 
     def print(self, args):

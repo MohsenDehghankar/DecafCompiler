@@ -44,34 +44,26 @@ def main(argv):
 
     print("Parse Tree:")
 
-    # tree = parser.parse("""
-    # int main(){
-    #     int x;
-    #     int y;
-    #     x = 10;
-    #     y = 20;
-    #     x = y + 2 * 8 + x;
-    #     Print(x);
-    # }
-    # """)
-
-    # tree = parser.parse("""
-    # int main(){
-    #     int x;
-    #     if(3 == 3 || 4 != 3) {
-
-    #     };
-    # }
-    # """)
-
     tree = parser.parse("""
     int main(){
         int x;
-        if(3 == 3 || 4 != 3) {
-            print(2);
-        };
+        x = 10;
+        int y;
+        y = 6;
+        x = 4 * (((y + 1) + 25) * (31 % 10));
+        Print(x);
     }
     """)
+
+    # tree = parser.parse("""
+    # int main(){
+    #     int x;
+    #     if (3 <= 4)
+    #         x = 3;
+    #      else
+    #         x = 2;
+    # }
+    # """)
 
     # print(tree.pretty())
 
