@@ -3,9 +3,9 @@ import getopt
 from lark import Lark, UnexpectedInput
 from CodeGenerator import CodeGenerator
 
-grammar = open("grammar.lark", 'r')
+grammar = open("grammar.lark", "r")
 codeGen = CodeGenerator()
-parser = Lark(grammar, parser='lalr', transformer=codeGen, debug=True)
+parser = Lark(grammar, parser="lalr", transformer=codeGen, debug=True)
 
 
 def test(decaf_text):
@@ -44,16 +44,15 @@ def main(argv):
 
     print("Parse Tree:")
 
-    tree = parser.parse("""
+    tree = parser.parse(
+        """
     int main(){
-        int x;
-        x = 10;
-        int y;
-        y = 6;
-        x = 4 * (((y + 1) + 25) * (31 % 10));
-        Print(x);
+        bool x;
+        x = true;
+        Print(!x);
     }
-    """)
+    """
+    )
 
     # tree = parser.parse("""
     # int main(){
@@ -73,8 +72,11 @@ def main(argv):
     print("symbol table: ")
     for var in codeGen.symbol_table.keys():
         var = codeGen.symbol_table[var]
-        print("name: {}, offset: {}, size: {}".format(
-            var.name, var.address_offset, var.size))
+        print(
+            "name: {}, offset: {}, size: {}".format(
+                var.name, var.address_offset, var.size
+            )
+        )
 
     print("MIPS:")
     print(codeGen.mips_code)

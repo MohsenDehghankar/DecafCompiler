@@ -25,22 +25,26 @@ class CodeGenerator(Transformer):
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
 
-    '''
+    """
     Initialization
-    '''
+    """
 
     def create_data_segment(self):
-        self.write_code("""
+        self.write_code(
+            """
 .data
 frame_pointer:  .space  1000
+true_const:     .asciiz "true"
+false_const:    .asciiz "false"
 
 .text
 main:
-        """)
+        """
+        )
 
-    '''
+    """
     Variable declaration
-    '''
+    """
 
     def variable_declare(self, args):
         variable_name = args[0].children[1].value
@@ -50,8 +54,9 @@ main:
             exit(4)
 
         # debug
-        print("Variable Declared type {0}, name {1}".format(
-            self.type_tmp, variable_name))
+        print(
+            "Variable Declared type {0}, name {1}".format(self.type_tmp, variable_name)
+        )
 
         if self.type_tmp == None:
             print("Type of Variable {} unknown".format(variable_name))
@@ -60,6 +65,10 @@ main:
         self.create_variable(self.type_tmp, variable_name)
         self.type_tmp = None
         return args
+
+    """
+    Create a variable in Memory and add to Symbol Table
+    """
 
     def create_variable(self, var_type, var_name):
         # dynamic allocation
@@ -72,8 +81,11 @@ main:
         else:
             offset = self.last_var_in_fp.address_offset + self.last_var_in_fp.size
             # memory alignment
-            variable.address_offset = offset if offset % variable.size == 0 else offset + \
-                (variable.size - variable.size % offset)
+            variable.address_offset = (
+                offset
+                if offset % variable.size == 0
+                else offset + (variable.size - variable.size % offset)
+            )
         self.last_var_in_fp = variable
         if variable.address_offset + variable.size > 1000:
             print("Local Variables are more than frame size!")
@@ -81,9 +93,9 @@ main:
         self.symbol_table[var_name] = variable
         return variable
 
-    '''
+    """
     Getting the type of declared variable
-    '''
+    """
 
     def int_variable_declaraion(self, args):
         self.type_tmp = "int"
@@ -101,18 +113,20 @@ main:
         self.type_tmp = "string"
         return args
 
-    '''
+    """
     Read from console
-    '''
+    """
 
     def read_line(self, args):
         # print("[readLine]")
         # print(args)
         var = self.create_variable(
-            "string", "readline" + str(CodeGenerator.tmp_var_id_read))
+            "string", "readline" + str(CodeGenerator.tmp_var_id_read)
+        )
         CodeGenerator.tmp_var_id_read += 1
         t = self.get_a_free_t_register()
-        self.write_code("""
+        self.write_code(
+            """
 li $v0, 9;
 li $a0, 16384;
 syscall
@@ -122,9 +136,16 @@ move $a0, $v0;
 li $v0, 8
 li $a1, 16384
 syscall
-        """.format(t, var.address_offset, t))
+        """.format(
+                t, var.address_offset, t
+            )
+        )
         # act as a new variable in rest of the tree
-        return [Token('IDENT', var.name)]
+        return [Token("IDENT", var.name)]
+
+    """
+    Get a not used Register of Type 't'
+    """
 
     def get_a_free_t_register(self):
         for i in range(10):
@@ -133,6 +154,10 @@ syscall
         print("Not Enough Regsiter to Use!")
         exit(4)
 
+    """
+    After 'left_value = right_value' calculated 
+    """
+
     def assignment_calculated(self, args):
         # print("assignment calculated")
         # print(args)
@@ -140,37 +165,105 @@ syscall
         right_value = args[1]
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
+
+        # right
         if isinstance(right_value, Register):
-            self.write_code("""
+            # check bool
+            if right_value.is_bool and not self.is_bool(left_value):
+                print("BOOL assignment to non BOOL.")
+                exit(4)
+
+            self.write_code(
+                """
 move $t{}, ${};
-            """.format(t1, right_value.type + str(right_value.number)))
+            """.format(
+                    t1, right_value.type + str(right_value.number)
+                )
+            )
             if right_value.type == "t":
                 self.t_registers[right_value.number] = False
         elif isinstance(right_value, Immediate):
-            self.write_code("""
+            # check bool
+            if right_value.is_bool and not self.is_bool(left_value):
+                print("BOOL assignment to non BOOL.")
+                exit(4)
+
+            self.write_code(
+                """
 li $t{}, {};
-            """.format(t1, right_value.value))
+            """.format(
+                    t1, right_value.value
+                )
+            )
         else:
-            self.write_code("""
+            self.write_code(
+                """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
-            """.format(t1, right_value.address_offset, t1, t1))
+            """.format(
+                    t1, right_value.address_offset, t1, t1
+                )
+            )
+
+        # left
         if isinstance(left_value, Register):
-            self.write_code("""
+            self.write_code(
+                """
 move ${}, $t{};
-            """.format(left_value.type + str(left_value.number), t1))
-            if left_value.type == "t":
-                self.t_registers[left_value.number] = False
+            """.format(
+                    left_value.type + str(left_value.number), t1
+                )
+            )
+            # if left_value.type == "t":
+            #     self.t_registers[left_value.number] = False
         else:
-            t2 = self.get_a_free_t_register()
-            self.write_code("""
+            if left_value.type == "int":
+                t2 = self.get_a_free_t_register()
+                self.write_code(
+                    """
 li $t{}, {};
 sw $t{}, frame_pointer($t{});
-            """.format(t2, left_value.address_offset, t1, t2))
+                """.format(
+                        t2, left_value.address_offset, t1, t2
+                    )
+                )
+            elif left_value.type == "bool":
+                t2 = self.get_a_free_t_register()
+                if not self.is_bool(right_value):
+                    print("Wrong assignment to BOOL variable")
+                    exit(4)
+
+                self.write_code(
+                    """
+li $t{}, {};
+sb $t{}, frame_pointer($t{});
+                """.format(
+                        t2, left_value.address_offset, t1, t2
+                    )
+                )
+            else:
+                # other types
+                pass
         self.t_registers[t1] = False
 
         # return something for nested equalities
-        return args[0] # after assignment, the left value will be returned for other assignment (nested)
+        return args[
+            0
+        ]  # after assignment, the left value will be returned for other assignment (nested)
+
+    """
+    Check if a Variable, Register or Immediate is 'bool'
+    """
+
+    def is_bool(self, var_or_reg):
+        # check if the Variable or Register or Immediate is bool
+        if isinstance(var_or_reg, Variable) and var_or_reg.type == "bool":
+            return True
+        elif (
+            isinstance(var_or_reg, Immediate) or isinstance(var_or_reg, Register)
+        ) and var_or_reg.is_bool:
+            return True
+        return False
 
     def lvalue_calculated(self, args):
         # print("lvalue calculated")
@@ -181,25 +274,23 @@ sw $t{}, frame_pointer($t{});
         # print("ident: {0}".format(args[0].value))
         return args[0]
 
-    '''
+    """
     Expressions
-    '''
+    """
 
     def token_to_var(self, args):
         # print("high prior: ")
         # print(args)
         try:
             child = args[0]
-            if isinstance(child, Token) and child.type == 'IDENT':
+            if isinstance(child, Token) and child.type == "IDENT":
                 return self.symbol_table[child.value]
-            elif isinstance(child, Immediate):
-                return args[0]
             else:
                 pass  # other expressions
         except Exception:
             print("Exception in token to var.")
             exit(4)
-        return args
+        return args[0]
 
     def minus(self, args):
         # print("minus:")
@@ -210,13 +301,17 @@ sw $t{}, frame_pointer($t{});
                 t1 = self.get_a_free_t_register()
                 self.t_registers[t1] = True
                 t2 = self.get_a_free_t_register()
-                self.write_code("""
+                self.write_code(
+                    """
 li $t{}, -1;
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
 mult $t{}, $t{};
 mflo $t{};
-                """.format(t1, t2, var.address_offset, t2, t2, t1, t2, t1))
+                """.format(
+                        t1, t2, var.address_offset, t2, t2, t1, t2, t1
+                    )
+                )
                 return Register("t", t1)
             # other types
         elif isinstance(var, Immediate):
@@ -237,45 +332,73 @@ mflo $t{};
             t2 = self.get_a_free_t_register()
             if isinstance(opr1, Variable):
                 if opr1.type == "int":
-                    self.write_code("""
+                    self.write_code(
+                        """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
-                    """.format(t1, opr1.address_offset, t1, t1))
+                    """.format(
+                            t1, opr1.address_offset, t1, t1
+                        )
+                    )
                 else:
                     pass  # type checking
             elif isinstance(opr1, Immediate):
-                self.write_code("""
+                self.write_code(
+                    """
 li $t{}, {};
-                """.format(t1, opr1.value))
+                """.format(
+                        t1, opr1.value
+                    )
+                )
             elif isinstance(opr1, Register):
-                self.write_code("""
+                self.write_code(
+                    """
 move $t{}, ${};
-                """.format(t1, opr1.type + str(opr1.number)))
+                """.format(
+                        t1, opr1.type + str(opr1.number)
+                    )
+                )
             else:
                 pass  # other things
             if isinstance(opr2, Variable):
                 if opr2.type == "int":
-                    self.write_code("""
+                    self.write_code(
+                        """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
-                    """.format(t2, opr2.address_offset, t2, t2))
+                    """.format(
+                            t2, opr2.address_offset, t2, t2
+                        )
+                    )
                 else:
                     pass  # type checking
             elif isinstance(opr2, Immediate):
-                self.write_code("""
+                self.write_code(
+                    """
 li $t{}, {};
-                """.format(t2, opr2.value))
+                """.format(
+                        t2, opr2.value
+                    )
+                )
             elif isinstance(opr2, Register):
-                self.write_code("""
+                self.write_code(
+                    """
 move $t{}, ${};
-                """.format(t2, opr2.type + str(opr2.number)))
+                """.format(
+                        t2, opr2.type + str(opr2.number)
+                    )
+                )
             else:
                 pass  # other things
 
-            self.write_code("""
+            self.write_code(
+                """
 mult $t{}, $t{};
 mflo $t{};
-            """.format(t1, t2, t1))
+            """.format(
+                    t1, t2, t1
+                )
+            )
             return Register("t", t1)
         except Exception:
             print("Error in multiply")
@@ -293,45 +416,73 @@ mflo $t{};
             t2 = self.get_a_free_t_register()
             if isinstance(opr1, Variable):
                 if opr1.type == "int":
-                    self.write_code("""
+                    self.write_code(
+                        """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
-                    """.format(t1, opr1.address_offset, t1, t1))
+                    """.format(
+                            t1, opr1.address_offset, t1, t1
+                        )
+                    )
                 else:
                     pass  # type checking
             elif isinstance(opr1, Immediate):
-                self.write_code("""
+                self.write_code(
+                    """
 li $t{}, {};
-                """.format(t1, opr1.value))
+                """.format(
+                        t1, opr1.value
+                    )
+                )
             elif isinstance(opr1, Register):
-                self.write_code("""
+                self.write_code(
+                    """
 move $t{}, ${};
-                """.format(t1, opr1.type + str(opr1.number)))
+                """.format(
+                        t1, opr1.type + str(opr1.number)
+                    )
+                )
             else:
                 pass  # other things
             if isinstance(opr2, Variable):
                 if opr2.type == "int":
-                    self.write_code("""
+                    self.write_code(
+                        """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
-                    """.format(t2, opr2.address_offset, t2, t2))
+                    """.format(
+                            t2, opr2.address_offset, t2, t2
+                        )
+                    )
                 else:
                     pass  # type checking
             elif isinstance(opr2, Immediate):
-                self.write_code("""
+                self.write_code(
+                    """
 li $t{}, {};
-                """.format(t2, opr2.value))
+                """.format(
+                        t2, opr2.value
+                    )
+                )
             elif isinstance(opr2, Register):
-                self.write_code("""
+                self.write_code(
+                    """
 move $t{}, ${};
-                """.format(t2, opr2.type + str(opr2.number)))
+                """.format(
+                        t2, opr2.type + str(opr2.number)
+                    )
+                )
             else:
                 pass  # other things
 
-            self.write_code("""
+            self.write_code(
+                """
 div $t{}, $t{};
 mflo $t{};
-            """.format(t1, t2, t1))
+            """.format(
+                    t1, t2, t1
+                )
+            )
             return Register("t", t1)
         except Exception:
             print("Error in DIvide")
@@ -349,45 +500,73 @@ mflo $t{};
             t2 = self.get_a_free_t_register()
             if isinstance(opr1, Variable):
                 if opr1.type == "int":
-                    self.write_code("""
+                    self.write_code(
+                        """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
-                    """.format(t1, opr1.address_offset, t1, t1))
+                    """.format(
+                            t1, opr1.address_offset, t1, t1
+                        )
+                    )
                 else:
                     pass  # type checking
             elif isinstance(opr1, Immediate):
-                self.write_code("""
+                self.write_code(
+                    """
 li $t{}, {};
-                """.format(t1, opr1.value))
+                """.format(
+                        t1, opr1.value
+                    )
+                )
             elif isinstance(opr1, Register):
-                self.write_code("""
+                self.write_code(
+                    """
 move $t{}, ${};
-                """.format(t1, opr1.type + str(opr1.number)))
+                """.format(
+                        t1, opr1.type + str(opr1.number)
+                    )
+                )
             else:
                 pass  # other things
             if isinstance(opr2, Variable):
                 if opr2.type == "int":
-                    self.write_code("""
+                    self.write_code(
+                        """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
-                    """.format(t2, opr2.address_offset, t2, t2))
+                    """.format(
+                            t2, opr2.address_offset, t2, t2
+                        )
+                    )
                 else:
                     pass  # type checking
             elif isinstance(opr2, Immediate):
-                self.write_code("""
+                self.write_code(
+                    """
 li $t{}, {};
-                """.format(t2, opr2.value))
+                """.format(
+                        t2, opr2.value
+                    )
+                )
             elif isinstance(opr2, Register):
-                self.write_code("""
+                self.write_code(
+                    """
 move $t{}, ${};
-                """.format(t2, opr2.type + str(opr2.number)))
+                """.format(
+                        t2, opr2.type + str(opr2.number)
+                    )
+                )
             else:
                 pass  # other things
 
-            self.write_code("""
+            self.write_code(
+                """
 div $t{}, $t{};
 mfhi $t{};
-            """.format(t1, t2, t1))
+            """.format(
+                    t1, t2, t1
+                )
+            )
             return Register("t", t1)
         except Exception:
             print("Error in MOD")
@@ -395,8 +574,77 @@ mfhi $t{};
         return args
 
     def not_statement(self, args):
-        # todo
-        return args
+        # print("not statement")
+        # print(args)
+        if isinstance(args[0], Variable):
+            if args[0].type == "bool":
+                t1 = self.get_a_free_t_register()
+                self.t_registers[t1] = True
+                lbl1 = self.get_new_label()
+                lbl2 = self.get_new_label()
+                self.write_code(
+                    """
+li $t{}, {};
+lb $t{}, frame_pointer($t{});
+beq $t{}, $zero, {};
+move $t{}, $zero;
+j {};
+{}:
+li $t{}, 1;
+{}:
+                """.format(
+                        t1,
+                        args[0].address_offset,
+                        t1,
+                        t1,
+                        t1,
+                        lbl1,
+                        t1,
+                        lbl2,
+                        lbl1,
+                        t1,
+                        lbl2,
+                    )
+                )
+                reg = Register("t", t1)
+                reg.is_bool = True
+                return reg
+            else:
+                print("! is for boolean only.")
+                exit(4)
+        elif isinstance(args[0], Immediate):
+            if args[0].is_bool:
+                args[0].value = 0 if args[0].value == 1 else 1
+            else:
+                print("! is for boolean only.")
+                exit(4)
+        elif isinstance(args[0], Register):
+            if args[0].is_bool:
+                t1 = self.get_a_free_t_register()
+                lbl1 = self.get_new_label()
+                lbl2 = self.get_new_label()
+                self.write_code(
+                    """
+beq ${}, $zero, {};
+move ${}, $zero;
+j {};
+{}:
+li ${}, 1;
+{}:
+                """.format(
+                        args[0].type + str(args[0].number),
+                        lbl1,
+                        args[0].type + str(args[0].number),
+                        lbl2,
+                        lbl1,
+                        args[0].type + str(args[0].number),
+                        lbl2,
+                    )
+                )
+            else:
+                print("! is for boolean only.")
+                exit(4)
+        return args[0]
 
     def pass_one_operand_calculation(self, args):
         # print("one opr")
@@ -418,42 +666,70 @@ mfhi $t{};
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
         if isinstance(opr1, Register):
-            self.write_code("""
+            self.write_code(
+                """
 move $t{}, ${};
-            """.format(t1, opr1.type + str(opr1.number)))
+            """.format(
+                    t1, opr1.type + str(opr1.number)
+                )
+            )
             if opr1.type == "t":
                 self.t_registers[opr1.number] = False
         elif isinstance(opr1, Variable):
-            self.write_code("""
+            self.write_code(
+                """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
-            """.format(t1, opr1.address_offset, t1, t1))
+            """.format(
+                    t1, opr1.address_offset, t1, t1
+                )
+            )
         elif isinstance(opr1, Immediate):
-            self.write_code("""
+            self.write_code(
+                """
 li $t{}, {};
-            """.format(t1, opr1.value))
+            """.format(
+                    t1, opr1.value
+                )
+            )
         else:
             pass  # other types
         if isinstance(opr2, Register):
-            self.write_code("""
+            self.write_code(
+                """
 move $t{}, ${};
-            """.format(t2, opr2.type + str(opr2.number)))
+            """.format(
+                    t2, opr2.type + str(opr2.number)
+                )
+            )
             if opr2.type == "t":
                 self.t_registers[opr2.number] = False
         elif isinstance(opr2, Variable):
-            self.write_code("""
+            self.write_code(
+                """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
-            """.format(t2, opr2.address_offset, t2, t2))
+            """.format(
+                    t2, opr2.address_offset, t2, t2
+                )
+            )
         elif isinstance(opr2, Immediate):
-            self.write_code("""
+            self.write_code(
+                """
 li $t{}, {};
-            """.format(t2, opr2.value))
+            """.format(
+                    t2, opr2.value
+                )
+            )
         else:
             pass  # other types
-        self.write_code("""
+        self.write_code(
+            """
 add $t{}, $t{}, $t{}
-        """.format(t1, t1, t2))
+        """.format(
+                t1, t1, t2
+            )
+        )
 
         return Register("t", t1)
 
@@ -466,85 +742,145 @@ add $t{}, $t{}, $t{}
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
         if isinstance(opr1, Register):
-            self.write_code("""
+            self.write_code(
+                """
 move $t{}, ${};
-            """.format(t1, opr1.type + str(opr1.number)))
+            """.format(
+                    t1, opr1.type + str(opr1.number)
+                )
+            )
             if opr1.type == "t":
                 self.t_registers[opr1.number] = False
         elif isinstance(opr1, Variable):
-            self.write_code("""
+            self.write_code(
+                """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
-            """.format(t1, opr1.address_offset, t1, t1))
+            """.format(
+                    t1, opr1.address_offset, t1, t1
+                )
+            )
         elif isinstance(opr1, Immediate):
-            self.write_code("""
+            self.write_code(
+                """
 li $t{}, {};
-            """.format(t1, opr1.value))
+            """.format(
+                    t1, opr1.value
+                )
+            )
         else:
             pass  # other types
         if isinstance(opr2, Register):
-            self.write_code("""
+            self.write_code(
+                """
 move $t{}, ${};
-            """.format(t2, opr2.type + str(opr2.number)))
+            """.format(
+                    t2, opr2.type + str(opr2.number)
+                )
+            )
             if opr2.type == "t":
                 self.t_registers[opr2.number] = False
         elif isinstance(opr2, Variable):
-            self.write_code("""
+            self.write_code(
+                """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
-            """.format(t2, opr2.address_offset, t2, t2))
+            """.format(
+                    t2, opr2.address_offset, t2, t2
+                )
+            )
         elif isinstance(opr2, Immediate):
-            self.write_code("""
+            self.write_code(
+                """
 li $t{}, {};
-            """.format(t2, opr2.value))
+            """.format(
+                    t2, opr2.value
+                )
+            )
         else:
             pass  # other types
-        self.write_code("""
+        self.write_code(
+            """
 sub $t{}. $t{}, $t{}
-        """.format(t1, t1, t2))
+        """.format(
+                t1, t1, t2
+            )
+        )
 
         return Register("t", t1)
+
+    '''
+    Conditional Part
+    '''
 
     def write_conditional_expr(self, opr1, opr2):
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
         if isinstance(opr1, Register):
-            self.write_code("""
+            self.write_code(
+                """
 move $t{}, ${};
-            """.format(t1, opr1.type + str(opr1.number)))
+            """.format(
+                    t1, opr1.type + str(opr1.number)
+                )
+            )
             if opr1.type == "t":
                 self.t_registers[opr1.number] = False
         elif isinstance(opr1, Variable):
-            self.write_code("""
+            self.write_code(
+                """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
-            """.format(t1, opr1.address_offset, t1, t1))
+            """.format(
+                    t1, opr1.address_offset, t1, t1
+                )
+            )
         elif isinstance(opr1, Immediate):
-            self.write_code("""
+            self.write_code(
+                """
 li $t{}, {};
-            """.format(t1, opr1.value))
+            """.format(
+                    t1, opr1.value
+                )
+            )
         else:
             pass  # other types
         if isinstance(opr2, Register):
-            self.write_code("""
+            self.write_code(
+                """
 move $t{}, ${};
-            """.format(t2, opr2.type + str(opr2.number)))
+            """.format(
+                    t2, opr2.type + str(opr2.number)
+                )
+            )
             if opr2.type == "t":
                 self.t_registers[opr2.number] = False
         elif isinstance(opr2, Variable):
-            self.write_code("""
+            self.write_code(
+                """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
-            """.format(t2, opr2.address_offset, t2, t2))
+            """.format(
+                    t2, opr2.address_offset, t2, t2
+                )
+            )
         elif isinstance(opr2, Immediate):
-            self.write_code("""
+            self.write_code(
+                """
 li $t{}, {};
-            """.format(t2, opr2.value))
+            """.format(
+                    t2, opr2.value
+                )
+            )
         else:
             pass  # other types
 
-        return (Register('t', t1), Register('t', t2))
+        return (Register("t", t1), Register("t", t2))
+
+    '''
+    Get A new Label
+    '''
 
     def get_new_label(self):
         self.label_count += 1
@@ -552,46 +888,54 @@ li $t{}, {};
 
     def map_condition_to_boolian(self, t_reg, label):
         out_label = self.get_new_label()
-        self.write_code("""
+        self.write_code(
+            """
 add $t{}, zero, zero;
 b {};
 {}:
 addi $t{}, zero, 1;
 {}:
-        """.format(t_reg.number, out_label, label, t_reg.number, out_label))
+        """.format(
+                t_reg.number, out_label, label, t_reg.number, out_label
+            )
+        )
 
     def handle_condition(self, left_opr, right_opr, branch_instruction):
         t1, t2 = self.write_conditional_expr(left_opr, right_opr)
         label = self.get_new_label()
-        self.write_code("""
+        self.write_code(
+            """
 {} $t{}, $t{}, {};
-        """.format(branch_instruction, t1.number, t2.number, label))
+        """.format(
+                branch_instruction, t1.number, t2.number, label
+            )
+        )
         self.map_condition_to_boolian(t1, label)
         return t1
 
     def less_than(self, args):
         # print(args, 'less')
-        t1 = self.handle_condition(args[0], args[1], 'blt')
+        t1 = self.handle_condition(args[0], args[1], "blt")
         return t1
 
     def less_equal(self, args):
-        t1 = self.handle_condition(args[0], args[1], 'ble')
+        t1 = self.handle_condition(args[0], args[1], "ble")
         return t1
 
     def grater_than(self, args):
-        t1 = self.handle_condition(args[0], args[1], 'bgt')
+        t1 = self.handle_condition(args[0], args[1], "bgt")
         return t1
 
     def grater_equal(self, args):
-        t1 = self.handle_condition(args[0], args[1], 'bge')
+        t1 = self.handle_condition(args[0], args[1], "bge")
         return t1
 
     def equal(self, args):
-        t1 = self.handle_condition(args[0], args[1], 'be')
+        t1 = self.handle_condition(args[0], args[1], "be")
         return t1
 
     def not_equal(self, args):
-        t1 = self.handle_condition(args[0], args[1], 'bne')
+        t1 = self.handle_condition(args[0], args[1], "bne")
         return t1
 
     def and_logic(self, args):
@@ -601,30 +945,42 @@ addi $t{}, zero, 1;
         pass
 
     def if_expr(self, args):
-        print(args, 'if_expr')
+        # print(args, "if_expr")
         result_register = args[0]
-        end_if_stmt_label = Label('label1')         # generate label
-        self.write_code("""
+        end_if_stmt_label = Label("label1")  # generate label
+        self.write_code(
+            """
 ble $t{}, zero, {}:
-        """.format(result_register.number, end_if_stmt_label.name))
+        """.format(
+                result_register.number, end_if_stmt_label.name
+            )
+        )
         return end_if_stmt_label
 
     def if_stmt(self, args):
-        print('if_stmt', args[0].name)
+        # print("if_stmt", args[0].name)
         end_if_stmt_label = args[0]
-        end_if_else_label = Label('lable_out')  # todo: generate lable
-        self.write_code("""
+        end_if_else_label = Label("lable_out")  # todo: generate lable
+        self.write_code(
+            """
 b {} ;
 {}:
-        """.format(end_if_else_label.name, end_if_stmt_label.name))
+        """.format(
+                end_if_else_label.name, end_if_stmt_label.name
+            )
+        )
         return end_if_else_label
 
     def pass_if(self, args):
-        print(args, 'pass_if')
+        # print(args, "pass_if")
         end_if_else_label = args[0]
-        self.write_code("""
+        self.write_code(
+            """
 {}:
-        """.format(end_if_else_label.name))
+        """.format(
+                end_if_else_label.name
+            )
+        )
 
     def pass_compare(self, args):
         # print(args[0].value)
@@ -649,11 +1005,20 @@ b {} ;
         # print(args)
         return args[0]
 
+    '''
+    There is a Constant operand in Expression
+    '''
+
     def constant_operand(self, args):
         # print("constant operands")
         # print(args)
-        if isinstance(args[0], Token) and args[0].type == "NUMBER":
-            return Immediate(args[0].value)
+        if isinstance(args[0], Token):
+            if args[0].type == "NUMBER":
+                return Immediate(args[0].value)
+            elif args[0].type == "BOOL":
+                imm = Immediate(1 if args[0].value == "true" else 0)
+                imm.is_bool = True
+                return imm
         return args
 
     def pass_constant(self, args):
@@ -666,18 +1031,14 @@ b {} ;
         # print(args)
         return args[0]
 
-    # [Tree(math_expr_1, [Tree(math_expr_2, [<CodeGenerator.Variable object at 0x000001B9FBB3B308>])]), Tree(math_expr_2, [<CodeGenerator.Variable object at 0x000001B9FBB3B548>])]
-    # [Tree(math_expr_1, [Tree(math_expr_2, [<CodeGenerator.Variable object at 0x000001F904ADA708>])]), <CodeGenerator.Register object at 0x000001F904ADAB48>]
-    
     def paranthes_action(self, args):
         # print("paranethesis")
         # print(args)
         return args[0]
 
-
-    '''
+    """
     Print
-    '''
+    """
 
     def exp_to_actual(self, args):
         # print("exp to actual")
@@ -694,24 +1055,72 @@ b {} ;
         # print(args)
         if isinstance(args[0], Variable):
             if args[0].type == "int":
-                self.write_code("""
+                self.write_code(
+                    """
 li $v0, 1;
 li $a0, {};
 lw $a0, frame_pointer($a0);
 syscall
-                """.format(args[0].address_offset))
+                """.format(
+                        args[0].address_offset
+                    )
+                )
             elif args[0].type == "string":
                 pass
             elif args[0].type == "double":
                 pass
             elif args[0].type == "bool":
-                pass
+                t1 = self.get_a_free_t_register()
+                lbl = self.get_new_label()
+                lbl2 = self.get_new_label()
+                self.write_code(
+                    """
+li $t{}, {};
+lb $t{}, frame_pointer($t{});
+li $v0, 4;
+beq $t{}, $zero, {};
+la $a0, true_const;
+j {};
+{}:
+la $a0, false_const;
+{}:
+syscall
+                """.format(
+                        t1, args[0].address_offset, t1, t1, t1, lbl, lbl2, lbl, lbl2
+                    )
+                )
             else:
                 pass  # other types
+        elif isinstance(args[0], Register):
+            if args[0].is_bool:
+                lbl1 = self.get_new_label()
+                lbl2 = self.get_new_label()
+                self.write_code(
+                    """
+li $v0, 4;
+beq ${}, $zero, {};
+la $a0, true_const;
+j {};
+{}:
+la $a0, false_const;
+{}:
+syscall
+                """.format(
+                        args[0].type + str(args[0].number), lbl1, lbl2, lbl1, lbl2
+                    )
+                )
+            else:
+                pass
+                # other types in Register
         else:
             pass  # other types
         return args
 
+
+
+'''
+Other Classes
+'''
 
 class Variable:
     def __init__(self):
@@ -719,7 +1128,7 @@ class Variable:
         self.name = None
         self.type = None
         self.value = None
-        self.address_offset = None   # address from the start of frame pointer
+        self.address_offset = None  # address from the start of frame pointer
         self.size = None  # in bytes
 
     def calc_size(self):
@@ -728,7 +1137,7 @@ class Variable:
         if self.type == "bool":
             self.size = 1
         if self.type == "string":
-            self.size = 4   # address of string
+            self.size = 4  # address of string
         if self.type == "double":
             self.size = 8
         # var type is an object
@@ -757,11 +1166,14 @@ class Register:
     def __init__(self, typ, number):
         self.type = typ  # s, v, a, t
         self.number = number
+        self.is_bool = False
+        self.is_reference = False  # later
 
 
 class Immediate:
     def __init__(self, value):
         self.value = value
+        self.is_bool = False
 
 
 class Label:
