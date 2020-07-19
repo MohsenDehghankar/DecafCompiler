@@ -580,8 +580,8 @@ mfhi $t{};
             if args[0].type == "bool":
                 t1 = self.get_a_free_t_register()
                 self.t_registers[t1] = True
-                lbl1 = self.get_new_label()
-                lbl2 = self.get_new_label()
+                lbl1 = self.get_new_label().name
+                lbl2 = self.get_new_label().name
                 self.write_code(
                     """
 li $t{}, {};
@@ -621,8 +621,8 @@ li $t{}, 1;
         elif isinstance(args[0], Register):
             if args[0].is_bool:
                 t1 = self.get_a_free_t_register()
-                lbl1 = self.get_new_label()
-                lbl2 = self.get_new_label()
+                lbl1 = self.get_new_label().name
+                lbl2 = self.get_new_label().name
                 self.write_code(
                     """
 beq ${}, $zero, {};
@@ -1077,8 +1077,8 @@ syscall
                 pass
             elif args[0].type == "bool":
                 t1 = self.get_a_free_t_register()
-                lbl = self.get_new_label()
-                lbl2 = self.get_new_label()
+                lbl = self.get_new_label().name
+                lbl2 = self.get_new_label().name
                 self.write_code(
                     """
 li $t{}, {};
@@ -1099,8 +1099,8 @@ syscall
                 pass  # other types
         elif isinstance(args[0], Register):
             if args[0].is_bool:
-                lbl1 = self.get_new_label()
-                lbl2 = self.get_new_label()
+                lbl1 = self.get_new_label().name
+                lbl2 = self.get_new_label().name
                 self.write_code(
                     """
 li $v0, 4;
