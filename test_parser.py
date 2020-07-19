@@ -55,10 +55,21 @@ def main(argv):
     # }
     # """)
 
+    # tree = parser.parse("""
+    # int main(){
+    #     int x;
+    #     if(3 == 3 || 4 != 3) {
+
+    #     };
+    # }
+    # """)
+
     tree = parser.parse("""
     int main(){
         int x;
-        x = 3 == 3;
+        if(3 == 3 || 4 != 3) {
+            print(2);
+        };
     }
     """)
 
