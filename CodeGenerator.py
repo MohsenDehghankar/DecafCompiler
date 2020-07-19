@@ -19,6 +19,8 @@ class CodeGenerator(Transformer):
         self.t_registers = [False for i in range(10)]
         # last local variable
         self.last_var_in_fp = None
+        # for generating label names
+        self.label_count = 0
 
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
@@ -119,7 +121,7 @@ sw $v0, frame_pointer($t{})
 move $a0, $v0;
 li $v0, 8
 li $a1, 16384
-syscall 
+syscall
         """.format(t, var.address_offset, t))
         # act as a new variable in rest of the tree
         return [Token('IDENT', var.name)]
@@ -163,7 +165,7 @@ move ${}, $t{};
             t2 = self.get_a_free_t_register()
             self.write_code("""
 li $t{}, {};
-sw $t{}, frame_pointer($t{}); 
+sw $t{}, frame_pointer($t{});
             """.format(t2, left_value.address_offset, t1, t2))
         self.t_registers[t1] = False
         # return something for nested equalities
@@ -542,50 +544,87 @@ li $t{}, {};
         else:
             pass  # other types
 
-        return (t1, t2)
+        return (Register('t', t1), Register('t', t2))
+
+    def get_new_label(self):
+        self.label_count += 1
+        return "label{}".format(self.label_count)
+
+    def map_condition_to_boolian(self, t_reg, label):
+        out_label = self.get_new_label()
+        self.write_code("""
+add $t{}, zero, zero;
+b {};
+{}:
+addi $t{}, zero, 1;
+{}:
+        """.format(t_reg.number, out_label, label, t_reg.number, out_label))
+
+    def handle_condition(self, left_opr, right_opr, branch_instruction):
+        t1, t2 = self.write_conditional_expr(left_opr, right_opr)
+        label = self.get_new_label()
+        self.write_code("""
+{} $t{}, $t{}, {};
+        """.format(branch_instruction, t1.number, t2.number, label))
+        self.map_condition_to_boolian(t1, label)
+        return t1
 
     def less_than(self, args):
         # print(args, 'less')
-        opr1 = args[0]
-        opr2 = args[1]
-        t1, t2 = self.write_conditional_expr(opr1, opr2)
-        self.write_code("""
-bge $t{}, $t{}, label{}
-        """.format(t1, t2, 1))  # todo: label number
-        return 1
+        t1 = self.handle_condition(args[0], args[1], 'blt')
+        return t1
 
     def less_equal(self, args):
-        opr1 = args[0]
-        opr2 = args[1]
-        t1, t2 = self.write_conditional_expr(opr1, opr2)
-        self.write_code("""
-bgt $t{}, $t{}, label{}
-        """.format(t1, t2, 1))  # todo: label number
-        return 1
+        t1 = self.handle_condition(args[0], args[1], 'ble')
+        return t1
 
     def grater_than(self, args):
-        opr1 = args[0]
-        opr2 = args[1]
-        t1, t2 = self.write_conditional_expr(opr1, opr2)
-        self.write_code("""
-ble $t{}, $t{}, label{}
-        """.format(t1, t2, 1))  # todo: label number
-        return 1
+        t1 = self.handle_condition(args[0], args[1], 'bgt')
+        return t1
 
     def grater_equal(self, args):
-        opr1 = args[0]
-        opr2 = args[1]
-        t1, t2 = self.write_conditional_expr(opr1, opr2)
-        self.write_code("""
-blt $t{}, $t{}, label{}
-        """.format(t1, t2, 1))  # todo: label number
-        return 1
+        t1 = self.handle_condition(args[0], args[1], 'bge')
+        return t1
 
-    def _if(self, args):
-        label_number = args[0]
+    def equal(self, args):
+        t1 = self.handle_condition(args[0], args[1], 'be')
+        return t1
+
+    def not_equal(self, args):
+        t1 = self.handle_condition(args[0], args[1], 'bne')
+        return t1
+
+    def and_logic(self, args):
+        pass
+
+    def or_logic(self, args):
+        pass
+
+    def if_expr(self, args):
+        print(args, 'if_expr')
+        result_register = args[0]
+        end_if_stmt_label = Label('label1')         # generate label
         self.write_code("""
-label{}:
-        """.format(label_number))
+ble $t{}, zero, {}:
+        """.format(result_register.number, end_if_stmt_label.name))
+        return end_if_stmt_label
+
+    def if_stmt(self, args):
+        print('if_stmt', args[0].name)
+        end_if_stmt_label = args[0]
+        end_if_else_label = Label('lable_out')  # todo: generate lable
+        self.write_code("""
+b {} ;
+{}:
+        """.format(end_if_else_label.name, end_if_stmt_label.name))
+        return end_if_else_label
+
+    def pass_if(self, args):
+        print(args, 'pass_if')
+        end_if_else_label = args[0]
+        self.write_code("""
+{}:
+        """.format(end_if_else_label.name))
 
     def pass_compare(self, args):
         print(args[0].value)
@@ -714,3 +753,8 @@ class Register:
 class Immediate:
     def __init__(self, value):
         self.value = value
+
+
+class Label:
+    def __init__(self, name):
+        self.name = name

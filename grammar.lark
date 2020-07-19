@@ -23,7 +23,7 @@ formal : variable*
 
 stmtblock : "{"variabledec* stmt* COMMENT*"}" -> stmt_block
 
-stmt : [expr]";" | stmtblock | if_stmt | while 
+stmt : [expr]";" | stmtblock | if | while 
     | for | return | print | "break" ";"        -> pass_stmt
 
 // -------expression---------
@@ -40,12 +40,12 @@ lvalue : logical_expr                 -> lvalue_calculated
 // logical_expr_2 : logical_expr_2 "&&" equlaity_expr 
 //         | equlaity_expr
 
-logical_expr : logical_expr "||" equlaity_expr
-        | logical_expr "&&" equlaity_expr
+logical_expr : logical_expr "||" equlaity_expr          ->or_logic
+        | logical_expr "&&" equlaity_expr               ->and_logic
         | equlaity_expr                                 -> pass_logic
 
-equlaity_expr : equlaity_expr "==" compare_expr 
-        | equlaity_expr "!=" compare_expr
+equlaity_expr : equlaity_expr "==" compare_expr         -> equal
+        | equlaity_expr "!=" compare_expr               -> not_equal
         | compare_expr                                  -> pass_equality
 
 compare_expr : compare_expr "<" math_expr_1             -> less_than
@@ -95,8 +95,9 @@ actual : actual","expr
 constant : HEX_NUMBER | NUMBER | BOOL | STRING_CONSTANT | "null"
 
 //------special statements----------
-if_stmt : if ("else" stmt)? 
-if: "if" "(" expr ")" stmt -> _if
+if : if_stmt ("else" stmt)?     ->pass_if
+if_stmt:  if_expr stmt -> if_stmt
+if_expr : "if" "(" expr ")"     -> if_expr
 while : "while" "(" expr ")" stmt
 for : "for" "("[expr]";"expr";"[expr]")" stmt
 return : "return" [expr] ";"

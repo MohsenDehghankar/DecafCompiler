@@ -58,10 +58,7 @@ def main(argv):
     tree = parser.parse("""
     int main(){
         int x;
-        if (3 <= 4)
-            x = 3;
-         else
-            x = 2;
+        x = 3 == 3;
     }
     """)
 
