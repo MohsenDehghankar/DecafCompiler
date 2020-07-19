@@ -884,21 +884,18 @@ li $t{}, {};
 
     def get_new_label(self):
         self.label_count += 1
-        return "label{}".format(self.label_count)
+        return Label("label{}".format(self.label_count))
 
     def map_condition_to_boolian(self, t_reg, label):
         out_label = self.get_new_label()
-        self.write_code(
-            """
-add $t{}, zero, zero;
+        self.write_code("""
+add $t{}, $zero, $zero;
 b {};
 {}:
-addi $t{}, zero, 1;
+addi $t{}, $zero, 1;
 {}:
-        """.format(
-                t_reg.number, out_label, label, t_reg.number, out_label
-            )
-        )
+        """.format(t_reg.number, out_label.name, label.name, t_reg.number, out_label.name))
+
 
     def handle_condition(self, left_opr, right_opr, branch_instruction):
         t1, t2 = self.write_conditional_expr(left_opr, right_opr)
@@ -906,11 +903,11 @@ addi $t{}, zero, 1;
         self.write_code(
             """
 {} $t{}, $t{}, {};
-        """.format(
-                branch_instruction, t1.number, t2.number, label
-            )
-        )
+
+        """.format(branch_instruction, t1.number, t2.number, label.name))
+
         self.map_condition_to_boolian(t1, label)
+        self.t_registers[t2.number] = False
         return t1
 
     def less_than(self, args):
@@ -931,7 +928,7 @@ addi $t{}, zero, 1;
         return t1
 
     def equal(self, args):
-        t1 = self.handle_condition(args[0], args[1], "be")
+        t1 = self.handle_condition(args[0], args[1], 'beq')
         return t1
 
     def not_equal(self, args):
@@ -939,30 +936,39 @@ addi $t{}, zero, 1;
         return t1
 
     def and_logic(self, args):
-        pass
+        # print(args, "and_logic")
+        t1 = args[0]
+        t2 = args[1]
+        self.write_code("""
+and $t{}, $t{}, $t{};
+        """.format(t1.number, t1.number, t2.number))
+        self.t_registers[t2.number] = False
+        return t1
 
     def or_logic(self, args):
-        pass
+        # print(args, 'or_logic')
+        t1 = args[0]
+        t2 = args[1]
+        self.write_code("""
+or $t{}, $t{}, $t{};
+        """.format(t1.number, t1.number, t2.number))
+        self.t_registers[t2.number] = False
+        return t1
 
     def if_expr(self, args):
-        # print(args, "if_expr")
+        # print(args, 'if_expr')
         result_register = args[0]
-        end_if_stmt_label = Label("label1")  # generate label
-        self.write_code(
-            """
-ble $t{}, zero, {}:
-        """.format(
-                result_register.number, end_if_stmt_label.name
-            )
-        )
+        end_if_stmt_label = self.get_new_label()        # generate label
+        self.write_code("""
+ble $t{}, $zero, {};
+        """.format(result_register.number, end_if_stmt_label.name))
         return end_if_stmt_label
 
     def if_stmt(self, args):
-        # print("if_stmt", args[0].name)
+        # print('if_stmt', args[0].name)
         end_if_stmt_label = args[0]
-        end_if_else_label = Label("lable_out")  # todo: generate lable
-        self.write_code(
-            """
+        end_if_else_label = self.get_new_label()  # todo: generate lable
+        self.write_code("""
 b {} ;
 {}:
         """.format(
@@ -972,7 +978,7 @@ b {} ;
         return end_if_else_label
 
     def pass_if(self, args):
-        # print(args, "pass_if")
+        # print(args, 'pass_if')
         end_if_else_label = args[0]
         self.write_code(
             """
