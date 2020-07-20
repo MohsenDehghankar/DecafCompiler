@@ -43,6 +43,16 @@ def main(argv):
     codeGen.create_data_segment()
 
     print("Parse Tree:")
+    #
+    # tree = parser.parse(
+    #     """
+    # int main(){
+    #     bool x;
+    #     x = true;
+    #     Print(!x);
+    # }
+    # """
+    # )
 
     tree = parser.parse(
         """

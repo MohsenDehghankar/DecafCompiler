@@ -3,7 +3,6 @@ from lark.lexer import Lexer, Token
 
 
 class CodeGenerator(Transformer):
-
     tmp_var_id_read = 1000
 
     def __init__(self, visit_tokens=True):
@@ -260,7 +259,7 @@ sb $t{}, frame_pointer($t{});
         if isinstance(var_or_reg, Variable) and var_or_reg.type == "bool":
             return True
         elif (
-            isinstance(var_or_reg, Immediate) or isinstance(var_or_reg, Register)
+                isinstance(var_or_reg, Immediate) or isinstance(var_or_reg, Register)
         ) and var_or_reg.is_bool:
             return True
         return False
@@ -888,23 +887,23 @@ li $t{}, {};
 
     def map_condition_to_boolian(self, t_reg, label):
         out_label = self.get_new_label()
-        self.write_code("""
-add $t{}, $zero, $zero;
-b {};
-{}:
-addi $t{}, $zero, 1;
-{}:
-        """.format(t_reg.number, out_label.name, label.name, t_reg.number, out_label.name))
 
+    #         self.write_code("""
+    # add $t{}, $zero, $zero;
+    # b {};
+    # {}:
+    # addi $t{}, $zero, 1;
+    # {}:
+    #         """.format(t_reg.number, out_label.name, label.name, t_reg.number, out_label.name))
 
     def handle_condition(self, left_opr, right_opr, branch_instruction):
         t1, t2 = self.write_conditional_expr(left_opr, right_opr)
         label = self.get_new_label()
-        self.write_code(
-            """
-{} $t{}, $t{}, {};
-
-        """.format(branch_instruction, t1.number, t2.number, label.name))
+        #         self.write_code(
+        #             """
+        # {} $t{}, $t{}, {};
+        #
+        #         """.format(branch_instruction, t1.number, t2.number, label.name))
 
         self.map_condition_to_boolian(t1, label)
         self.t_registers[t2.number] = False
@@ -958,7 +957,7 @@ or $t{}, $t{}, $t{};
     def if_expr(self, args):
         # print(args, 'if_expr')
         result_register = args[0]
-        end_if_stmt_label = self.get_new_label()        # generate label
+        end_if_stmt_label = self.get_new_label()  # generate label
         self.write_code("""
 ble $t{}, $zero, {};
         """.format(result_register.number, end_if_stmt_label.name))
@@ -972,8 +971,8 @@ ble $t{}, $zero, {};
 b {} ;
 {}:
         """.format(
-                end_if_else_label.name, end_if_stmt_label.name
-            )
+            end_if_else_label.name, end_if_stmt_label.name
+        )
         )
         return end_if_else_label
 
@@ -987,6 +986,23 @@ b {} ;
                 end_if_else_label.name
             )
         )
+
+    def _for(self, args):
+        print(args)
+        for_lablel = self.get_new_label()
+        print(for_lablel)
+        end_label = self.get_new_label()
+        print(end_label)
+        condition = args[1].number
+        print(condition)
+        # TODO:body (stmt tree) should be here
+        self.write_code("""
+{}:
+beq $t{},$zero,{}
+#body should be inserted here
+j {}
+{}:
+        """.format(for_lablel.name, condition, end_label.name, for_lablel.name, end_label.name))
 
     def pass_compare(self, args):
         # print(args[0].value)
@@ -1123,10 +1139,10 @@ syscall
         return args
 
 
-
 '''
 Other Classes
 '''
+
 
 class Variable:
     def __init__(self):
