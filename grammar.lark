@@ -103,7 +103,7 @@ if : if_stmt ("else" stmt)?     ->pass_if
 if_stmt:  if_expr stmt -> if_stmt
 if_expr : "if" "(" expr ")"     -> if_expr
 while : "while" "(" expr ")" stmt
-for : "for" "("[expr]";"expr";"[expr]")" stmt
+for : "for" "("[expr]";"expr";"[expr]")" stmt -> _for
 return : "return" [expr] ";"
 print : ("Print"|"print") "("actual")" ";" -> print
 
