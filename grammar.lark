@@ -103,9 +103,7 @@ constant : HEX_NUMBER
         | "null"
 
 //------special statements----------
-if : if_stmt ("else" stmt)?     ->pass_if
-if_stmt:  if_expr stmt -> if_stmt
-if_expr : "if" "(" expr ")"     -> if_expr
+if: "if" "(" expr ")" stmt ("else" stmt)? -> _if
 while : "while" "(" expr ")" stmt
 for : "for" "("exp_or_nothing";"expr_high_level";"exp_or_nothing")" stmt   -> _for
 return : "return" [expr] ";"

@@ -1012,10 +1012,10 @@ addi $t{}, $zero, 1;
             ),
         )
 
+        t1.write_code(current_code)
         self.map_condition_to_boolian(t1, label)
         self.t_registers[t2.number] = False
         t1.is_bool = True
-        t1.write_code(current_code)
         return t1
 
     def less_than(self, args):
@@ -1093,47 +1093,37 @@ or $t{}, $t{}, $t{};
             pass  # other possible types
         return args[0]
 
-    def if_expr(self, args):
-        # print(args, 'if_expr')
-        result_register = args[0]
-        end_if_stmt_label = self.get_new_label()  # generate label
+    def _if(self, args):
+        # print("_if", args)
+        expr_result_reg = args[0]
+        end_if_stmt_label = self.get_new_label()
+        end_if_else_label = self.get_new_label()
         current_code = ""
+        current_code = self.append_code(current_code, expr_result_reg.code)
         current_code = self.append_code(
             current_code,
             """
-ble $t{}, $zero, {};
+beq $t{}, $zero, {};
         """.format(
-                result_register.number, end_if_stmt_label.name
+                expr_result_reg.number, end_if_stmt_label.name
             ),
         )
-        result = Result()
-        result.write_code(current_code)
-        # return end_if_stmt_label
-        return result
-
-    def if_stmt(self, args):
-        # print('if_stmt', args[0].name)
-        end_if_stmt_label = args[0]
-        end_if_else_label = self.get_new_label()  # todo: generate lable
-        current_code = ""
+        if_stmt = args[1]
+        for child in if_stmt.children:
+            current_code = self.append_code(current_code, child.code)
         current_code = self.append_code(
             current_code,
             """
-b {} ;
+b {};
 {}:
         """.format(
                 end_if_else_label.name, end_if_stmt_label.name
             ),
         )
-        result = Result()
-        result.write_code(current_code)
-        # return end_if_else_label
-        return result
-
-    def pass_if(self, args):
-        # print(args, 'pass_if')
-        end_if_else_label = args[0]
-        current_code = ""
+        if len(args) == 3:
+            else_stmt = args[2]
+        for child in else_stmt.children:
+            current_code = self.append_code(current_code, child.code)
         current_code = self.append_code(
             current_code,
             """
