@@ -23,7 +23,7 @@ formal : variable*
 
 stmtblock : "{" (variabledec|stmt|COMMENT)* "}" -> stmt_block
 
-stmt : [expr]";"                
+stmt : [expr]";"                                
         | stmtblock 
         | if 
         | while 
@@ -33,6 +33,8 @@ stmt : [expr]";"
         | "break" ";"        -> pass_stmt
 
 // -------expression---------
+expr_high_level : expr                                  -> end_of_expr                 // when the start and finish of expression is important (for, while)
+
 expr : assignment                                       -> exp_calculated
 
 assignment : lvalue "=" assignment                      -> assignment_calculated       // todo: assignment as assignment
@@ -40,8 +42,8 @@ assignment : lvalue "=" assignment                      -> assignment_calculated
 
 lvalue : logical_expr                                   -> lvalue_calculated
 
-logical_expr : logical_expr "||" equlaity_expr          ->or_logic
-        | logical_expr "&&" equlaity_expr               ->and_logic
+logical_expr : logical_expr "||" equlaity_expr          -> or_logic
+        | logical_expr "&&" equlaity_expr               -> and_logic
         | equlaity_expr                                 -> pass_logic
 
 equlaity_expr : equlaity_expr "==" compare_expr         -> equal
@@ -71,8 +73,10 @@ one_operand_expr : "!"one_operand_expr  -> not_statement
 
 // from here to above, we have Variable or Immediate
 
-paranthes : "("expr")"          -> paranthes_action
-        | high_proior           -> token_to_var       
+paranthes : "("expr")"          -> paranthes_action     // start of expression
+        | high_proior           -> token_to_var         // start of expression 
+
+// bellow this, no code is generatd yet.
 
 high_proior : high_proior "." IDENT ("("actual?")")? 
         | high_proior"["expr"]" 
@@ -103,9 +107,13 @@ if : if_stmt ("else" stmt)?     ->pass_if
 if_stmt:  if_expr stmt -> if_stmt
 if_expr : "if" "(" expr ")"     -> if_expr
 while : "while" "(" expr ")" stmt
-for : "for" "("[expr]";"expr";"[expr]")" stmt -> _for
+for : "for" "("exp_or_nothing";"expr_high_level";"exp_or_nothing")" stmt   -> _for
 return : "return" [expr] ";"
-print : ("Print"|"print") "("actual")" ";" -> print
+print : ("Print"|"print") "("actual")" ";"      -> print
+
+//------helps finding which expr is empty---
+exp_or_nothing : expr_high_level                -> pass_high_level_expr
+                |                               -> false_expression
 
 //---------class dec----------
 classdec : "class" IDENT ["extends" IDENT] ["implements" (IDENT | IDENT",")+] "{"field*"}"
@@ -124,6 +132,7 @@ BOOL.2 : "true" | "false"
 IDENT : /[a-zA-Z]([\w]|[_]){0,30}/
 HEX_NUMBER.2: /0x[\da-f]*/
 READLINE.4: "ReadLine()"
+// EMPTY: ""
 
 
 %import common.ESCAPED_STRING
