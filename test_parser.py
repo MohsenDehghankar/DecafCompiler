@@ -47,9 +47,9 @@ def main(argv):
     tree = parser.parse(
         """
     int main(){
-        bool x;
-        x = true;
-        Print(!x);
+        string x;
+        x = ReadLine();
+        Print(x);
     }
     """
     )
