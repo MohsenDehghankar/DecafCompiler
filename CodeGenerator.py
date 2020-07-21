@@ -21,6 +21,8 @@ class CodeGenerator(Transformer):
         self.last_var_in_fp = None
         # for generating label names
         self.label_count = 0
+        # for generating double name
+        self.tmp_double_count = 0
         # for loop
         self.expr_started = False
         self.expr_tokens = []
@@ -294,8 +296,8 @@ sb $t{}, frame_pointer($t{});
     """
 
     def token_to_var(self, args):
-        # print("high prior: ")
-        # print(args)
+        print("high prior: ")
+        print(args[0])
 
         # start of expression
         #         if not self.expr_started:
@@ -310,6 +312,8 @@ sb $t{}, frame_pointer($t{});
             child = args[0]
             if isinstance(child, Token) and child.type == "IDENT":
                 return self.symbol_table[child.value]
+            elif isinstance(child, Variable) and child.type == "double":
+                return child
             else:
                 pass  # other expressions
         except Exception:
@@ -804,7 +808,7 @@ add $t{}, $t{}, $t{}
                 t1, t1, t2
             ),
         )
-        reg = Register("t", t1)
+        reg = Register("int", "t", t1)
         reg.write_code(current_code)
 
         return reg
@@ -890,7 +894,7 @@ sub $t{}. $t{}, $t{}
                 t1, t1, t2
             ),
         )
-        reg = Register("t", t1)
+        reg = Register("int", "t", t1)
         reg.write_code(current_code)
 
         return reg
@@ -969,9 +973,9 @@ li $t{}, {};
         else:
             pass  # other types
 
-        reg = Register("t", t1)
+        reg = Register("int", "t", t1)
         reg.write_code(current_code)
-        return (reg, Register("t", t2))
+        return (reg, Register("int", "t", t2))
 
     """
     Get A new Label
@@ -1209,8 +1213,8 @@ j {}
         return args[0]
 
     def stmt_block(self, args):
-        print("stmt_block")
-        print(args)
+        # print("stmt_block")
+        # print(args)
         for result in args:
             if isinstance(result, Tree):
                 for child in result.children:
@@ -1235,12 +1239,29 @@ j {}
     There is a Constant operand in Expression
     """
 
+    def generate_name_for_double(self):
+        self.tmp_double_count += 1
+        return "double{}".format(self.tmp_double_count)
+
+    def calculate_value_of_double(self, val):
+        mantis, exponent = val.lower().split("e")
+        if exponent[0] == "+":
+            exponent = int(exponent)
+        else:
+            exponent = -int(exponent)
+        val = float(mantis) * 10 ** exponent
+        return val
+
     def constant_operand(self, args):
         # print("constant operands")
         # print(args)
         if isinstance(args[0], Token):
-            if args[0].type == "NUMBER":
+            if args[0].type == "INT":
                 return Immediate(args[0].value)
+            elif args[0].type == "DOUBLE":
+                var = self.create_variable("double", self.generate_name_for_double())
+                var.value = self.calculate_value_of_double(args[0].value)
+                return var
             elif args[0].type == "BOOL":
                 imm = Immediate(1 if args[0].value == "true" else 0)
                 imm.is_bool = True
@@ -1248,8 +1269,8 @@ j {}
         return args
 
     def pass_constant(self, args):
-        # print("pass constants")
-        # print(args)
+        # print("pass constants", args)
+        # print(args[0].children[0])
         return args[0].children[0]
 
     def call_action(self, args):
@@ -1380,6 +1401,10 @@ syscall
         result.write_code(current_code)
         return result
 
+    # def number(self, args):
+    #     print("number", args)
+    #     return args
+
 
 """
 Other Classes
@@ -1415,16 +1440,34 @@ class Variable(Result):
         # var type is an object
 
     def __str__(self):
-        return "Variable({})".format(self.name)
+        return "Variable name: {}, type: {}, value: {}, size: {}".format(
+            self.name, self.type, self.value, self.size
+        )
+
+    def __repr__(self):
+        return "Variable name: {}, type: {}, value: {}, size: {}".format(
+            self.name, self.type, self.value, self.size
+        )
 
 
 class Register(Result):
-    def __init__(self, typ, number):
+    def __init__(self, _type, kind, number):
         super().__init__()
-        self.type = typ  # s, v, a, t
+        self.type = _type  # int, string, boolian, double
+        self.kind = kind  # s, v, a, t
         self.number = number
         self.is_bool = False
         self.is_reference = False  # later
+
+    def __str__(self):
+        return "register type:{}, kind: {}, number: {}".format(
+            self.type, self.kind, self.number
+        )
+
+    def __repr__(self):
+        return "register type:{}, kind: {}, number: {}".format(
+            self.type, self.kind, self.number
+        )
 
 
 class Immediate(Result):
@@ -1432,6 +1475,9 @@ class Immediate(Result):
         super().__init__()
         self.value = value
         self.is_bool = False
+
+    def __repr__(self):
+        return "Immediate value: {}".format(self.value)
 
 
 class Label:

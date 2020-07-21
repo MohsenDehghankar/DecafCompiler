@@ -97,7 +97,8 @@ actual : actual","expr
         | expr                  -> exp_to_actual
 
 constant : HEX_NUMBER 
-        | NUMBER 
+        | DOUBLE                
+        | INT
         | BOOL                  
         | STRING_CONSTANT 
         | "null"
@@ -131,11 +132,13 @@ IDENT : /[a-zA-Z]([\w]|[_]){0,30}/
 HEX_NUMBER.2: /0x[\da-f]*/
 READLINE.4: "ReadLine()"
 // EMPTY: ""
+INT: /\d+/
+DOUBLE: /\d+\.\d*[E,e]\+?\d+/ | /\d+\.\d*/
 
 
 %import common.ESCAPED_STRING
 %import common._STRING_ESC_INNER
-%import common.NUMBER
+// %import common.NUMBER
 %import common.WS
 
 %ignore WS

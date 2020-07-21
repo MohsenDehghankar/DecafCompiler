@@ -73,10 +73,7 @@ def main(argv):
         """
     int main(){
         int x;
-        if (3 <= 4)
-            x = 3;
-         else
-            x = 2;
+        x = 1.2E2;
     }
     """
     )
@@ -96,7 +93,7 @@ def main(argv):
         )
 
     print("MIPS:")
-    print(codeGen.mips_code)
+    # print(codeGen.mips_code)
 
 
 if __name__ == "__main__":
