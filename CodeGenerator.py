@@ -39,6 +39,7 @@ class CodeGenerator(Transformer):
 frame_pointer:  .space  1000
 true_const:     .asciiz "true"
 false_const:    .asciiz "false"
+end_of_string:  .byte 0
 
 .text
 main:
@@ -165,8 +166,8 @@ syscall
         return current_code + "\n" + new_code
 
     def assignment_calculated(self, args):
-        # print("assignment calculated")
-        # print(args)
+        print("assignment calculated")
+        print(args)
         left_value = args[0]
         right_value = args[1]
         t1 = self.get_a_free_t_register()
@@ -192,18 +193,41 @@ move $t{}, ${};
                 self.t_registers[right_value.number] = False
         elif isinstance(right_value, Immediate):
             # check bool
-            if right_value.is_bool and not self.is_bool(left_value):
+            if right_value.type == "bool" and not self.is_bool(left_value):
                 print("BOOL assignment to non BOOL.")
                 exit(4)
-
-            current_code = self.append_code(
-                current_code,
-                """
+            if right_value.type != "string":
+                current_code = self.append_code(
+                    current_code,
+                    """
 li $t{}, {};
-            """.format(
-                    t1, right_value.value
-                ),
-            )
+                """.format(
+                        t1, right_value.value
+                    ),
+                )
+            else:
+                length = len(right_value.value) + 1
+                current_code = self.append_code(
+                    current_code,
+                    """
+li $a0,{};
+                    """.format(length)
+                )
+                for i in range(length):
+                    if i == length - 1:
+                        current_code = self.append_code(
+                            current_code, """
+lb $a0, end_of_string;
+sb $a0, {}($t{});
+                            """.format(i, t1)
+                        )
+                    else:
+                        current_code = self.append_code(
+                            current_code, """
+li $a0,'{}';
+sb $a0,{}($t{});
+                            """.format(right_value.value[i], i, t1)
+                        )
         else:
             current_code = self.append_code(
                 current_code,
@@ -227,7 +251,7 @@ move ${}, $t{};
             )
 
         else:
-            if left_value.type == "int":
+            if left_value.type == "int" or left_value.type == "string":
                 t2 = self.get_a_free_t_register()
                 current_code = self.append_code(
                     current_code,
@@ -254,7 +278,7 @@ sb $t{}, frame_pointer($t{});
                     ),
                 )
             else:
-                # other types
+                #other types
                 pass
         self.t_registers[t1] = False
 
@@ -275,7 +299,7 @@ sb $t{}, frame_pointer($t{});
         if isinstance(var_or_reg, Variable) and var_or_reg.type == "bool":
             return True
         elif (
-            isinstance(var_or_reg, Immediate) or isinstance(var_or_reg, Register)
+                isinstance(var_or_reg, Immediate) or isinstance(var_or_reg, Register)
         ) and var_or_reg.is_bool:
             return True
         return False
@@ -1160,56 +1184,56 @@ b {} ;
         )
         return lbl
 
-    def _for(self, args):
-        print("for")
-        print(args)
-        result_code = ""
-        for_lablel = self.get_new_label()
-        # print(for_lablel.name)
-        end_label = self.get_new_label()
-        # print(end_label.name)
-        condition = args[1].number
-        # print(condition)
-
-        # check availability
-        if isinstance(args[0], Tree):
-            if len(args[0].children) == 0:
-                pass  # handle when we don't have first expr
-        elif len(args[0]) == 0:
-            pass  # handle when we don't have first expr
-        if isinstance(args[2], Tree):
-            if len(args[2].children) == 0:
-                pass  # handle when we don't have second expr
-        elif len(args[2]) == 0:
-            pass  # handle when we don't have second expr
-
-        # We do have both exprs
-        # todo
-        # label for condition
-        condition_label = self.get_label_to_expr_token(condition_part_token)
-        # label for part
-        step_label = self.get_label_to_expr_token(step_part_token)
-
-        # TODO:body (stmt tree) should be here
-        current_code = self.append_code(
-            current_code,
-            """
-{}:
-beq $t{},$zero,{}
-#body should be inserted here
-j {}
-{}:
-        """.format(
-                for_lablel.name,
-                condition,
-                end_label.name,
-                for_lablel.name,
-                end_label.name,
-            ),
-        )
-        result = Result()
-        result.write_code(current_code)
-        return result
+    #     def _for(self, args):
+    #         print("for")
+    #         print(args)
+    #         result_code = ""
+    #         for_lablel = self.get_new_label()
+    #         # print(for_lablel.name)
+    #         end_label = self.get_new_label()
+    #         # print(end_label.name)
+    #         condition = args[1].number
+    #         # print(condition)
+    #
+    #         # check availability
+    #         if isinstance(args[0], Tree):
+    #             if len(args[0].children) == 0:
+    #                 pass  # handle when we don't have first expr
+    #         elif len(args[0]) == 0:
+    #             pass  # handle when we don't have first expr
+    #         if isinstance(args[2], Tree):
+    #             if len(args[2].children) == 0:
+    #                 pass  # handle when we don't have second expr
+    #         elif len(args[2]) == 0:
+    #             pass  # handle when we don't have second expr
+    #
+    #         # We do have both exprs
+    #         # todo
+    #         # label for condition
+    #         condition_label = self.get_label_to_expr_token(condition_part_token)
+    #         # label for part
+    #         step_label = self.get_label_to_expr_token(step_part_token)
+    #
+    #         # TODO:body (stmt tree) should be here
+    #         current_code = self.append_code(
+    #             current_code,
+    #             """
+    # {}:
+    # beq $t{},$zero,{}
+    # #body should be inserted here
+    # j {}
+    # {}:
+    #         """.format(
+    #                 for_lablel.name,
+    #                 condition,
+    #                 end_label.name,
+    #                 for_lablel.name,
+    #                 end_label.name,
+    #             ),
+    #         )
+    #         result = Result()
+    #         result.write_code(current_code)
+    #         return result
 
     def pass_compare(self, args):
         # print(args[0].value)
@@ -1247,13 +1271,19 @@ j {}
 
     def constant_operand(self, args):
         # print("constant operands")
-        # print(args)
+        print(args)
         if isinstance(args[0], Token):
             if args[0].type == "NUMBER":
                 return Immediate(args[0].value)
             elif args[0].type == "BOOL":
                 imm = Immediate(1 if args[0].value == "true" else 0)
                 imm.is_bool = True
+                return imm
+            elif args[0].type == "STRING_CONSTANT":
+                str = args[0].value
+                str = str[1:len(str) - 1]
+                imm = Immediate(str)
+                imm.type = "string"
                 return imm
         return args
 
@@ -1305,11 +1335,12 @@ j {}
         return args[0]
 
     def print(self, args):
-        # print("print")
-        # print(args)
+        print("print")
+        print(args)
         current_code = ""
         if isinstance(args[0], Variable):
             if args[0].type == "int":
+                print("here 0")
                 current_code = self.append_code(
                     current_code,
                     """
@@ -1322,10 +1353,24 @@ syscall
                     ),
                 )
             elif args[0].type == "string":
+                print("here 1")
+                current_code = self.append_code(
+                    current_code,
+                    """
+move $a0,$t{};
+li $v0, 4;
+lw $a0, frame_pointer($a0);
+syscall
+                    """.format(
+                        args[0].address_offset
+                    )
+                )
                 pass
             elif args[0].type == "double":
+                print("here 2")
                 pass
             elif args[0].type == "bool":
+                print("here 3")
                 t1 = self.get_a_free_t_register()
                 lbl = self.get_new_label().name
                 lbl2 = self.get_new_label().name
@@ -1347,9 +1392,12 @@ syscall
                     ),
                 )
             else:
+                print("here 4")
                 pass  # other types
         elif isinstance(args[0], Register):
             if args[0].is_bool:
+                print("here 5")
+
                 lbl1 = self.get_new_label().name
                 lbl2 = self.get_new_label().name
                 current_code = self.append_code(
@@ -1368,12 +1416,17 @@ syscall
                     ),
                 )
             else:
+                print("here 6")
                 pass
                 # other types in Register
         elif isinstance(args[0], Immediate):
             if args[0].is_bool:
+                print("here 7")
+
                 pass  # todo
             else:
+                print("here 8")
+
                 current_code = self.append_code(
                     current_code,
                     """
@@ -1441,7 +1494,7 @@ class Immediate(Result):
     def __init__(self, value):
         super().__init__()
         self.value = value
-        self.is_bool = False
+        self.type = type
 
 
 class Label:

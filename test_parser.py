@@ -57,16 +57,16 @@ def main(argv):
     tree = parser.parse(
         """
     int main(){
-        int x;
-        int y;
-        y = 3;
-        x = 90;
-        print(90);
-        print(x);
+    int x;
+    x = 8;
+       print(x);
     }
     """
     )
-
+    # string
+    # x;
+    # x = "salam";
+    # print(x);
     # print(codeGen.expr_tokens)
 
     # tree = parser.parse("""
