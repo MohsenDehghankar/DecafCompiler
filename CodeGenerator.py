@@ -167,8 +167,8 @@ syscall
         return current_code + "\n" + new_code
 
     def assignment_calculated(self, args):
-        # print("assignment calculated")
-        # print(args)
+        print("assignment calculated")
+        print(args)
         left_value = args[0]
         right_value = args[1]
         t1 = self.get_a_free_t_register()
@@ -283,12 +283,16 @@ sb $t{}, frame_pointer($t{});
         return False
 
     def lvalue_calculated(self, args):
-        # print("lvalue calculated")
-        # print(args)
+        print("lvalue calculated")
+        print(args)
+        return args[0]
+
+    def pass_bool(self, args):
+        print("bool", args)
         return args[0]
 
     def identifier_in_expression(self, args):
-        # print("ident: {0}".format(args[0].value))
+        print("ident: {0}".format(args[0].value))
         return args[0]
 
     """
@@ -297,7 +301,7 @@ sb $t{}, frame_pointer($t{});
 
     def token_to_var(self, args):
         print("high prior: ")
-        print(args[0])
+        print(args)
 
         # start of expression
         #         if not self.expr_started:
@@ -358,190 +362,181 @@ mflo $t{};
     def multiply(self, args):
         # print("multiply")
         # print(args)
-        try:
-            current_code = ""
-            opr1 = args[0]
-            opr2 = args[1]
-            t1 = self.get_a_free_t_register()
-            self.t_registers[t1] = True
-            t2 = self.get_a_free_t_register()
-            if isinstance(opr1, Variable):
-                if opr1.type == "int":
-                    current_code = self.append_code(
-                        current_code,
-                        """
+        current_code = ""
+        opr1 = args[0]
+        opr2 = args[1]
+        self.check_type_for_math_expr(opr1, opr2)
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+        t2 = self.get_a_free_t_register()
+        if isinstance(opr1, Variable):
+            if opr1.type == "int":
+                current_code = self.append_code(
+                    current_code,
+                    """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
                     """.format(
-                            t1, opr1.address_offset, t1, t1
-                        ),
-                    )
-                else:
-                    pass  # type checking
-            elif isinstance(opr1, Immediate):
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $t{}, {};
-                """.format(
-                        t1, opr1.value
-                    ),
-                )
-            elif isinstance(opr1, Register):
-                current_code = self.append_code(
-                    current_code,
-                    """
-move $t{}, ${};
-                """.format(
-                        t1, opr1.type + str(opr1.number)
+                        t1, opr1.address_offset, t1, t1
                     ),
                 )
             else:
-                pass  # other things
-            if isinstance(opr2, Variable):
-                if opr2.type == "int":
-                    current_code = self.append_code(
-                        current_code,
-                        """
-li $t{}, {};
-lw $t{}, frame_pointer($t{});
-                    """.format(
-                            t2, opr2.address_offset, t2, t2
-                        ),
-                    )
-                else:
-                    pass  # type checking
-            elif isinstance(opr2, Immediate):
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $t{}, {};
-                """.format(
-                        t2, opr2.value
-                    ),
-                )
-            elif isinstance(opr2, Register):
-                current_code = self.append_code(
-                    current_code,
-                    """
-move $t{}, ${};
-                """.format(
-                        t2, opr2.type + str(opr2.number)
-                    ),
-                )
-            else:
-                pass  # other things
-
+                pass  # type checking
+        elif isinstance(opr1, Immediate):
             current_code = self.append_code(
                 current_code,
                 """
+li $t{}, {};
+                """.format(
+                    t1, opr1.value
+                ),
+            )
+        elif isinstance(opr1, Register):
+            current_code = self.append_code(
+                current_code,
+                """
+move $t{}, ${};
+                """.format(
+                    t1, opr1.type + str(opr1.number)
+                ),
+            )
+        else:
+            pass  # other things
+        if isinstance(opr2, Variable):
+            if opr2.type == "int":
+                current_code = self.append_code(
+                    current_code,
+                    """
+li $t{}, {};
+lw $t{}, frame_pointer($t{});
+                    """.format(
+                        t2, opr2.address_offset, t2, t2
+                    ),
+                )
+            else:
+                pass  # type checking
+        elif isinstance(opr2, Immediate):
+            current_code = self.append_code(
+                current_code,
+                """
+li $t{}, {};
+                """.format(
+                    t2, opr2.value
+                ),
+            )
+        elif isinstance(opr2, Register):
+            current_code = self.append_code(
+                current_code,
+                """
+move $t{}, ${};
+                """.format(
+                    t2, opr2.type + str(opr2.number)
+                ),
+            )
+        else:
+            pass  # other things
+        current_code = self.append_code(
+            current_code,
+            """
 mult $t{}, $t{};
 mflo $t{};
             """.format(
-                    t1, t2, t1
-                ),
-            )
-            reg = Register("t", t1)
-            reg.write_code(current_code)
-            return reg
-        except Exception:
-            print("Error in multiply")
-            exit(4)
-        return args
+                t1, t2, t1
+            ),
+        )
+        reg = Register(opr1.type, "t", t1)
+        reg.write_code(current_code)
+        return reg
 
     def divide(self, args):
-        # print("divide")
-        # print(args)
-        try:
-            current_code = ""
-            opr1 = args[0]
-            opr2 = args[1]
-            t1 = self.get_a_free_t_register()
-            self.t_registers[t1] = True
-            t2 = self.get_a_free_t_register()
-            if isinstance(opr1, Variable):
-                if opr1.type == "int":
-                    current_code = self.append_code(
-                        current_code,
-                        """
+        print("divide")
+        print(args)
+        current_code = ""
+        opr1 = args[0]
+        opr2 = args[1]
+        self.check_type_for_math_expr(opr1, opr2)
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+        t2 = self.get_a_free_t_register()
+        if isinstance(opr1, Variable):
+            if opr1.type == "int":
+                current_code = self.append_code(
+                    current_code,
+                    """
 li $t{}, {};
 lw $t{}, frame_pointer($t{});
                     """.format(
-                            t1, opr1.address_offset, t1, t1
-                        ),
-                    )
-                else:
-                    pass  # type checking
-            elif isinstance(opr1, Immediate):
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $t{}, {};
-                """.format(
-                        t1, opr1.value
-                    ),
-                )
-            elif isinstance(opr1, Register):
-                current_code = self.append_code(
-                    current_code,
-                    """
-move $t{}, ${};
-                """.format(
-                        t1, opr1.type + str(opr1.number)
+                        t1, opr1.address_offset, t1, t1
                     ),
                 )
             else:
-                pass  # other things
-            if isinstance(opr2, Variable):
-                if opr2.type == "int":
-                    current_code = self.append_code(
-                        current_code,
-                        """
-li $t{}, {};
-lw $t{}, frame_pointer($t{});
-                    """.format(
-                            t2, opr2.address_offset, t2, t2
-                        ),
-                    )
-                else:
-                    pass  # type checking
-            elif isinstance(opr2, Immediate):
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $t{}, {};
-                """.format(
-                        t2, opr2.value
-                    ),
-                )
-            elif isinstance(opr2, Register):
-                current_code = self.append_code(
-                    current_code,
-                    """
-move $t{}, ${};
-                """.format(
-                        t2, opr2.type + str(opr2.number)
-                    ),
-                )
-            else:
-                pass  # other things
-
+                pass  # type checking
+        elif isinstance(opr1, Immediate):
             current_code = self.append_code(
                 current_code,
                 """
-div $t{}, $t{};
-mflo $t{};
+li $t{}, {};
             """.format(
-                    t1, t2, t1
+                    t1, opr1.value
                 ),
             )
-            reg = Register("t", t1)
-            reg.write_code(current_code)
-            return reg
-        except Exception:
-            print("Error in DIvide")
-            exit(4)
-        return args
+        elif isinstance(opr1, Register):
+            current_code = self.append_code(
+                current_code,
+                """
+move $t{}, ${};
+            """.format(
+                    t1, opr1.type + str(opr1.number)
+                ),
+            )
+        else:
+            pass  # other things
+        if isinstance(opr2, Variable):
+            if opr2.type == "int":
+                current_code = self.append_code(
+                    current_code,
+                    """
+li $t{}, {};
+lw $t{}, frame_pointer($t{});
+                """.format(
+                        t2, opr2.address_offset, t2, t2
+                    ),
+                )
+            else:
+                pass  # type checking
+        elif isinstance(opr2, Immediate):
+            current_code = self.append_code(
+                current_code,
+                """
+li $t{}, {};
+            """.format(
+                    t2, opr2.value
+                ),
+            )
+        elif isinstance(opr2, Register):
+            current_code = self.append_code(
+                current_code,
+                """
+move $t{}, ${};
+            """.format(
+                    t2, opr2.type + str(opr2.number)
+                ),
+            )
+        else:
+            pass  # other things
+
+        current_code = self.append_code(
+            current_code,
+            """
+div $t{}, $t{};
+mflo $t{};
+        """.format(
+                t1, t2, t1
+            ),
+        )
+        reg = Register(opr1, "t", t1)
+        reg.write_code(current_code)
+        return reg
 
     def mod(self, args):
         # print("mod")
@@ -638,8 +633,8 @@ mfhi $t{};
         return args
 
     def not_statement(self, args):
-        # print("not statement")
-        # print(args)
+        print("not statement")
+        print(args)
         if isinstance(args[0], Variable):
             if args[0].type == "bool":
                 current_code = ""
@@ -732,6 +727,7 @@ li ${}, 1;
         # print(args)
         opr1 = args[0]
         opr2 = args[1]
+        self.check_type_for_math_expr(opr1, opr2)
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
@@ -813,11 +809,21 @@ add $t{}, $t{}, $t{}
 
         return reg
 
+    def check_type_for_math_expr(self, opr1, opr2):
+        if opr1.type != opr2.type:
+            print("invalid type {} and {}".format(opr1.type, opr2.type))
+            exit(4)
+        if opr1.type != ("int" and "double"):
+            print("math expr (+,-,*,/,%) for {} are not allowed".format(opr1.type))
+            exit(4)
+
     def sub(self, args):
-        # print("minus")
-        # print(args)
+        print("minus")
+        print(args)
+
         opr1 = args[0]
         opr2 = args[1]
+        self.check_type_for_math_expr(opr1, opr2)
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
@@ -1244,38 +1250,41 @@ j {}
         return "double{}".format(self.tmp_double_count)
 
     def calculate_value_of_double(self, val):
-        mantis, exponent = val.lower().split("e")
-        if exponent[0] == "+":
-            exponent = int(exponent)
+        val = val.lower()
+        if "e" in val:
+            mantis, exponent = val.lower().split("e")
+            if exponent[0] == "+":
+                exponent = int(exponent)
+            else:
+                exponent = -int(exponent)
+            val = float(mantis) * 10 ** exponent
+            return val
         else:
-            exponent = -int(exponent)
-        val = float(mantis) * 10 ** exponent
-        return val
+            return float(val)
 
     def constant_operand(self, args):
-        # print("constant operands")
-        # print(args)
+        print("constant operands")
+        print(args)
         if isinstance(args[0], Token):
             if args[0].type == "INT":
-                return Immediate(args[0].value)
+                return Immediate(args[0].value, "int")
             elif args[0].type == "DOUBLE":
                 var = self.create_variable("double", self.generate_name_for_double())
                 var.value = self.calculate_value_of_double(args[0].value)
                 return var
             elif args[0].type == "BOOL":
-                imm = Immediate(1 if args[0].value == "true" else 0)
-                imm.is_bool = True
+                imm = Immediate(1 if args[0].value == "true" else 0, "bool")
                 return imm
         return args
 
     def pass_constant(self, args):
-        # print("pass constants", args)
-        # print(args[0].children[0])
+        print("pass constants", args)
+        print(args[0].children[0])
         return args[0].children[0]
 
     def call_action(self, args):
-        # print("call")
-        # print(args)
+        print("call")
+        print(args)
         return args[0]
 
     def paranthes_action(self, args):
@@ -1471,10 +1480,10 @@ class Register(Result):
 
 
 class Immediate(Result):
-    def __init__(self, value):
+    def __init__(self, value, _type):
         super().__init__()
         self.value = value
-        self.is_bool = False
+        self.type = _type
 
     def __repr__(self):
         return "Immediate value: {}".format(self.value)

@@ -73,7 +73,7 @@ def main(argv):
         """
     int main(){
         int x;
-        x = 1.2E2;
+        x = 1.2 * 2.3;
     }
     """
     )

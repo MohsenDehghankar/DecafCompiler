@@ -99,9 +99,9 @@ actual : actual","expr
 constant : HEX_NUMBER 
         | DOUBLE                
         | INT
-        | BOOL                  
+        | BOOL                 
         | STRING_CONSTANT 
-        | "null"
+        | "null"                
 
 //------special statements----------
 if: "if" "(" expr ")" stmt ("else" stmt)? -> _if
@@ -127,7 +127,7 @@ prototype : type IDENT "(" formal ")" ";"
 STRING_CONSTANT : /"[^"^\n]*"/
 COMMENT : "//" /[^\n]*/
         | "/*" /(.|\n)+/ "*/"
-BOOL.2 : "true" | "false"
+BOOL.6 : "true" | "false"  
 IDENT : /[a-zA-Z]([\w]|[_]){0,30}/
 HEX_NUMBER.2: /0x[\da-f]*/
 READLINE.4: "ReadLine()"
