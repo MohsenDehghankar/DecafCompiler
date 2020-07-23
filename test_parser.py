@@ -75,7 +75,7 @@ def main(argv):
         bool x;
         bool y;
         y = false;
-        x = !y;
+        x = !3;
     }
     """
     )
