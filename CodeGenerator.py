@@ -221,7 +221,7 @@ lw $t{}, frame_pointer($t{});
                 code = self.append_code(
                     code,
                     """
-        li.d $f{}, {};
+li.d $f{}, {};
                     """.format(
                         f1, right_opr.value
                     ),
@@ -230,8 +230,8 @@ lw $t{}, frame_pointer($t{});
                 code = self.append_code(
                     code,
                     """
-        li $t{}, {};
-        lwc1 $f{}, frame_pointer($t{})
+li $t{}, {};
+l.d $f{}, frame_pointer($t{})
                     """.format(
                         t1, right_opr.address_offset, f1, t1
                     ),
@@ -242,8 +242,8 @@ lw $t{}, frame_pointer($t{});
         code = self.append_code(
             code,
             """
-    li $t{}, {};
-    swc1 $f{}, frame_pointer($t{});
+li $t{}, {};
+s.d $f{}, frame_pointer($t{});
                 """.format(
                 t1, left_opr.address_offset, f1, t1
             ),
@@ -259,8 +259,10 @@ lw $t{}, frame_pointer($t{});
         self.type_checking_for_assignment(left_value, right_value)
 
         if left_value.type == "double":
-            current_code = self.handle_double_assignment(left_value, right_value)
-            args[0].write_code(current_code)
+            code = right_value.code
+            assign_code = self.handle_double_assignment(left_value, right_value)
+            code = self.append_code(code, assign_code)
+            args[0].write_code(code)
             return args[0]
 
         t1 = self.get_a_free_t_register()
@@ -807,8 +809,8 @@ li.d $f{}, {};
         self.check_type_for_math_expr(opr1, opr2, "add")
 
         if opr1.type == "double":
-            return self.double_operation(opr1, opr2, "add")
-
+            reg = self.double_operation(opr1, opr2, "add")
+            return reg
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
@@ -1169,7 +1171,7 @@ li.d $f{}, {};
                     code,
                     """
 li $t{}, {};
-lwc1 $f{}, frame_pointer($t{})
+s.d $f{}, frame_pointer($t{})
                     """.format(
                         t1, opr.address_offset, f1, t1
                     ),
@@ -1569,7 +1571,30 @@ syscall
             elif args[0].type == "string":
                 pass
             elif args[0].type == "double":
-                pass
+                if args[0].address_offset == None:
+                    current_code = self.append_code(
+                        current_code,
+                        """
+li $v0, 3;
+li.d $f12, {};
+syscall
+                """.format(
+                            args[0].value
+                        ),
+                    )
+                else:
+                    t1 = self.get_a_free_t_register()
+                    current_code = self.append_code(
+                        current_code,
+                        """
+li $v0, 3;
+li $t{}, {};
+l.d $f12, frame_pointer($t{});
+syscall
+                """.format(
+                            t1, args[0].address_offset, t1
+                        ),
+                    )
             elif args[0].type == "bool":
                 t1 = self.get_a_free_t_register()
                 lbl = self.get_new_label().name
@@ -1594,7 +1619,7 @@ syscall
             else:
                 pass  # other types
         elif isinstance(args[0], Register):
-            if args[0].is_bool:
+            if args[0].type == "bool":
                 lbl1 = self.get_new_label().name
                 lbl2 = self.get_new_label().name
                 current_code = self.append_code(
@@ -1610,6 +1635,17 @@ la $a0, false_const;
 syscall
                 """.format(
                         args[0].type + str(args[0].number), lbl1, lbl2, lbl1, lbl2
+                    ),
+                )
+            elif args[0].type == "double":
+                current_code = self.append_code(
+                    current_code,
+                    """
+li $v0, 3;
+mov.d $f12, {};
+syscall
+                """.format(
+                        args[0].number
                     ),
                 )
             else:
