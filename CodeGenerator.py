@@ -17,6 +17,8 @@ class CodeGenerator(Transformer):
         self.lvalue_stack = []
         # $t registers. $t[i] is being used <==> self.t_regsiters[i] = True
         self.t_registers = [False for i in range(10)]
+        # $f registers. $f[i] is being used <==> self.f_regsiters[i] = True
+        self.f_registers = [False for i in range(32)]
         # last local variable
         self.last_var_in_fp = None
         # for generating label names
@@ -160,6 +162,13 @@ syscall
         print("Not Enough Regsiter to Use!")
         exit(4)
 
+    def get_a_free_f_register(self):
+        for i in range(0, 32, 2):
+            if not self.f_registers[i]:
+                return i
+        print("Not Enough Regsiter to Use!")
+        exit(4)
+
     """
     After 'left_value = right_value' calculated 
     """
@@ -204,7 +213,7 @@ lw $t{}, frame_pointer($t{});
 
     def handle_double_assignment(self, left_opr, right_opr):
 
-        f1 = 0  # todo : generate f register dynamically
+        f1 = self.get_a_free_f_register()
         t1 = self.get_a_free_t_register()
         code = ""
         if isinstance(right_opr, Variable):
@@ -262,7 +271,7 @@ lw $t{}, frame_pointer($t{});
 
         # right
         if isinstance(right_value, Register):
-            if right_value.type == ("int" or "bool"):
+            if right_value.type == "int" or right_value.type == "bool":
                 right_code = self.code_for_loading_int_reg(t1, right_value)
 
             # now right register can be free
@@ -769,8 +778,10 @@ li ${}, 1;
         return args[0]
 
     def double_operation(self, opr1, opr2, instruction):
-        f1 = 0  # generate register dynamically
-        f2 = 2
+        f1 = self.get_a_free_f_register()
+        self.f_registers[f1] = True
+        # self.f_registers[f1 + 1] = True
+        f2 = self.get_a_free_f_register()
         current_code = ""
         current_code = self.append_code(
             current_code,
@@ -991,6 +1002,7 @@ sub $t{}, $t{}, $t{}
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
+        self.t_registers[t2] = True
         current_code = ""
         if isinstance(opr1, Register):
             current_code = self.append_code(
@@ -1106,8 +1118,18 @@ addi $t{}, $zero, 1;
         if left_opr.type == "string":
             pass  # todo: handle type checking for string
 
-    def handle_condition(self, left_opr, right_opr, branch_instruction):
+    def handle_condition(self, left_opr, right_opr, inst):
+        if left_opr.type == "double":
+            return self.handle_condition_for_double(left_opr, right_opr, inst)
 
+        _map = {
+            "<": "blt",
+            ">": "bgt",
+            "<=": "ble",
+            ">=": "bge",
+            "==": "beq",
+            "!=": "bne",
+        }
         t1, t2 = self.write_conditional_expr(left_opr, right_opr)
         label = self.get_new_label()
         current_code = ""
@@ -1117,7 +1139,7 @@ addi $t{}, $zero, 1;
 {} $t{}, $t{}, {};
         
         """.format(
-                branch_instruction, t1.number, t2.number, label.name
+                _map[inst], t1.number, t2.number, label.name
             ),
         )
 
@@ -1128,7 +1150,8 @@ addi $t{}, $zero, 1;
         return t1
 
     def load_double_to_reg(self, opr):
-        f1 = 0  # todo : generate f register dynamically
+        f1 = self.get_a_free_f_register()
+        self.f_registers[f1] = True
         t1 = self.get_a_free_t_register()
         code = ""
         if isinstance(opr, Variable):
@@ -1136,7 +1159,7 @@ addi $t{}, $zero, 1;
                 code = self.append_code(
                     code,
                     """
-        li.d $f{}, {};
+li.d $f{}, {};
                     """.format(
                         f1, opr.value
                     ),
@@ -1145,8 +1168,8 @@ addi $t{}, $zero, 1;
                 code = self.append_code(
                     code,
                     """
-        li $t{}, {};
-        lwc1 $f{}, frame_pointer($t{})
+li $t{}, {};
+lwc1 $f{}, frame_pointer($t{})
                     """.format(
                         t1, opr.address_offset, f1, t1
                     ),
@@ -1158,64 +1181,91 @@ addi $t{}, $zero, 1;
         reg.write_code(code)
         return reg
 
-    def handle_condition_for_double(self, left_opr, right_opr, branch_instruction):
+    def handle_condition_for_double(self, left_opr, right_opr, inst):
+        _map = {
+            "<": "c.lt.d",
+            ">": "c.lt.d",
+            "<=": "c.le.d",
+            ">=": "c.le.d",
+            "==": "c.eq.d",
+            "!=": "c.eq.d",
+        }
+
         left_reg = self.load_double_to_reg(left_opr)
         right_reg = self.load_double_to_reg(right_opr)
-        t1 = self.get_a_free_t_register()  # todo: generate dynamic
+
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+
         code = self.append_code(left_reg.code, right_reg.code)
+
         one_label = self.get_new_label()
-        zero_label = self.get_new_label()
+        out_label = self.get_new_label()
+
+        if inst == "<" or inst == "<=" or inst == "==":
+            code = self.append_code(
+                code,
+                """
+{} $f{}, $f{};
+bc1t {}
+            """.format(
+                    _map[inst], left_reg.number, right_reg.number, one_label.name
+                ),
+            )
+        else:
+            code = self.append_code(
+                code,
+                """
+{} $f{}, $f{};
+bc1f {}
+            """.format(
+                    _map[inst], left_reg.number, right_reg.number, one_label.name
+                ),
+            )
         code = self.append_code(
             code,
             """
-{} $f{}, $f{};
-bc1t {}
 add $t{}, $zero, $zero;
 b {};
 {}:
 addi $t{}, $zero, 1;
 {}:
         """.format(
-                branch_instruction,
-                left_reg.number,
-                right_reg.number,
-                one_label.name,
-                t1,
-                one_label.name,
-                one_label.name,
-                t1,
-                one_label.name,
+                t1, out_label.name, one_label.name, t1, out_label.name,
             ),
         )
+        reg = Register("bool", "t", t1)
+        reg.write_code(code)
+        return reg
 
     def less_than(self, args):
         self.type_checking_for_compare_expr(args[0], args[1], "<")
-        t1 = self.handle_condition(args[0], args[1], "blt")
+        t1 = self.handle_condition(args[0], args[1], "<")
         return t1
 
     def less_equal(self, args):
         self.type_checking_for_compare_expr(args[0], args[1], "<=")
-        t1 = self.handle_condition(args[0], args[1], "ble")
+        t1 = self.handle_condition(args[0], args[1], "<=")
         return t1
 
     def grater_than(self, args):
         self.type_checking_for_compare_expr(args[0], args[1], ">")
-        t1 = self.handle_condition(args[0], args[1], "bgt")
+        t1 = self.handle_condition(args[0], args[1], ">")
         return t1
 
     def grater_equal(self, args):
         self.type_checking_for_compare_expr(args[0], args[1], ">=")
-        t1 = self.handle_condition(args[0], args[1], "bge")
+        t1 = self.handle_condition(args[0], args[1], ">=")
         return t1
 
     def equal(self, args):
         self.type_checking_for_equality_expr(args[0], args[1], "==")
-        t1 = self.handle_condition(args[0], args[1], "beq")
+        t1 = self.handle_condition(args[0], args[1], "==")
         return t1
 
     def not_equal(self, args):
         self.type_checking_for_equality_expr(args[0], args[1], "!=")
-        t1 = self.handle_condition(args[0], args[1], "bne")
+        t1 = self.handle_condition(args[0], args[1], "!=")
         return t1
 
     def type_checking_for_logical_expr(self, left_opr, right_opr, instruction):

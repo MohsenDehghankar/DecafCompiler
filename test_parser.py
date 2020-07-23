@@ -73,8 +73,9 @@ def main(argv):
         """
    int main(){
         bool x;
-        int y;
-        y = 2;
+        bool y;
+        y = 2.2 != 2.2;
+        print(y);
     }
     """
     )
