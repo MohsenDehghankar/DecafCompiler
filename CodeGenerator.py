@@ -52,6 +52,7 @@ main:
     """
 
     def variable_declare(self, args):
+        print("var_declare", args)
         variable_name = args[0].children[1].value
 
         if variable_name in self.symbol_table.keys():
@@ -166,64 +167,124 @@ syscall
     def append_code(self, current_code, new_code):
         return current_code + "\n" + new_code
 
+    def type_checking_for_assignment(self, l_opr, r_opr):
+        if l_opr.type != r_opr.type:
+            print(
+                "invalid type {} and {} for assignment".format(l_opr.type, r_opr.type)
+            )
+            exit(4)
+
+    def code_for_loading_int_reg(self, t_reg, _int):
+        code = """
+    move $t{}, ${};
+                """.format(
+            t_reg, _int.type + str(_int.number)
+        )
+
+        return code
+
+    def code_for_loading_int_Imm(self, t_reg, _Imm):
+        code = """
+li $t{}, {};
+            """.format(
+            t_reg, _Imm.value
+        )
+
+        return code
+
+    def code_for_moveing_int_var(self, t_reg, var):
+        code = """
+li $t{}, {};
+lw $t{}, frame_pointer($t{});
+            """.format(
+            t_reg, var.address_offset, t_reg, t_reg
+        )
+
+        return code
+
+    def handle_double_assignment(self, left_opr, right_opr):
+
+        f1 = 0  # todo : generate f register dynamically
+        t1 = self.get_a_free_t_register()
+        code = ""
+        if isinstance(right_opr, Variable):
+            if right_opr.address_offset == None:
+                code = self.append_code(
+                    code,
+                    """
+        li.d $f{}, {};
+                    """.format(
+                        f1, right_opr.value
+                    ),
+                )
+            else:
+                code = self.append_code(
+                    code,
+                    """
+        li $t{}, {};
+        lwc1 $f{}, frame_pointer($t{})
+                    """.format(
+                        t1, right_opr.address_offset, f1, t1
+                    ),
+                )
+        # double register
+        else:
+            f1 = right_opr.number
+        code = self.append_code(
+            code,
+            """
+    li $t{}, {};
+    swc1 $f{}, frame_pointer($t{});
+                """.format(
+                t1, left_opr.address_offset, f1, t1
+            ),
+        )
+        return code
+
     def assignment_calculated(self, args):
         print("assignment calculated")
         print(args)
         left_value = args[0]
         right_value = args[1]
+
+        self.type_checking_for_assignment(left_value, right_value)
+
+        if left_value.type == "double":
+            current_code = self.handle_double_assignment(left_value, right_value)
+            args[0].write_code(current_code)
+            return args[0]
+
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
 
         current_code = ""
+        right_code = ""
+
         # right
         if isinstance(right_value, Register):
-            # check bool
-            if right_value.is_bool and not self.is_bool(left_value):
-                print("BOOL assignment to non BOOL.")
-                exit(4)
+            if right_value.type == ("int" or "bool"):
+                right_code = self.code_for_loading_int_reg(t1, right_value)
 
-            current_code = self.append_code(
-                current_code,
-                """
-move $t{}, ${};
-            """.format(
-                    t1, right_value.type + str(right_value.number)
-                ),
-            )
-            if right_value.type == "t":
+            # now right register can be free
+            if right_value.kind == "t":
                 self.t_registers[right_value.number] = False
-        elif isinstance(right_value, Immediate):
-            # check bool
-            if right_value.is_bool and not self.is_bool(left_value):
-                print("BOOL assignment to non BOOL.")
-                exit(4)
 
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-            """.format(
-                    t1, right_value.value
-                ),
-            )
-        else:
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-lw $t{}, frame_pointer($t{});
-            """.format(
-                    t1, right_value.address_offset, t1, t1
-                ),
-            )
+        elif isinstance(right_value, Immediate):
+            right_code = self.code_for_loading_int_Imm(t1, right_value)
+
+        elif isinstance(right_value, Variable):
+            # int or bool
+            right_code = self.code_for_moveing_int_var(t1, right_value)
+
+        current_code = self.append_code(current_code, right_code)
 
         # left
         if isinstance(left_value, Register):
-            current_code = self.append_code(
+            current_code = self.append_code(  # ?????????????
                 current_code,
                 """
-move ${}, $t{};
-            """.format(
+    move ${}, $t{};
+                """.format(
                     left_value.type + str(left_value.number), t1
                 ),
             )
@@ -242,10 +303,6 @@ sw $t{}, frame_pointer($t{});
                 )
             elif left_value.type == "bool":
                 t2 = self.get_a_free_t_register()
-                if not self.is_bool(right_value):
-                    print("Wrong assignment to BOOL variable")
-                    exit(4)
-
                 current_code = self.append_code(
                     current_code,
                     """
@@ -272,16 +329,6 @@ sb $t{}, frame_pointer($t{});
     Check if a Variable, Register or Immediate is 'bool'
     """
 
-    def is_bool(self, var_or_reg):
-        # check if the Variable or Register or Immediate is bool
-        if isinstance(var_or_reg, Variable) and var_or_reg.type == "bool":
-            return True
-        elif (
-            isinstance(var_or_reg, Immediate) or isinstance(var_or_reg, Register)
-        ) and var_or_reg.is_bool:
-            return True
-        return False
-
     def lvalue_calculated(self, args):
         print("lvalue calculated")
         print(args)
@@ -302,15 +349,6 @@ sb $t{}, frame_pointer($t{});
     def token_to_var(self, args):
         print("high prior: ")
         print(args)
-
-        # start of expression
-        #         if not self.expr_started:
-        #             self.expr_started = True
-        #             tkn = str(uuid.uuid4())
-        #             self.expr_tokens.append(tkn)
-        #             self.write_code("""
-        # #{}
-        #             """.format(tkn))
 
         try:
             child = args[0]
@@ -722,12 +760,36 @@ li ${}, 1;
     def pass_math_expr1(self, args):
         return args[0]
 
+    def double_operation(self, opr1, opr2, instruction):
+        f1 = 0  # generate register dynamically
+        f2 = 2
+        current_code = ""
+        current_code = self.append_code(
+            current_code,
+            """
+li.d $f{}, {};
+li.d $f{}, {};
+{}.d $f{}, $f{}, $f{} 
+            """.format(
+                f1, opr1.value, f2, opr2.value, instruction, f1, f1, f2
+            ),
+        )
+        reg = Register("double", "f", f1)
+        reg.write_code(current_code)
+        return reg
+
     def add(self, args):
-        # print("add")
-        # print(args)
+        print("add")
+        print(args)
         opr1 = args[0]
         opr2 = args[1]
+
+        # type checking
         self.check_type_for_math_expr(opr1, opr2)
+
+        if opr1.type == "double":
+            return self.double_operation(opr1, opr2, "add")
+
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
@@ -813,7 +875,7 @@ add $t{}, $t{}, $t{}
         if opr1.type != opr2.type:
             print("invalid type {} and {}".format(opr1.type, opr2.type))
             exit(4)
-        if opr1.type != ("int" and "double"):
+        if opr1.type != "int" and opr1.type != "double":
             print("math expr (+,-,*,/,%) for {} are not allowed".format(opr1.type))
             exit(4)
 
@@ -1269,7 +1331,9 @@ j {}
             if args[0].type == "INT":
                 return Immediate(args[0].value, "int")
             elif args[0].type == "DOUBLE":
-                var = self.create_variable("double", self.generate_name_for_double())
+                var = Variable()
+                var.type = "double"
+                # var = self.create_variable("double", self.generate_name_for_double())
                 var.value = self.calculate_value_of_double(args[0].value)
                 return var
             elif args[0].type == "BOOL":
@@ -1465,7 +1529,7 @@ class Register(Result):
         self.type = _type  # int, string, boolian, double
         self.kind = kind  # s, v, a, t
         self.number = number
-        self.is_bool = False
+        # self.is_bool = False
         self.is_reference = False  # later
 
     def __str__(self):

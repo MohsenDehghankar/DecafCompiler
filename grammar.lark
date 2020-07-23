@@ -127,7 +127,7 @@ prototype : type IDENT "(" formal ")" ";"
 STRING_CONSTANT : /"[^"^\n]*"/
 COMMENT : "//" /[^\n]*/
         | "/*" /(.|\n)+/ "*/"
-BOOL.6 : "true" | "false"  
+BOOL.2 : "true" | "false"  
 IDENT : /[a-zA-Z]([\w]|[_]){0,30}/
 HEX_NUMBER.2: /0x[\da-f]*/
 READLINE.4: "ReadLine()"
