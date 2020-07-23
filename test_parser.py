@@ -74,8 +74,10 @@ def main(argv):
     int main(){
         bool x;
         bool y;
-        y = false;
-        x = !3;
+        x = 3 > 4;
+
+
+        
     }
     """
     )
