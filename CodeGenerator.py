@@ -283,6 +283,7 @@ sb $t{}, frame_pointer($t{});
         self.t_registers[t1] = False
 
         # add this generated code
+        # self.deepest_in_tree(args[0]).write_code(current_code)
         args[0].write_code(current_code)
 
         # return something for nested equalities
@@ -294,6 +295,7 @@ sb $t{}, frame_pointer($t{});
     Check if a Variable, Register or Immediate is 'bool'
     """
 
+<<<<<<< Updated upstream
     def is_bool(self, var_or_reg):
         # check if the Variable or Register or Immediate is bool
         if isinstance(var_or_reg, Variable) and var_or_reg.type == "bool":
@@ -303,6 +305,12 @@ sb $t{}, frame_pointer($t{});
         ) and var_or_reg.is_bool:
             return True
         return False
+=======
+    def lvalue_calculated(self, args):
+        print("lvalue calculated")
+        print(args[0])
+        return args[0]
+>>>>>>> Stashed changes
 
     def lvalue_calculated(self, args):
         # print("lvalue calculated")
@@ -1184,6 +1192,7 @@ b {} ;
         )
         return lbl
 
+<<<<<<< Updated upstream
     #     def _for(self, args):
     #         print("for")
     #         print(args)
@@ -1234,6 +1243,112 @@ b {} ;
     #         result = Result()
     #         result.write_code(current_code)
     #         return result
+=======
+    def _for(self, args):
+        print("for")
+        condition_label = self.get_new_label()
+        end_label = self.get_new_label()
+        current_code = "";
+        for i in range(len(args)):
+            print(args[i])
+        if isinstance(args[0], Tree):
+            if len(args[0].children) != 0:
+                current_code = self.append_code(
+                    current_code, args[0].children[0].code
+                )
+        else:
+            pass
+        current_code = self.append_code(
+            current_code, """
+{}:
+
+            """.format(condition_label.name)
+        )
+        if isinstance(args[1], Register):
+            current_code = self.append_code(current_code, args[1].code)
+            current_code = self.append_code(
+                current_code, """
+beq $t{},$zero,{};
+            """.format(args[1].number, end_label.name)
+            )
+        else:
+            print("not handled")
+        if isinstance(args[3], Tree):
+            for i in range(len(args[3].children[0])):
+                current_code = self.append_code(
+                    current_code, args[3].children[0][i].children[0].code
+                )
+        else:
+            print("not handled")
+        if isinstance(args[2], Tree):
+            if len(args[2].children) != 0:
+                current_code = self.append_code(
+                    current_code, args[2].children[0].code
+                )
+        else:
+            pass
+        current_code = self.append_code(
+            current_code, """
+j {};
+{}:
+            """.format(condition_label.name, end_label.name)
+        )
+        result = Result()
+        result.write_code(current_code)
+        return result
+    # for i in len(args[3].children[0]-1):
+    #     print(args[3].children[0][i])
+    # current_code = self.append_code(current_code, child.code)
+
+
+#         result_code = ""
+#         for_lablel = self.get_new_label()
+#         # print(for_lablel.name)
+#         end_label = self.get_new_label()
+#         # print(end_label.name)
+#         condition = args[1].number
+#         # print(condition)
+#
+#         # check availability
+#         if isinstance(args[0], Tree):
+#             if len(args[0].children) == 0:
+#                 pass  # handle when we don't have first expr
+#         elif len(args[0]) == 0:
+#             pass  # handle when we don't have first expr
+#         if isinstance(args[2], Tree):
+#             if len(args[2].children) == 0:
+#                 pass  # handle when we don't have second expr
+#         elif len(args[2]) == 0:
+#             pass  # handle when we don't have second expr
+#
+#         # We do have both exprs
+#         # todo
+#         # label for condition
+#         condition_label = self.get_label_to_expr_token(condition_part_token)
+#         # label for part
+#         step_label = self.get_label_to_expr_token(step_part_token)
+#
+#         # TODO:body (stmt tree) should be here
+#         current_code = self.append_code(
+#             current_code,
+#             """
+# {}:
+# beq $t{},$zero,{}
+# #body should be inserted here
+# j {}
+# {}:
+#         """.format(
+#                 for_lablel.name,
+#                 condition,
+#                 end_label.name,
+#                 for_lablel.name,
+#                 end_label.name,
+#             ),
+#         )
+#         result = Result()
+#         result.write_code(current_code)
+#         return result
+>>>>>>> Stashed changes
 
     def pass_compare(self, args):
         # print(args[0].value)

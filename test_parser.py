@@ -57,9 +57,15 @@ def main(argv):
     tree = parser.parse(
         """
     int main(){
+<<<<<<< Updated upstream
     int x;
     x = 8;
        print(x);
+=======
+        int i;
+        for(i = 0; i<10; i=i+1){
+        }
+>>>>>>> Stashed changes
     }
     """
     )

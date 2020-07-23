@@ -109,7 +109,7 @@ if_expr : "if" "(" expr ")"     -> if_expr
 while : "while" "(" expr ")" stmt
 for : "for" "("exp_or_nothing";"expr_high_level";"exp_or_nothing")" stmt   -> _for
 return : "return" [expr] ";"
-print : ("Print"|"print") "("actual")" ";"      -> print
+print : ("Print"|"print") "("actual")" ";"      -> _print
 
 //------helps finding which expr is empty---
 exp_or_nothing : expr_high_level                -> pass_high_level_expr
