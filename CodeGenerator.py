@@ -90,7 +90,7 @@ main:
             variable.address_offset = (
                 offset
                 if offset % variable.size == 0
-                else offset + (variable.size - variable.size % offset)
+                else offset + (variable.size - offset % variable.size)
             )
         self.last_var_in_fp = variable
         if variable.address_offset + variable.size > 1000:
@@ -414,6 +414,9 @@ mflo $t{};
 
         self.check_type_for_math_expr(opr1, opr2, "*")
 
+        if opr1.type == "double":
+            return self.double_operation(opr1, opr2, "mul")
+
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
@@ -504,6 +507,9 @@ mflo $t{};
         opr2 = args[1]
 
         self.check_type_for_math_expr(opr1, opr2, "/")
+
+        if opr1.type == "double":
+            return self.double_operation(opr1, opr2, "div")
 
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
@@ -892,6 +898,10 @@ add $t{}, $t{}, $t{}
         opr1 = args[0]
         opr2 = args[1]
         self.check_type_for_math_expr(opr1, opr2, "sub")
+
+        if opr1.type == "double":
+            return self.double_operation(opr1, opr2, "sub")
+
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
@@ -1116,6 +1126,67 @@ addi $t{}, $zero, 1;
         self.t_registers[t2.number] = False
         t1.type = "bool"
         return t1
+
+    def load_double_to_reg(self, opr):
+        f1 = 0  # todo : generate f register dynamically
+        t1 = self.get_a_free_t_register()
+        code = ""
+        if isinstance(opr, Variable):
+            if opr.address_offset == None:
+                code = self.append_code(
+                    code,
+                    """
+        li.d $f{}, {};
+                    """.format(
+                        f1, opr.value
+                    ),
+                )
+            else:
+                code = self.append_code(
+                    code,
+                    """
+        li $t{}, {};
+        lwc1 $f{}, frame_pointer($t{})
+                    """.format(
+                        t1, opr.address_offset, f1, t1
+                    ),
+                )
+        # double register
+        else:
+            f1 = opr.number
+        reg = Register("double", "f", f1)
+        reg.write_code(code)
+        return reg
+
+    def handle_condition_for_double(self, left_opr, right_opr, branch_instruction):
+        left_reg = self.load_double_to_reg(left_opr)
+        right_reg = self.load_double_to_reg(right_opr)
+        t1 = self.get_a_free_t_register()  # todo: generate dynamic
+        code = self.append_code(left_reg.code, right_reg.code)
+        one_label = self.get_new_label()
+        zero_label = self.get_new_label()
+        code = self.append_code(
+            code,
+            """
+{} $f{}, $f{};
+bc1t {}
+add $t{}, $zero, $zero;
+b {};
+{}:
+addi $t{}, $zero, 1;
+{}:
+        """.format(
+                branch_instruction,
+                left_reg.number,
+                right_reg.number,
+                one_label.name,
+                t1,
+                one_label.name,
+                one_label.name,
+                t1,
+                one_label.name,
+            ),
+        )
 
     def less_than(self, args):
         self.type_checking_for_compare_expr(args[0], args[1], "<")

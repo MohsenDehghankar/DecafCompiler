@@ -71,13 +71,10 @@ def main(argv):
 
     tree = parser.parse(
         """
-    int main(){
+   int main(){
         bool x;
-        bool y;
-        x = 3 > 4;
-
-
-        
+        int y;
+        y = 2;
     }
     """
     )
