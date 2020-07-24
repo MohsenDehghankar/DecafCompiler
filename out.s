@@ -9,13 +9,6 @@ main:
 
 
 
-li $v0, 1;
-li $a0, 0;
-lw $a0, frame_pointer($a0);
-syscall
-
-
-
 
 
 
@@ -52,6 +45,7 @@ label2:
 
 
 beq $t0,$zero,label4;
+
 
 
 

@@ -1392,26 +1392,18 @@ b {};
         return lbl
 
     def _for(self, args):
-        # print("for")
-        # for i in range(len(args)):
-        #     print(args[i])
         condition_label = self.get_new_label()
         end_label = self.get_new_label()
         current_code = ""
         if len(args) == 4 or (len(args) == 3 and isinstance(args[1], Register)):
-            # print("*******exp[1]")
-            # print(args[0].code)
             current_code = self.append_code(current_code, args[0].code)
         current_code = self.append_code(
             current_code, """
 {}:
                 """.format(condition_label.name)
         )
-        # print(current_code)
 
         if len(args) == 4 or len(args) == 2 or (len(args) == 3 and isinstance(args[1], Register)):
-            # print("**********exp[2]")
-            # print(args[1].code)
             current_code = self.append_code(current_code, args[1].code)
             current_code = self.append_code(
                 current_code, """
@@ -1427,22 +1419,15 @@ beq $t{},$zero,{};
                             """.format(args[0].number, end_label.name)
             )
         if isinstance(args[len(args) - 1], Tree):
-            # print("*********childre of statement")
-            for child in args[len(args) - 1].children[0]:
-                # print(child.children[0].code)
-                current_code = self.append_code(
-                    current_code, child.children[0].code
-                )
+            print(args[len(args) - 1].children[0].code)
+            current_code = self.append_code(
+                current_code, args[len(args) - 1].children[0].code)
         else:
             print("not handled")
 
         if len(args) == 4:
-            # print("***************exp[2]")
-            # print(args[2].code)
             current_code = self.append_code(current_code, args[2].code)
         elif len(args) == 3 and isinstance(args[0], Register):
-            # print("***************exp[2]")
-            # print(args[1].code)
             current_code = self.append_code(current_code, args[1].code)
         current_code = self.append_code(
             current_code, """
@@ -1450,10 +1435,6 @@ j {};
 {}:
                 """.format(condition_label.name, end_label.name)
         )
-        # print("******** final current code")
-        # print(current_code)
-        # print("******** final current code")
-
         result = Result()
         result.write_code(current_code)
         return result
@@ -1721,7 +1702,6 @@ syscall
 
     def void_func_declare(self, args):
         return self.oo_gen.void_func_declare(args)
-
 
     def read_integer(self, args):
         print("read integer", args)
