@@ -1462,9 +1462,9 @@ j {}
         for result in args:
             if isinstance(result, Tree):
                 for child in result.children:
-                    self.append_code(code, child.code)
+                    code = self.append_code(code, child.code)
             else:
-                self.append_code(code, result.code)
+                code = self.append_code(code, result.code)
         result = Result()
         result.code = code
         return result
