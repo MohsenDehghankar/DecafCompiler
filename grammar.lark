@@ -106,7 +106,7 @@ constant : HEX_NUMBER
 //------special statements----------
 if: "if" "(" expr ")" stmt ("else" stmt)? -> _if
 while : "while" "(" expr ")" stmt
-for : "for" "("exp_or_nothing";"expr_high_level";"exp_or_nothing")" stmt   -> _for
+for : "for" "("expr";"expr";"expr")" stmt   -> _for
 return : "return" [expr] ";"
 print : ("Print"|"print") "("actual")" ";"      -> print
 
