@@ -33,6 +33,7 @@ class CodeGenerator(Transformer):
         self.oo_gen = ObjectOrientedCodeGen(self)
         # last declared function
         self.func_type_tmp = None
+        self.current_function_name = None
 
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
@@ -45,12 +46,13 @@ class CodeGenerator(Transformer):
         self.write_code(
             """
 .data
-frame_pointer:  .space  1000
+frame_pointer:  .space  10000
 true_const:     .asciiz "true"
 false_const:    .asciiz "false"
 
 .text
 main:
+la $s0, frame_pointer;
         """
         )
 
@@ -89,6 +91,7 @@ main:
         variable.type = var_type
         variable.name = var_name
         variable.calc_size()
+        self.get_last_variable_in_frame()
         if self.last_var_in_fp == None:
             variable.address_offset = 8
         else:
@@ -105,6 +108,20 @@ main:
             exit(4)
         self.symbol_table[var_name] = variable
         return variable
+
+    def get_last_variable_in_frame(self):
+        max_a = 0
+        last = None
+        for var in self.symbol_table.keys():
+            if self.symbol_table[var].address_offset >= max_a:
+                max_a = self.symbol_table[var].address_offset
+                last = self.symbol_table[var]
+        self.last_var_in_fp = last
+        if last is None:
+            var = Variable()
+            var.address_offset = 8
+            var.size = 0
+            self.last_var_in_fp = var
 
     """
     Getting the type of declared variable
@@ -133,6 +150,8 @@ main:
     def save_function_type(self, args):
         self.func_type_tmp = self.type_tmp
         self.type_tmp = None
+        # print("here")
+        # print(args)
         # return args
 
     """
@@ -153,13 +172,14 @@ li $v0, 9;
 li $a0, 16384;
 syscall
 li $t{}, {};
-sw $v0, frame_pointer($t{})
+add $t{}, $t{} ,$s0;
+sw $v0, ($t{})
 move $a0, $v0;
 li $v0, 8
 li $a1, 16384
 syscall
         """.format(
-                t, var.address_offset, t
+                t, var.address_offset, t, t, t
             )
         )
         # act as a new variable in rest of the tree
@@ -218,9 +238,10 @@ li $t{}, {};
     def code_for_moveing_int_var(self, t_reg, var):
         code = """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
             """.format(
-            t_reg, var.address_offset, t_reg, t_reg
+            t_reg, var.address_offset, t_reg, t_reg, t_reg, t_reg
         )
 
         return code
@@ -245,9 +266,10 @@ li.d $f{}, {};
                     code,
                     """
 li $t{}, {};
-l.d $f{}, frame_pointer($t{})
+add $t{}, $t{}, $s0;
+l.d $f{}, ($t{})
                     """.format(
-                        t1, right_opr.address_offset, f1, t1
+                        t1, right_opr.address_offset, t1, t1, f1, t1
                     ),
                 )
         # double register
@@ -257,9 +279,10 @@ l.d $f{}, frame_pointer($t{})
             code,
             """
 li $t{}, {};
-s.d $f{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+s.d $f{}, ($t{});
                 """.format(
-                t1, left_opr.address_offset, f1, t1
+                t1, left_opr.address_offset, t1, t1, f1, t1
             ),
         )
         return code
@@ -325,9 +348,10 @@ s.d $f{}, frame_pointer($t{});
                     current_code,
                     """
 li $t{}, {};
-sw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+sw $t{}, ($t{});
                 """.format(
-                        t2, left_value.address_offset, t1, t2
+                        t2, left_value.address_offset, t2, t2, t1, t2
                     ),
                 )
             elif left_value.type == "bool":
@@ -336,9 +360,10 @@ sw $t{}, frame_pointer($t{});
                     current_code,
                     """
 li $t{}, {};
-sb $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+sb $t{}, ($t{});
                 """.format(
-                        t2, left_value.address_offset, t1, t2
+                        t2, left_value.address_offset, t2, t2, t1, t2
                     ),
                 )
             else:
@@ -384,10 +409,14 @@ sb $t{}, frame_pointer($t{});
                 try:
                     return self.symbol_table[child.value]
                 except KeyError:
-                    return self.oo_gen.current_function_signiture[child.value]
-                except Exception:
-                    print("Variable Not Exists!")
-                    exit(4)
+                    try:
+                        for par in self.oo_gen.current_function_signiture:
+                            if par.name == child.value:
+                                return par
+                        raise Exception
+                    except Exception:
+                        print("Variable Not Exists!")
+                        exit(4)
             elif isinstance(child, Variable) and child.type == "double":
                 return child
             else:
@@ -421,11 +450,12 @@ sb $t{}, frame_pointer($t{});
                     """
 li $t{}, -1;
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
 mult $t{}, $t{};
 mflo $t{};
                 """.format(
-                        t1, t2, var.address_offset, t2, t2, t1, t2, t1
+                        t1, t2, var.address_offset, t2, t2, t2, t2, t1, t2, t1
                     ),
                 )
                 reg = Register("int", "t", t1)
@@ -460,9 +490,10 @@ mflo $t{};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
                     """.format(
-                        t1, opr1.address_offset, t1, t1
+                        t1, opr1.address_offset, t1, t1, t1, t1
                     ),
                 )
             else:
@@ -493,9 +524,10 @@ move $t{}, ${};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
                     """.format(
-                        t2, opr2.address_offset, t2, t2
+                        t2, opr2.address_offset, t2, t2, t2, t2
                     ),
                 )
             else:
@@ -555,9 +587,10 @@ mflo $t{};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
                     """.format(
-                        t1, opr1.address_offset, t1, t1
+                        t1, opr1.address_offset, t1, t1, t1, t1
                     ),
                 )
             else:
@@ -588,9 +621,10 @@ move $t{}, ${};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
                 """.format(
-                        t2, opr2.address_offset, t2, t2
+                        t2, opr2.address_offset, t2, t2, t2, t2
                     ),
                 )
             else:
@@ -647,9 +681,10 @@ mflo $t{};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
                     """.format(
-                        t1, opr1.address_offset, t1, t1
+                        t1, opr1.address_offset, t1, t1, t1, t1
                     ),
                 )
             else:
@@ -680,9 +715,10 @@ move $t{}, ${};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
                     """.format(
-                        t2, opr2.address_offset, t2, t2
+                        t2, opr2.address_offset, t2, t2, t2, t2
                     ),
                 )
             else:
@@ -737,7 +773,8 @@ mfhi $t{};
                 current_code,
                 """
 li $t{}, {};
-lb $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lb $t{}, ($t{});
 beq $t{}, $zero, {};
 move $t{}, $zero;
 j {};
@@ -747,6 +784,8 @@ li $t{}, 1;
              """.format(
                     t1,
                     args[0].address_offset,
+                    t1,
+                    t1,
                     t1,
                     t1,
                     t1,
@@ -823,8 +862,8 @@ li.d $f{}, {};
         return reg
 
     def add(self, args):
-        print("add")
-        print(args)
+        # print("add")
+        # print(args)
         opr1 = args[0]
         opr2 = args[1]
 
@@ -854,9 +893,10 @@ move $t{}, ${};
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
             """.format(
-                    t1, opr1.address_offset, t1, t1
+                    t1, opr1.address_offset, t1, t1, t1, t1
                 ),
             )
         elif isinstance(opr1, Immediate):
@@ -886,9 +926,10 @@ move $t{}, ${};
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
             """.format(
-                    t2, opr2.address_offset, t2, t2
+                    t2, opr2.address_offset, t2, t2, t2, t2
                 ),
             )
         elif isinstance(opr2, Immediate):
@@ -958,9 +999,10 @@ move $t{}, ${};
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
             """.format(
-                    t1, opr1.address_offset, t1, t1
+                    t1, opr1.address_offset, t1, t1, t1, t1
                 ),
             )
         elif isinstance(opr1, Immediate):
@@ -990,9 +1032,10 @@ move $t{}, ${};
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
             """.format(
-                    t2, opr2.address_offset, t2, t2
+                    t2, opr2.address_offset, t2, t2, t2, t2
                 ),
             )
         elif isinstance(opr2, Immediate):
@@ -1045,9 +1088,10 @@ move $t{}, ${};
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
             """.format(
-                    t1, opr1.address_offset, t1, t1
+                    t1, opr1.address_offset,t1,t1, t1, t1
                 ),
             )
         elif isinstance(opr1, Immediate):
@@ -1077,9 +1121,10 @@ move $t{}, ${};
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
             """.format(
-                    t2, opr2.address_offset, t2, t2
+                    t2, opr2.address_offset,t2,t2, t2, t2
                 ),
             )
         elif isinstance(opr2, Immediate):
@@ -1194,9 +1239,10 @@ li.d $f{}, {};
                     code,
                     """
 li $t{}, {};
-s.d $f{}, frame_pointer($t{})
+add $t{}, $t{}, $s0;
+s.d $f{}, ($t{})
                     """.format(
-                        t1, opr.address_offset, f1, t1
+                        t1, opr.address_offset,t1,t1, f1, t1
                     ),
                 )
         # double register
@@ -1415,30 +1461,44 @@ b {};
         if len(args) == 4 or (len(args) == 3 and isinstance(args[1], Register)):
             current_code = self.append_code(current_code, args[0].code)
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 {}:
-                """.format(condition_label.name)
+                """.format(
+                condition_label.name
+            ),
         )
 
-        if len(args) == 4 or len(args) == 2 or (len(args) == 3 and isinstance(args[1], Register)):
+        if (
+            len(args) == 4
+            or len(args) == 2
+            or (len(args) == 3 and isinstance(args[1], Register))
+        ):
             current_code = self.append_code(current_code, args[1].code)
             current_code = self.append_code(
-                current_code, """
+                current_code,
+                """
 beq ${}{},$zero,{};
-                            """.format(args[1].kind, args[1].number, end_label.name)
+                            """.format(
+                    args[1].kind, args[1].number, end_label.name
+                ),
             )
         else:
             # print(args[0].code)
             current_code = self.append_code(current_code, args[0].code)
             current_code = self.append_code(
-                current_code, """
+                current_code,
+                """
 beq ${}{},$zero,{};
-                            """.format(args[0].kind, args[0].number, end_label.name)
+                            """.format(
+                    args[0].kind, args[0].number, end_label.name
+                ),
             )
         if isinstance(args[len(args) - 1], Tree):
             print(args[len(args) - 1].children[0].code)
             current_code = self.append_code(
-                current_code, args[len(args) - 1].children[0].code)
+                current_code, args[len(args) - 1].children[0].code
+            )
         else:
             print("not handled")
 
@@ -1447,10 +1507,13 @@ beq ${}{},$zero,{};
         elif len(args) == 3 and isinstance(args[0], Register):
             current_code = self.append_code(current_code, args[1].code)
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 j {};
 {}:
-                """.format(condition_label.name, end_label.name)
+                """.format(
+                condition_label.name, end_label.name
+            ),
         )
         result = Result()
         result.write_code(current_code)
@@ -1463,26 +1526,34 @@ j {};
         loop_lable = self.get_new_label()
         end_lable = self.get_new_label()
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 {}:
-            """.format(loop_lable.name)
+            """.format(
+                loop_lable.name
+            ),
         )
         current_code = self.append_code(current_code, args[0].code)
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 beq ${}{},$zero,{};
-            """.format(args[0].kind, args[0].number, end_lable.name)
+            """.format(
+                args[0].kind, args[0].number, end_lable.name
+            ),
         )
         if isinstance(args[1], Tree):
-            current_code = self.append_code(
-                current_code, args[1].children[0].code)
+            current_code = self.append_code(current_code, args[1].children[0].code)
         else:
             print("not handled")
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 j {};
 {}:
-            """.format(loop_lable.name, end_lable.name)
+            """.format(
+                loop_lable.name, end_lable.name
+            ),
         )
         result = Result()
         result.write_code(current_code)
@@ -1622,7 +1693,8 @@ j {};
                     """
 li $v0, 1;
 li $a0, {};
-lw $a0, frame_pointer($a0);
+add $a0, $a0, $s0;
+lw $a0, ($a0);
 syscall
                 """.format(
                         args[0].address_offset
@@ -1649,10 +1721,11 @@ syscall
                         """
 li $v0, 3;
 li $t{}, {};
-l.d $f12, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+l.d $f12, ($t{});
 syscall
                 """.format(
-                            t1, args[0].address_offset, t1
+                            t1, args[0].address_offset,t1,t1, t1
                         ),
                     )
             elif args[0].type == "bool":
@@ -1663,7 +1736,8 @@ syscall
                     current_code,
                     """
 li $t{}, {};
-lb $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lb $t{}, ($t{});
 li $v0, 4;
 beq $t{}, $zero, {};
 la $a0, true_const;
@@ -1673,7 +1747,7 @@ la $a0, false_const;
 {}:
 syscall
                 """.format(
-                        t1, args[0].address_offset, t1, t1, t1, lbl, lbl2, lbl, lbl2
+                        t1, args[0].address_offset,t1,t1, t1, t1, t1, lbl, lbl2, lbl, lbl2
                     ),
                 )
             else:
@@ -1763,9 +1837,11 @@ syscall
     def return_from_func(self, args):
         return self.oo_gen.return_from_func(args)
 
-    def add_codes(self,args):
+    def add_codes(self, args):
         return self.oo_gen.add_codes(args)
-        
+
+    def function_call(self, args):
+        return self.oo_gen.function_call(args)
 
     """
     Read Integer

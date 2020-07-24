@@ -42,49 +42,27 @@ def main(argv):
 
     codeGen.create_data_segment()
 
-    # print("Parse Tree:")
-    #
-    # tree = parser.parse(
-    #     """
-    # int main(){
-    #     bool x;
-    #     x = true;
-    #     Print(!x);
-    # }
-    # """
-    # )
-
-    # tree = parser.parse(
-    #     """
-    # int main(){
-    #     int x;
-    #     int y;
-    #     y = 3;
-    #     x = 90;
-    #     print(90);
-    #     print(x);
-    # }
-    # """
-    # )
-
-    # print(codeGen.expr_tokens)
-
     tree = parser.parse(
         """
-    bool func1 (string a, double b){
-        bool y;
-        return y;
+    
+    void func2(int y){
+        y = y + 1;
+        print(y);
+    }
+    void func1 (int a){
+        print(a);
+        func2(a);
     }
     int main(){
-        print(10);
+        int x;
+        x = 90;
+        func1(x);
+        print(x);
     }
     """
     )
 
     # print(tree.pretty())
-
-    # add var declarations
-    # codeGen.generate_variable_declaration_codes()
 
     print("---------------------------------------\nsymbol table: ")
     for var in codeGen.symbol_table.keys():
