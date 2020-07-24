@@ -42,7 +42,7 @@ def main(argv):
 
     codeGen.create_data_segment()
 
-    print("Parse Tree:")
+    # print("Parse Tree:")
     #
     # tree = parser.parse(
     #     """
@@ -71,11 +71,13 @@ def main(argv):
 
     tree = parser.parse(
         """
-   int main(){
-        int i;
-        for (i=0; i<5; i=i+1){
+    int y;
+    bool my_func(int y){
 
-        }
+    }
+    int main(){
+        int i;
+        i = 9;
     }
     """
     )
