@@ -337,7 +337,7 @@ sb $t{}, frame_pointer($t{});
         result = Result()
         result.code = current_code
         # return something for nested equalities
-        return result # after assignment, the left value will be returned for other assignment (nested)
+        return result  # after assignment, the left value will be returned for other assignment (nested)
 
     """
     Check if a Variable, Register or Immediate is 'bool'
@@ -1389,58 +1389,68 @@ b {};
         return lbl
 
     def _for(self, args):
-        print("for")
-        print(args)
-        result_code = ""
-        for_lablel = self.get_new_label()
-        # print(for_lablel.name)
+        # print("for")
+        # for i in range(len(args)):
+        #     print(args[i])
+        condition_label = self.get_new_label()
         end_label = self.get_new_label()
-        # print(end_label.name)
-        condition = args[1].number
-        # print(condition)
-
-        # check availability
-        # if isinstance(args[0], Tree):
-        #     if len(args[0].children) == 0:
-        #         pass  # handle when we don't have first expr
-        # elif len(args[0]) == 0:
-        #     pass  # handle when we don't have first expr
-        # if isinstance(args[2], Tree):
-        #     if len(args[2].children) == 0:
-        #         pass  # handle when we don't have second expr
-        # elif len(args[2]) == 0:
-        #     pass  # handle when we don't have second expr
-
-        # We do have both exprs
-        # todo
-        # label for condition
-        # condition_label = self.get_label_to_expr_token(condition_part_token)
-        # label for part
-        # step_label = self.get_label_to_expr_token(step_part_token)
-
-        print(args[0].code)
-        print("----------------")
-        print(args[1].code)
-        print("--------------------")
-        print(args[2].code)
-
-        # TODO:body (stmt tree) should be here
+        current_code = ""
+        if len(args) == 4 or (len(args) == 3 and isinstance(args[1], Register)):
+            # print("*******exp[1]")
+            # print(args[0].code)
+            current_code = self.append_code(current_code, args[0].code)
         current_code = self.append_code(
-            current_code,
-            """
+            current_code, """
 {}:
-beq $t{},$zero,{}
-#body should be inserted here
-j {}
-{}:
-        """.format(
-                for_lablel.name,
-                condition,
-                end_label.name,
-                for_lablel.name,
-                end_label.name,
-            ),
+                """.format(condition_label.name)
         )
+        # print(current_code)
+
+        if len(args) == 4 or len(args) == 2 or (len(args) == 3 and isinstance(args[1], Register)):
+            # print("**********exp[2]")
+            # print(args[1].code)
+            current_code = self.append_code(current_code, args[1].code)
+            current_code = self.append_code(
+                current_code, """
+beq $t{},$zero,{};
+                            """.format(args[1].number, end_label.name)
+            )
+        else:
+            # print(args[0].code)
+            current_code = self.append_code(current_code, args[0].code)
+            current_code = self.append_code(
+                current_code, """
+beq $t{},$zero,{};
+                            """.format(args[0].number, end_label.name)
+            )
+        if isinstance(args[len(args) - 1], Tree):
+            # print("*********childre of statement")
+            for child in args[len(args) - 1].children[0]:
+                # print(child.children[0].code)
+                current_code = self.append_code(
+                    current_code, child.children[0].code
+                )
+        else:
+            print("not handled")
+
+        if len(args) == 4:
+            # print("***************exp[2]")
+            # print(args[2].code)
+            current_code = self.append_code(current_code, args[2].code)
+        elif len(args) == 3 and isinstance(args[0], Register):
+            # print("***************exp[2]")
+            # print(args[1].code)
+            current_code = self.append_code(current_code, args[1].code)
+        current_code = self.append_code(
+            current_code, """
+j {};
+{}:
+                """.format(condition_label.name, end_label.name)
+        )
+        # print("******** final current code")
+        # print(current_code)
+        # print("******** final current code")
+
         result = Result()
         result.write_code(current_code)
         return result
