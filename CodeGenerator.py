@@ -1,5 +1,6 @@
 from lark import Transformer, Tree
 from lark.lexer import Lexer, Token
+from ObjectOrientedCodeGen import ObjectOrientedCodeGen
 import uuid
 
 
@@ -28,6 +29,8 @@ class CodeGenerator(Transformer):
         # for loop
         self.expr_started = False
         self.expr_tokens = []
+        # object oriented code generator
+        self.oo_gen = ObjectOrientedCodeGen(self)
 
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
@@ -62,9 +65,9 @@ main:
             exit(4)
 
         # debug
-        print(
-            "Variable Declared type {0}, name {1}".format(self.type_tmp, variable_name)
-        )
+        # print(
+        #     "Variable Declared type {0}, name {1}".format(self.type_tmp, variable_name)
+        # )
 
         if self.type_tmp == None:
             print("Type of Variable {} unknown".format(variable_name))
@@ -107,19 +110,19 @@ main:
 
     def int_variable_declaraion(self, args):
         self.type_tmp = "int"
-        return args
+        return "int"
 
     def double_variable_declaration(self, args):
         self.type_tmp = "double"
-        return args
+        return "double"
 
     def bool_variable_declaration(self, args):
         self.type_tmp = "bool"
-        return args
+        return "bool"
 
     def string_variable_declaration(self, args):
         self.type_tmp = "string"
-        return args
+        return "string"
 
     """
     Read from console
@@ -1389,8 +1392,8 @@ b {};
         return lbl
 
     def _for(self, args):
-        print("for")
-        print(args)
+        # print("for")
+        # print(args)
         result_code = ""
         for_lablel = self.get_new_label()
         # print(for_lablel.name)
@@ -1455,13 +1458,16 @@ j {}
     def stmt_block(self, args):
         # print("stmt_block")
         # print(args)
+        code = ""
         for result in args:
             if isinstance(result, Tree):
                 for child in result.children:
-                    self.write_code(child.code)
+                    self.append_code(code, child.code)
             else:
-                self.write_code(result.code)
-        return args
+                self.append_code(code, result.code)
+        result = Result()
+        result.code = code
+        return result
 
     def pass_stmt(self, args):
         # print(args, 'pass_stmt')
@@ -1519,8 +1525,8 @@ j {}
         return args[0].children[0]
 
     def call_action(self, args):
-        print("call")
-        print(args)
+        # print("call")
+        # print(args)
         return args[0]
 
     def paranthes_action(self, args):
@@ -1550,8 +1556,8 @@ j {}
     def exp_calculated(self, args):
         # print("exp calculated")
         # print(args)
-        print("exp_calculated:")
-        print(args[0].code)
+        # print("exp_calculated:")
+        # print(args[0].code)
         return args[0]
 
     def end_of_expr(self, args):
@@ -1682,9 +1688,17 @@ syscall
         result.write_code(current_code)
         return result
 
-    # def number(self, args):
-    #     print("number", args)
-    #     return args
+
+    """
+    Methods from second code generator
+    """
+    def non_void_func_declare(self, args):
+        return self.oo_gen.non_void_func_declare(args)
+
+    def void_func_declare(self, args):
+        return self.oo_gen.void_func_declare(args)
+
+
 
 
 """
