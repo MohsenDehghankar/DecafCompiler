@@ -54,7 +54,7 @@ main:
     """
 
     def variable_declare(self, args):
-        print("var_declare", args)
+        # print("var_declare", args)
         variable_name = args[0].children[1].value
 
         if variable_name in self.symbol_table.keys():
@@ -251,8 +251,8 @@ s.d $f{}, frame_pointer($t{});
         return code
 
     def assignment_calculated(self, args):
-        print("assignment calculated")
-        print(args)
+        # print("assignment calculated")
+        # print(args)
         left_value = args[0]
         right_value = args[1]
 
@@ -262,8 +262,10 @@ s.d $f{}, frame_pointer($t{});
             code = right_value.code
             assign_code = self.handle_double_assignment(left_value, right_value)
             code = self.append_code(code, assign_code)
-            args[0].write_code(code)
-            return args[0]
+            # args[0].write_code(code)
+            result = Result()
+            result.code = code
+            return result
 
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
@@ -300,6 +302,8 @@ s.d $f{}, frame_pointer($t{});
                 ),
             )
 
+            # free left_value register
+            self.t_registers[left_value.number] = False
         else:
             if left_value.type == "int":
                 t2 = self.get_a_free_t_register()
@@ -329,20 +333,19 @@ sb $t{}, frame_pointer($t{});
         self.t_registers[t1] = False
 
         # add this generated code
-        args[0].write_code(current_code)
-
+        # args[0].write_code(current_code)
+        result = Result()
+        result.code = current_code
         # return something for nested equalities
-        return args[
-            0
-        ]  # after assignment, the left value will be returned for other assignment (nested)
+        return result # after assignment, the left value will be returned for other assignment (nested)
 
     """
     Check if a Variable, Register or Immediate is 'bool'
     """
 
     def lvalue_calculated(self, args):
-        print("lvalue calculated")
-        print(args)
+        # print("lvalue calculated")
+        # print(args)
         return args[0]
 
     def pass_bool(self, args):
@@ -358,8 +361,8 @@ sb $t{}, frame_pointer($t{});
     """
 
     def token_to_var(self, args):
-        print("high prior: ")
-        print(args)
+        # print("high prior: ")
+        # print(args)
 
         try:
             child = args[0]
@@ -1397,23 +1400,29 @@ b {};
         # print(condition)
 
         # check availability
-        if isinstance(args[0], Tree):
-            if len(args[0].children) == 0:
-                pass  # handle when we don't have first expr
-        elif len(args[0]) == 0:
-            pass  # handle when we don't have first expr
-        if isinstance(args[2], Tree):
-            if len(args[2].children) == 0:
-                pass  # handle when we don't have second expr
-        elif len(args[2]) == 0:
-            pass  # handle when we don't have second expr
+        # if isinstance(args[0], Tree):
+        #     if len(args[0].children) == 0:
+        #         pass  # handle when we don't have first expr
+        # elif len(args[0]) == 0:
+        #     pass  # handle when we don't have first expr
+        # if isinstance(args[2], Tree):
+        #     if len(args[2].children) == 0:
+        #         pass  # handle when we don't have second expr
+        # elif len(args[2]) == 0:
+        #     pass  # handle when we don't have second expr
 
         # We do have both exprs
         # todo
         # label for condition
-        condition_label = self.get_label_to_expr_token(condition_part_token)
+        # condition_label = self.get_label_to_expr_token(condition_part_token)
         # label for part
-        step_label = self.get_label_to_expr_token(step_part_token)
+        # step_label = self.get_label_to_expr_token(step_part_token)
+
+        print(args[0].code)
+        print("----------------")
+        print(args[1].code)
+        print("--------------------")
+        print(args[2].code)
 
         # TODO:body (stmt tree) should be here
         current_code = self.append_code(
@@ -1488,8 +1497,8 @@ j {}
             return float(val)
 
     def constant_operand(self, args):
-        print("constant operands")
-        print(args)
+        # print("constant operands")
+        # print(args)
         if isinstance(args[0], Token):
             if args[0].type == "INT":
                 return Immediate(args[0].value, "int")
@@ -1505,8 +1514,8 @@ j {}
         return args
 
     def pass_constant(self, args):
-        print("pass constants", args)
-        print(args[0].children[0])
+        # print("pass constants", args)
+        # print(args[0].children[0])
         return args[0].children[0]
 
     def call_action(self, args):
@@ -1539,8 +1548,10 @@ j {}
         return args[0]
 
     def exp_calculated(self, args):
-        print("exp calculated")
-        print(args)
+        # print("exp calculated")
+        # print(args)
+        print("exp_calculated:")
+        print(args[0].code)
         return args[0]
 
     def end_of_expr(self, args):
