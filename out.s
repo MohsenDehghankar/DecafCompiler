@@ -11,21 +11,11 @@ main:
 
 
 
+li $v0, 5;
+syscall
+move $t0, $v0;
+        
 
-
-li.d $f0, 2.3;
-li.d $f2, 1.2;
-mul.d $f0, $f0, $f2 
-            
-
-
-li $t0, 8;
-s.d $f0, frame_pointer($t0);
-                
-
-
-
-li $v0, 3;
-li $t0, 8;
-l.d $f12, frame_pointer($t0);
+li $v0, 1;
+move $a0, $t0;
 syscall

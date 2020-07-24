@@ -340,7 +340,7 @@ sb $t{}, frame_pointer($t{});
         result = Result()
         result.code = current_code
         # return something for nested equalities
-        return result # after assignment, the left value will be returned for other assignment (nested)
+        return result  # after assignment, the left value will be returned for other assignment (nested)
 
     """
     Check if a Variable, Register or Immediate is 'bool'
@@ -1571,7 +1571,8 @@ j {}
     def print(self, args):
         # print("print")
         # print(args)
-        current_code = ""
+        current_code = args[0].code
+
         if isinstance(args[0], Variable):
             if args[0].type == "int":
                 current_code = self.append_code(
@@ -1659,12 +1660,25 @@ syscall
                     current_code,
                     """
 li $v0, 3;
-mov.d $f12, {};
+mov.d $f12, $f{};
 syscall
                 """.format(
                         args[0].number
                     ),
                 )
+
+            elif args[0].type == "int":
+                current_code = self.append_code(
+                    current_code,
+                    """
+li $v0, 1;
+move $a0, $t{};
+syscall
+                """.format(
+                        args[0].number
+                    ),
+                )
+
             else:
                 pass
                 # other types in Register
@@ -1688,10 +1702,10 @@ syscall
         result.write_code(current_code)
         return result
 
-
     """
     Methods from second code generator
     """
+
     def non_void_func_declare(self, args):
         return self.oo_gen.non_void_func_declare(args)
 
@@ -1699,6 +1713,20 @@ syscall
         return self.oo_gen.void_func_declare(args)
 
 
+    def read_integer(self, args):
+        print("read integer", args)
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+        code = """
+li $v0, 5;
+syscall
+move $t{}, $v0;
+        """.format(
+            t1
+        )
+        reg = Register("int", "t", t1)
+        reg.write_code(code)
+        return reg
 
 
 """

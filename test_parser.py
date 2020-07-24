@@ -69,13 +69,22 @@ def main(argv):
 
     # print(codeGen.expr_tokens)
 
+    #     tree = parser.parse(
+    #         """
+    #    int main(){
+    #         int i;
+    #         for (i=0; i<5; i=i+1){
+
+    #         }
+    #     }
+    #     """
+    #     )
+
     tree = parser.parse(
         """
    int main(){
-        int i;
-        for (i=0; i<5; i=i+1){
-
-        }
+        int x;
+        print(ReadInteger());
     }
     """
     )
