@@ -12,6 +12,9 @@ class CodeGenerator(Transformer):
         self.mips_code = ""
         # stores (var_name, var_obj)
         self.symbol_table = {}
+        # symbol_tables['function_name']['var_name'] is instance of Variable
+        # this is the main symbol_table
+        self.symbol_tables = {}
         # last declared type
         self.type_tmp = None
         # needed for multiple assignments in one line: x = y = z
@@ -26,11 +29,10 @@ class CodeGenerator(Transformer):
         self.label_count = 0
         # for generating double name
         self.tmp_double_count = 0
-        # for loop
-        self.expr_started = False
-        self.expr_tokens = []
         # object oriented code generator
         self.oo_gen = ObjectOrientedCodeGen(self)
+        # last declared function
+        self.func_type_tmp = None
 
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
@@ -88,7 +90,7 @@ main:
         variable.name = var_name
         variable.calc_size()
         if self.last_var_in_fp == None:
-            variable.address_offset = 0
+            variable.address_offset = 8
         else:
             offset = self.last_var_in_fp.address_offset + self.last_var_in_fp.size
             # memory alignment
@@ -123,6 +125,15 @@ main:
     def string_variable_declaration(self, args):
         self.type_tmp = "string"
         return "string"
+
+    def void_function_declaration(self, args):
+        self.type_tmp = "void"
+        return "void"
+
+    def save_function_type(self, args):
+        self.func_type_tmp = self.type_tmp
+        self.type_tmp = None
+        # return args
 
     """
     Read from console
@@ -356,7 +367,7 @@ sb $t{}, frame_pointer($t{});
         return args[0]
 
     def identifier_in_expression(self, args):
-        print("ident: {0}".format(args[0].value))
+        # print("ident: {0}".format(args[0].value))
         return args[0]
 
     """
@@ -370,7 +381,13 @@ sb $t{}, frame_pointer($t{});
         try:
             child = args[0]
             if isinstance(child, Token) and child.type == "IDENT":
-                return self.symbol_table[child.value]
+                try:
+                    return self.symbol_table[child.value]
+                except KeyError:
+                    return self.oo_gen.current_function_signiture[child.value]
+                except Exception:
+                    print("Variable Not Exists!")
+                    exit(4)
             elif isinstance(child, Variable) and child.type == "double":
                 return child
             else:
@@ -1302,7 +1319,7 @@ and $t{}, $t{}, $t{};
                 ),
             )
             self.t_registers[t2.number] = False
-            t1.is_bool = True
+            t1.type = "bool"
             t1.write_code(current_code)
             return t1
         else:
@@ -1327,7 +1344,7 @@ or $t{}, $t{}, $t{};
                 ),
             )
             self.t_registers[t2.number] = False
-            t1.is_bool = True
+            t1.type = "bool"
             t1.write_code(current_code)
             return t1
         else:
@@ -1490,6 +1507,8 @@ j {};
                 code = self.append_code(code, result.code)
         result = Result()
         result.code = code
+        # used when going to a new function
+        result.symbol_table = self.symbol_table
         return result
 
     def pass_stmt(self, args):
@@ -1706,7 +1725,7 @@ syscall
                 pass
                 # other types in Register
         elif isinstance(args[0], Immediate):
-            if args[0].is_bool:
+            if args[0].type == "bool":
                 pass  # todo
             else:
                 current_code = self.append_code(
@@ -1735,6 +1754,23 @@ syscall
     def void_func_declare(self, args):
         return self.oo_gen.void_func_declare(args)
 
+    def func_declare(self, args):
+        return self.oo_gen.func_declare(args)
+
+    def formal_reduce(self, args):
+        return self.oo_gen.formal_reduce(args)
+
+    def return_from_func(self, args):
+        return self.oo_gen.return_from_func(args)
+
+    def add_codes(self,args):
+        return self.oo_gen.add_codes(args)
+        
+
+    """
+    Read Integer
+    """
+
     def read_integer(self, args):
         print("read integer", args)
         t1 = self.get_a_free_t_register()
@@ -1759,6 +1795,8 @@ Other Classes
 class Result:
     def __init__(self):
         self.code = ""
+        # When going to another function
+        self.symbol_table = {}
 
     def write_code(self, code):
         self.code += "\n" + code

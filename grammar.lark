@@ -1,7 +1,7 @@
-start: decl+
+start: decl+                                    -> add_codes
 
 decl : variabledec 
-        | funcdec               
+        | funcdec                               -> func_declare               
         | classdec 
         | interfacedec 
         | COMMENT
@@ -20,10 +20,14 @@ type : "int"            -> int_variable_declaraion
         | type "[]"
 
 //--------function dec--------
-funcdec : type IDENT "("formal")" stmtblock     -> non_void_func_declare
-        | "void" IDENT "("formal")" stmtblock   -> void_func_declare
+funcdec : type IDENT open_pr formal")" stmtblock             -> non_void_func_declare
+        | void_type IDENT "("formal")" stmtblock        -> void_func_declare
 
-formal : variable*
+open_pr : "("                                           -> save_function_type
+
+void_type : "void"                                      -> void_function_declaration
+
+formal : variable*                              -> formal_reduce
 
 stmtblock : "{" (variabledec|stmt|COMMENT)* "}" -> stmt_block
 
@@ -32,9 +36,9 @@ stmt : [expr]";"
         | if 
         | while 
         | for 
-        | return 
+        | return                -> return_from_func 
         | print 
-        | "break" ";"        -> pass_stmt
+        | "break" ";"           -> pass_stmt
 
 // -------expression---------
 expr_high_level : expr                                  -> end_of_expr                 // when the start and finish of expression is important (for, while)
@@ -141,7 +145,6 @@ READINTEGER.2: "ReadInteger()"
 // EMPTY: ""
 INT: /\d+/
 DOUBLE: /\d+\.\d*[E,e]\+?\d+/ | /\d+\.\d*/
-
 
 %import common.ESCAPED_STRING
 %import common._STRING_ESC_INNER

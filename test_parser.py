@@ -71,15 +71,13 @@ def main(argv):
 
     tree = parser.parse(
         """
-
-    int y;
-    bool my_func(int y){
-
+    bool func1 (string a, double b){
+        bool y;
+        return y;
     }
     int main(){
-        int i;
-        i = 9;
-
+        print(10);
+    }
     """
     )
 
@@ -88,7 +86,7 @@ def main(argv):
     # add var declarations
     # codeGen.generate_variable_declaration_codes()
 
-    print("symbol table: ")
+    print("---------------------------------------\nsymbol table: ")
     for var in codeGen.symbol_table.keys():
         var = codeGen.symbol_table[var]
         print(
@@ -97,7 +95,7 @@ def main(argv):
             )
         )
 
-    print("MIPS:")
+    print("---------------------------------------\nMIPS:")
     print(codeGen.mips_code)
 
 
