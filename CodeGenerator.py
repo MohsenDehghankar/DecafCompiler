@@ -1,5 +1,6 @@
 from lark import Transformer, Tree
 from lark.lexer import Lexer, Token
+from ObjectOrientedCodeGen import ObjectOrientedCodeGen
 import uuid
 
 
@@ -28,6 +29,8 @@ class CodeGenerator(Transformer):
         # for loop
         self.expr_started = False
         self.expr_tokens = []
+        # object oriented code generator
+        self.oo_gen = ObjectOrientedCodeGen(self)
 
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
@@ -62,9 +65,9 @@ main:
             exit(4)
 
         # debug
-        print(
-            "Variable Declared type {0}, name {1}".format(self.type_tmp, variable_name)
-        )
+        # print(
+        #     "Variable Declared type {0}, name {1}".format(self.type_tmp, variable_name)
+        # )
 
         if self.type_tmp == None:
             print("Type of Variable {} unknown".format(variable_name))
@@ -107,19 +110,19 @@ main:
 
     def int_variable_declaraion(self, args):
         self.type_tmp = "int"
-        return args
+        return "int"
 
     def double_variable_declaration(self, args):
         self.type_tmp = "double"
-        return args
+        return "double"
 
     def bool_variable_declaration(self, args):
         self.type_tmp = "bool"
-        return args
+        return "bool"
 
     def string_variable_declaration(self, args):
         self.type_tmp = "string"
-        return args
+        return "string"
 
     """
     Read from console
@@ -1465,13 +1468,16 @@ j {};
     def stmt_block(self, args):
         # print("stmt_block")
         # print(args)
+        code = ""
         for result in args:
             if isinstance(result, Tree):
                 for child in result.children:
-                    self.write_code(child.code)
+                    code = self.append_code(code, child.code)
             else:
-                self.write_code(result.code)
-        return args
+                code = self.append_code(code, result.code)
+        result = Result()
+        result.code = code
+        return result
 
     def pass_stmt(self, args):
         # print(args, 'pass_stmt')
@@ -1529,8 +1535,8 @@ j {};
         return args[0].children[0]
 
     def call_action(self, args):
-        print("call")
-        print(args)
+        # print("call")
+        # print(args)
         return args[0]
 
     def paranthes_action(self, args):
@@ -1560,8 +1566,8 @@ j {};
     def exp_calculated(self, args):
         # print("exp calculated")
         # print(args)
-        print("exp_calculated:")
-        print(args[0].code)
+        # print("exp_calculated:")
+        # print(args[0].code)
         return args[0]
 
     def end_of_expr(self, args):
@@ -1575,7 +1581,8 @@ j {};
     def print(self, args):
         # print("print")
         # print(args)
-        current_code = ""
+        current_code = args[0].code
+
         if isinstance(args[0], Variable):
             if args[0].type == "int":
                 current_code = self.append_code(
@@ -1663,12 +1670,25 @@ syscall
                     current_code,
                     """
 li $v0, 3;
-mov.d $f12, {};
+mov.d $f12, $f{};
 syscall
                 """.format(
                         args[0].number
                     ),
                 )
+
+            elif args[0].type == "int":
+                current_code = self.append_code(
+                    current_code,
+                    """
+li $v0, 1;
+move $a0, $t{};
+syscall
+                """.format(
+                        args[0].number
+                    ),
+                )
+
             else:
                 pass
                 # other types in Register
@@ -1692,9 +1712,31 @@ syscall
         result.write_code(current_code)
         return result
 
-    # def number(self, args):
-    #     print("number", args)
-    #     return args
+    """
+    Methods from second code generator
+    """
+
+    def non_void_func_declare(self, args):
+        return self.oo_gen.non_void_func_declare(args)
+
+    def void_func_declare(self, args):
+        return self.oo_gen.void_func_declare(args)
+
+
+    def read_integer(self, args):
+        print("read integer", args)
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+        code = """
+li $v0, 5;
+syscall
+move $t{}, $v0;
+        """.format(
+            t1
+        )
+        reg = Register("int", "t", t1)
+        reg.write_code(code)
+        return reg
 
 
 """
