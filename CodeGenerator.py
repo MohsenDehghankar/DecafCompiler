@@ -1407,16 +1407,16 @@ b {};
             current_code = self.append_code(current_code, args[1].code)
             current_code = self.append_code(
                 current_code, """
-beq $t{},$zero,{};
-                            """.format(args[1].number, end_label.name)
+beq ${}{},$zero,{};
+                            """.format(args[1].kind, args[1].number, end_label.name)
             )
         else:
             # print(args[0].code)
             current_code = self.append_code(current_code, args[0].code)
             current_code = self.append_code(
                 current_code, """
-beq $t{},$zero,{};
-                            """.format(args[0].number, end_label.name)
+beq ${}{},$zero,{};
+                            """.format(args[0].kind, args[0].number, end_label.name)
             )
         if isinstance(args[len(args) - 1], Tree):
             print(args[len(args) - 1].children[0].code)
@@ -1434,6 +1434,38 @@ beq $t{},$zero,{};
 j {};
 {}:
                 """.format(condition_label.name, end_label.name)
+        )
+        result = Result()
+        result.write_code(current_code)
+        return result
+
+    def _while(self, args):
+        print("while")
+        print(args)
+        current_code = ""
+        loop_lable = self.get_new_label()
+        end_lable = self.get_new_label()
+        current_code = self.append_code(
+            current_code, """
+{}:
+            """.format(loop_lable.name)
+        )
+        current_code = self.append_code(current_code, args[0].code)
+        current_code = self.append_code(
+            current_code, """
+beq ${}{},$zero,{};
+            """.format(args[0].kind, args[0].number, end_lable.name)
+        )
+        if isinstance(args[1], Tree):
+            current_code = self.append_code(
+                current_code, args[1].children[0].code)
+        else:
+            print("not handled")
+        current_code = self.append_code(
+            current_code, """
+j {};
+{}:
+            """.format(loop_lable.name, end_lable.name)
         )
         result = Result()
         result.write_code(current_code)
