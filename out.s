@@ -10,13 +10,13 @@ main:
 
 
 
-
-
 li $t0, 0;
 
 
 li $t1, 0;
 sw $t0, frame_pointer($t1);
+
+
 
 
 label3:

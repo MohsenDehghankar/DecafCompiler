@@ -110,8 +110,8 @@ constant : HEX_NUMBER
         | "null"                
 
 //------special statements----------
-if: "if" "(" expr ")" stmt ("else" stmt)? -> _if
-while : "while" "(" expr ")" stmt
+if: "if" "(" expr ")" stmt ("else" stmt)?       -> _if
+while : "while" "(" expr ")" stmt               -> _while
 for : "for" "("[expr]";"expr";"[expr]")" stmt   -> _for
 return : "return" [expr] ";"
 print : ("Print"|"print") "("actual")" ";"      -> print
