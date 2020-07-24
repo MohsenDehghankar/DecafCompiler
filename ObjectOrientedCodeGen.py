@@ -18,7 +18,7 @@ class ObjectOrientedCodeGen:
         input_parameters = args[2].children
         function_body = args[3]         # type = Result
 
-        # generate code 
+        # generate code if 'main'
         if function_name == "main" and func_return_type == "int":
             self.main_code_gen.write_code(args[3].code)
 

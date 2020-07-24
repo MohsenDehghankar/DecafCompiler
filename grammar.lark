@@ -90,10 +90,10 @@ high_proior : high_proior "." IDENT ("("actual?")")?
         | call                  -> call_action
         | constants             -> constant_operand     
 
-call : IDENT"("actual?")" 
+call : IDENT"("actual?")"       
         | "ReadLine()"          -> read_line
         | "NewArray("expr","type")" 
-        | "ReadInteger()"   
+        | "ReadInteger()"       -> read_integer
         | IDENT                 -> identifier_in_expression    
 
 constants : "this" 
@@ -110,8 +110,8 @@ constant : HEX_NUMBER
         | "null"                
 
 //------special statements----------
-if: "if" "(" expr ")" stmt ("else" stmt)? -> _if
-while : "while" "(" expr ")" stmt
+if: "if" "(" expr ")" stmt ("else" stmt)?       -> _if
+while : "while" "(" expr ")" stmt               -> _while
 for : "for" "("[expr]";"expr";"[expr]")" stmt   -> _for
 return : "return" [expr] ";"
 print : ("Print"|"print") "("actual")" ";"      -> print
@@ -137,6 +137,7 @@ BOOL.2 : "true" | "false"
 IDENT : /[a-zA-Z]([\w]|[_]){0,30}/
 HEX_NUMBER.2: /0x[\da-f]*/
 READLINE.4: "ReadLine()"
+READINTEGER.2: "ReadInteger()"
 // EMPTY: ""
 INT: /\d+/
 DOUBLE: /\d+\.\d*[E,e]\+?\d+/ | /\d+\.\d*/

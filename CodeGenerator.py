@@ -340,7 +340,7 @@ sb $t{}, frame_pointer($t{});
         result = Result()
         result.code = current_code
         # return something for nested equalities
-        return result # after assignment, the left value will be returned for other assignment (nested)
+        return result  # after assignment, the left value will be returned for other assignment (nested)
 
     """
     Check if a Variable, Register or Immediate is 'bool'
@@ -1392,57 +1392,80 @@ b {};
         return lbl
 
     def _for(self, args):
-        # print("for")
-        # print(args)
-        result_code = ""
-        for_lablel = self.get_new_label()
-        # print(for_lablel.name)
+        condition_label = self.get_new_label()
         end_label = self.get_new_label()
-        # print(end_label.name)
-        condition = args[1].number
-        # print(condition)
-
-        # check availability
-        # if isinstance(args[0], Tree):
-        #     if len(args[0].children) == 0:
-        #         pass  # handle when we don't have first expr
-        # elif len(args[0]) == 0:
-        #     pass  # handle when we don't have first expr
-        # if isinstance(args[2], Tree):
-        #     if len(args[2].children) == 0:
-        #         pass  # handle when we don't have second expr
-        # elif len(args[2]) == 0:
-        #     pass  # handle when we don't have second expr
-
-        # We do have both exprs
-        # todo
-        # label for condition
-        # condition_label = self.get_label_to_expr_token(condition_part_token)
-        # label for part
-        # step_label = self.get_label_to_expr_token(step_part_token)
-
-        print(args[0].code)
-        print("----------------")
-        print(args[1].code)
-        print("--------------------")
-        print(args[2].code)
-
-        # TODO:body (stmt tree) should be here
+        current_code = ""
+        if len(args) == 4 or (len(args) == 3 and isinstance(args[1], Register)):
+            current_code = self.append_code(current_code, args[0].code)
         current_code = self.append_code(
-            current_code,
-            """
+            current_code, """
 {}:
-beq $t{},$zero,{}
-#body should be inserted here
-j {}
+                """.format(condition_label.name)
+        )
+
+        if len(args) == 4 or len(args) == 2 or (len(args) == 3 and isinstance(args[1], Register)):
+            current_code = self.append_code(current_code, args[1].code)
+            current_code = self.append_code(
+                current_code, """
+beq ${}{},$zero,{};
+                            """.format(args[1].kind, args[1].number, end_label.name)
+            )
+        else:
+            # print(args[0].code)
+            current_code = self.append_code(current_code, args[0].code)
+            current_code = self.append_code(
+                current_code, """
+beq ${}{},$zero,{};
+                            """.format(args[0].kind, args[0].number, end_label.name)
+            )
+        if isinstance(args[len(args) - 1], Tree):
+            print(args[len(args) - 1].children[0].code)
+            current_code = self.append_code(
+                current_code, args[len(args) - 1].children[0].code)
+        else:
+            print("not handled")
+
+        if len(args) == 4:
+            current_code = self.append_code(current_code, args[2].code)
+        elif len(args) == 3 and isinstance(args[0], Register):
+            current_code = self.append_code(current_code, args[1].code)
+        current_code = self.append_code(
+            current_code, """
+j {};
 {}:
-        """.format(
-                for_lablel.name,
-                condition,
-                end_label.name,
-                for_lablel.name,
-                end_label.name,
-            ),
+                """.format(condition_label.name, end_label.name)
+        )
+        result = Result()
+        result.write_code(current_code)
+        return result
+
+    def _while(self, args):
+        print("while")
+        print(args)
+        current_code = ""
+        loop_lable = self.get_new_label()
+        end_lable = self.get_new_label()
+        current_code = self.append_code(
+            current_code, """
+{}:
+            """.format(loop_lable.name)
+        )
+        current_code = self.append_code(current_code, args[0].code)
+        current_code = self.append_code(
+            current_code, """
+beq ${}{},$zero,{};
+            """.format(args[0].kind, args[0].number, end_lable.name)
+        )
+        if isinstance(args[1], Tree):
+            current_code = self.append_code(
+                current_code, args[1].children[0].code)
+        else:
+            print("not handled")
+        current_code = self.append_code(
+            current_code, """
+j {};
+{}:
+            """.format(loop_lable.name, end_lable.name)
         )
         result = Result()
         result.write_code(current_code)
@@ -1571,7 +1594,8 @@ j {}
     def print(self, args):
         # print("print")
         # print(args)
-        current_code = ""
+        current_code = args[0].code
+
         if isinstance(args[0], Variable):
             if args[0].type == "int":
                 current_code = self.append_code(
@@ -1659,12 +1683,25 @@ syscall
                     current_code,
                     """
 li $v0, 3;
-mov.d $f12, {};
+mov.d $f12, $f{};
 syscall
                 """.format(
                         args[0].number
                     ),
                 )
+
+            elif args[0].type == "int":
+                current_code = self.append_code(
+                    current_code,
+                    """
+li $v0, 1;
+move $a0, $t{};
+syscall
+                """.format(
+                        args[0].number
+                    ),
+                )
+
             else:
                 pass
                 # other types in Register
@@ -1688,17 +1725,30 @@ syscall
         result.write_code(current_code)
         return result
 
-
     """
     Methods from second code generator
     """
+
     def non_void_func_declare(self, args):
         return self.oo_gen.non_void_func_declare(args)
 
     def void_func_declare(self, args):
         return self.oo_gen.void_func_declare(args)
 
-
+    def read_integer(self, args):
+        print("read integer", args)
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+        code = """
+li $v0, 5;
+syscall
+move $t{}, $v0;
+        """.format(
+            t1
+        )
+        reg = Register("int", "t", t1)
+        reg.write_code(code)
+        return reg
 
 
 """

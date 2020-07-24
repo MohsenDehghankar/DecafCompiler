@@ -71,6 +71,7 @@ def main(argv):
 
     tree = parser.parse(
         """
+
     int y;
     bool my_func(int y){
 
@@ -78,7 +79,7 @@ def main(argv):
     int main(){
         int i;
         i = 9;
-    }
+
     """
     )
 
