@@ -1,6 +1,7 @@
 from lark import Transformer, Tree
 from lark.lexer import Lexer, Token
 from ObjectOrientedCodeGen import ObjectOrientedCodeGen
+from ArrayCodeGen import ArrayCodeGen
 import uuid
 
 
@@ -31,6 +32,8 @@ class CodeGenerator(Transformer):
         self.expr_tokens = []
         # object oriented code generator
         self.oo_gen = ObjectOrientedCodeGen(self)
+        # array code generator
+        self.arr_cgen = ArrayCodeGen(self)
 
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
@@ -57,7 +60,7 @@ main:
     """
 
     def variable_declare(self, args):
-        # print("var_declare", args)
+        print("var_declare", args)
         variable_name = args[0].children[1].value
 
         if variable_name in self.symbol_table.keys():
@@ -73,7 +76,10 @@ main:
             print("Type of Variable {} unknown".format(variable_name))
             exit(4)
 
-        self.create_variable(self.type_tmp, variable_name)
+        if "[]" in self.type_tmp:
+            self.create_variable(self.type_tmp, variable_name, True)
+        else:
+            self.create_variable(self.type_tmp, variable_name, False)
         self.type_tmp = None
         return Result()
 
@@ -81,11 +87,18 @@ main:
     Create a variable in Memory and add to Symbol Table
     """
 
-    def create_variable(self, var_type, var_name):
+    def create_variable(self, var_type, var_name, is_ref=False):
         # dynamic allocation
-        variable = Variable()
+        variable = None
+
+        if "[]" in var_type:
+            variable = Array()
+        else:
+            variable = Variable()
+
         variable.type = var_type
         variable.name = var_name
+        variable.is_reference = is_ref
         variable.calc_size()
         if self.last_var_in_fp == None:
             variable.address_offset = 0
@@ -123,6 +136,11 @@ main:
     def string_variable_declaration(self, args):
         self.type_tmp = "string"
         return "string"
+
+    def array_variable_declaration(self, args):
+        print("array_declaration", args)
+        self.type_tmp = "{}[]".format(args[0])
+        return self.type_tmp
 
     """
     Read from console
@@ -214,6 +232,28 @@ lw $t{}, frame_pointer($t{});
 
         return code
 
+    def code_for_loading_ref_reg(self, t_reg, reg):
+        #         if reg.type == "double":
+        #             code = """
+        # lwc1 $f{}, ($f{});
+        #             """.format(
+        #                 t_reg, reg.number
+        #             )
+        #             return code
+
+        code = """
+lw $t{}, ($t{});
+        """.format(
+            t_reg, reg.number
+        )
+        return code
+
+    def code_for_loading_ref_var(self, t_reg, var):
+        code = """
+
+
+        """.format()
+
     def handle_double_assignment(self, left_opr, right_opr):
 
         f1 = self.get_a_free_f_register()
@@ -240,29 +280,50 @@ l.d $f{}, frame_pointer($t{})
                     ),
                 )
         # double register
+        elif isinstance(right_opr, Register):
+            if right_opr.is_reference == True:
+                code = self.append_code(
+                    code,
+                    """
+l.d $f{}, ($t{});
+                    """.format(
+                        f1, right_opr.number
+                    ),
+                )
+            else:
+                f1 = right_opr.number
+
+        if left_opr.is_reference == True:
+            code = self.append_code(
+                code,
+                """
+s.d $f{}, ($t{});
+                    """.format(
+                    f1, left_opr.number
+                ),
+            )
         else:
-            f1 = right_opr.number
-        code = self.append_code(
-            code,
-            """
+            code = self.append_code(
+                code,
+                """
 li $t{}, {};
 s.d $f{}, frame_pointer($t{});
                 """.format(
-                t1, left_opr.address_offset, f1, t1
-            ),
-        )
+                    t1, left_opr.address_offset, f1, t1
+                ),
+            )
         return code
 
     def assignment_calculated(self, args):
-        # print("assignment calculated")
-        # print(args)
+        print("assignment calculated")
+        print(args)
         left_value = args[0]
         right_value = args[1]
 
         self.type_checking_for_assignment(left_value, right_value)
 
         if left_value.type == "double":
-            code = right_value.code
+            code = self.append_code(right_value.code, left_value.code)
             assign_code = self.handle_double_assignment(left_value, right_value)
             code = self.append_code(code, assign_code)
             # args[0].write_code(code)
@@ -273,12 +334,14 @@ s.d $f{}, frame_pointer($t{});
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
 
-        current_code = right_value.code
+        current_code = self.append_code(right_value.code, left_value.code)
         right_code = ""
 
         # right
         if isinstance(right_value, Register):
-            if right_value.type == "int" or right_value.type == "bool":
+            if right_value.is_reference == True:
+                right_code = self.code_for_loading_ref_reg(t1, right_value)
+            elif right_value.type == "int" or right_value.type == "bool":
                 right_code = self.code_for_loading_int_reg(t1, right_value)
 
             # now right register can be free
@@ -296,19 +359,27 @@ s.d $f{}, frame_pointer($t{});
 
         # left
         if isinstance(left_value, Register):
-            current_code = self.append_code(  # ?????????????
+            current_code = self.append_code(
+                current_code, self.store_ref_reg(left_value, t1)
+            )
+            current_code = self.append_code(
                 current_code,
                 """
-    move ${}, $t{};
+sw $t{}, ($t{});
                 """.format(
-                    left_value.type + str(left_value.number), t1
+                    t1, left_value.number
                 ),
-            )
+            )  # TODO: handle other types
 
             # free left_value register
             self.t_registers[left_value.number] = False
         else:
-            if left_value.type == "int":
+            if left_value.is_reference:
+                current_code = self.append_code(
+                    current_code, self.store_ref_var(left_value, t1)
+                )
+
+            elif left_value.type == "int":
                 t2 = self.get_a_free_t_register()
                 current_code = self.append_code(
                     current_code,
@@ -330,6 +401,7 @@ sb $t{}, frame_pointer($t{});
                         t2, left_value.address_offset, t1, t2
                     ),
                 )
+
             else:
                 # other types
                 pass
@@ -341,6 +413,32 @@ sb $t{}, frame_pointer($t{});
         result.code = current_code
         # return something for nested equalities
         return result  # after assignment, the left value will be returned for other assignment (nested)
+
+    def store_ref_reg(self, reg, new_val):  # x[2] = 3, x[2] = 3.2, x[2] = true
+        if reg.type == "int":
+            code = """
+sw $t{}, ($t{});
+                """.format(
+                new_val, reg.number
+            )
+        elif reg.type == "bool":
+            code = """
+sb $t{}, ($t{});
+                """.format(
+                new_val, reg.number
+            )
+
+        return code
+
+    def store_ref_var(self, var, new_ref):  # x = newArray(4, int)
+        t2 = self.get_a_free_t_register()
+        code = """
+li $t{}, {};
+sw $t{}, frame_pointer($t{});
+                """.format(
+            t2, var.address_offset, new_ref, t2
+        )
+        return code
 
     """
     Check if a Variable, Register or Immediate is 'bool'
@@ -364,12 +462,16 @@ sb $t{}, frame_pointer($t{});
     """
 
     def token_to_var(self, args):
-        # print("high prior: ")
-        # print(args)
+        print("high prior: ")
+        print(args)
+
+        types = ["int", "bool", "double", "string"]
 
         try:
             child = args[0]
             if isinstance(child, Token) and child.type == "IDENT":
+                if child.value in types:  # when identifier is a reserved token
+                    return child.value
                 return self.symbol_table[child.value]
             elif isinstance(child, Variable) and child.type == "double":
                 return child
@@ -788,7 +890,6 @@ li ${}, 1;
     def double_operation(self, opr1, opr2, instruction):
         f1 = self.get_a_free_f_register()
         self.f_registers[f1] = True
-        # self.f_registers[f1 + 1] = True
         f2 = self.get_a_free_f_register()
         current_code = ""
         current_code = self.append_code(
@@ -796,7 +897,7 @@ li ${}, 1;
             """
 li.d $f{}, {};
 li.d $f{}, {};
-{}.d $f{}, $f{}, $f{} 
+{}.d $f{}, $f{}, $f{}
             """.format(
                 f1, opr1.value, f2, opr2.value, instruction, f1, f1, f2
             ),
@@ -1398,30 +1499,44 @@ b {};
         if len(args) == 4 or (len(args) == 3 and isinstance(args[1], Register)):
             current_code = self.append_code(current_code, args[0].code)
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 {}:
-                """.format(condition_label.name)
+                """.format(
+                condition_label.name
+            ),
         )
 
-        if len(args) == 4 or len(args) == 2 or (len(args) == 3 and isinstance(args[1], Register)):
+        if (
+            len(args) == 4
+            or len(args) == 2
+            or (len(args) == 3 and isinstance(args[1], Register))
+        ):
             current_code = self.append_code(current_code, args[1].code)
             current_code = self.append_code(
-                current_code, """
+                current_code,
+                """
 beq ${}{},$zero,{};
-                            """.format(args[1].kind, args[1].number, end_label.name)
+                            """.format(
+                    args[1].kind, args[1].number, end_label.name
+                ),
             )
         else:
             # print(args[0].code)
             current_code = self.append_code(current_code, args[0].code)
             current_code = self.append_code(
-                current_code, """
+                current_code,
+                """
 beq ${}{},$zero,{};
-                            """.format(args[0].kind, args[0].number, end_label.name)
+                            """.format(
+                    args[0].kind, args[0].number, end_label.name
+                ),
             )
         if isinstance(args[len(args) - 1], Tree):
             print(args[len(args) - 1].children[0].code)
             current_code = self.append_code(
-                current_code, args[len(args) - 1].children[0].code)
+                current_code, args[len(args) - 1].children[0].code
+            )
         else:
             print("not handled")
 
@@ -1430,10 +1545,13 @@ beq ${}{},$zero,{};
         elif len(args) == 3 and isinstance(args[0], Register):
             current_code = self.append_code(current_code, args[1].code)
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 j {};
 {}:
-                """.format(condition_label.name, end_label.name)
+                """.format(
+                condition_label.name, end_label.name
+            ),
         )
         result = Result()
         result.write_code(current_code)
@@ -1446,26 +1564,34 @@ j {};
         loop_lable = self.get_new_label()
         end_lable = self.get_new_label()
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 {}:
-            """.format(loop_lable.name)
+            """.format(
+                loop_lable.name
+            ),
         )
         current_code = self.append_code(current_code, args[0].code)
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 beq ${}{},$zero,{};
-            """.format(args[0].kind, args[0].number, end_lable.name)
+            """.format(
+                args[0].kind, args[0].number, end_lable.name
+            ),
         )
         if isinstance(args[1], Tree):
-            current_code = self.append_code(
-                current_code, args[1].children[0].code)
+            current_code = self.append_code(current_code, args[1].children[0].code)
         else:
             print("not handled")
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 j {};
 {}:
-            """.format(loop_lable.name, end_lable.name)
+            """.format(
+                loop_lable.name, end_lable.name
+            ),
         )
         result = Result()
         result.write_code(current_code)
@@ -1663,44 +1789,88 @@ syscall
             if args[0].type == "bool":
                 lbl1 = self.get_new_label().name
                 lbl2 = self.get_new_label().name
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $v0, 4;
+                reg = args[0].kind + str(args[0].number)
+                if args[0].is_reference == True:
+                    current_code = self.append_code(
+                        current_code,
+                        """
+lw ${}, (${})
 beq ${}, $zero, {};
 la $a0, true_const;
 j {};
 {}:
 la $a0, false_const;
 {}:
+li $v0, 4;
+syscall
+                    """.format(
+                            reg, reg, reg, lbl1, lbl2, lbl1, lbl2
+                        ),
+                    )
+                else:
+                    current_code = self.append_code(
+                        current_code,
+                        """
+beq ${}, $zero, {};
+la $a0, true_const;
+j {};
+{}:
+la $a0, false_const;
+{}:
+li $v0, 4;
 syscall
                 """.format(
-                        args[0].type + str(args[0].number), lbl1, lbl2, lbl1, lbl2
-                    ),
-                )
+                            reg, lbl1, lbl2, lbl1, lbl2
+                        ),
+                    )
             elif args[0].type == "double":
-                current_code = self.append_code(
-                    current_code,
-                    """
+                if args[0].is_reference == True:
+                    current_code = self.append_code(
+                        current_code,
+                        """
+li $v0, 3;
+l.d $f12, ($t{});
+syscall
+                """.format(
+                            args[0].number
+                        ),
+                    )
+                else:
+                    current_code = self.append_code(
+                        current_code,
+                        """
 li $v0, 3;
 mov.d $f12, $f{};
 syscall
                 """.format(
-                        args[0].number
-                    ),
-                )
+                            args[0].number
+                        ),
+                    )
 
             elif args[0].type == "int":
-                current_code = self.append_code(
-                    current_code,
-                    """
+                if args[0].is_reference == True:
+                    current_code = self.append_code(
+                        current_code,
+                        """
 li $v0, 1;
-move $a0, $t{};
+lw $a0, ($t{});
 syscall
-                """.format(
-                        args[0].number
-                    ),
-                )
+                    """.format(
+                            args[0].number
+                        ),
+                    )
+                else:
+
+                    current_code = self.append_code(
+                        current_code,
+                        """
+    li $v0, 1;
+    move $a0, $t{};
+    syscall
+                    """.format(
+                            args[0].number
+                        ),
+                    )
 
             else:
                 pass
@@ -1750,6 +1920,16 @@ move $t{}, $v0;
         reg.write_code(code)
         return reg
 
+    """
+    array methods
+    """
+
+    def new_array(self, args):
+        return self.arr_cgen.new_array(args)
+
+    def access_to_array(self, args):
+        return self.arr_cgen.access_to_array(args)
+
 
 """
 Other Classes
@@ -1772,26 +1952,31 @@ class Variable(Result):
         self.value = None
         self.address_offset = None  # address from the start of frame pointer
         self.size = None  # in bytes
+        self.is_reference = False
 
     def calc_size(self):
-        if self.type == "int":
+        if self.is_reference == True:
             self.size = 4
-        if self.type == "bool":
-            self.size = 1
-        if self.type == "string":
-            self.size = 4  # address of string
-        if self.type == "double":
-            self.size = 8
+        else:
+            if self.type == "int":
+                self.size = 4
+            if self.type == "bool":
+                self.size = 1
+            if self.type == "string":
+                self.size = 4  # address of string
+            if self.type == "double":
+                self.size = 8
+
         # var type is an object
 
     def __str__(self):
-        return "Variable name: {}, type: {}, value: {}, size: {}".format(
-            self.name, self.type, self.value, self.size
+        return "Variable name: {}, type: {}, value: {}, size: {}, is_reference: {}".format(
+            self.name, self.type, self.value, self.size, self.is_reference
         )
 
     def __repr__(self):
-        return "Variable name: {}, type: {}, value: {}, size: {}".format(
-            self.name, self.type, self.value, self.size
+        return "Variable name: {}, type: {}, value: {}, size: {}, is_reference: {}".format(
+            self.name, self.type, self.value, self.size, self.is_reference
         )
 
 
@@ -1805,13 +1990,13 @@ class Register(Result):
         self.is_reference = False  # later
 
     def __str__(self):
-        return "register type:{}, kind: {}, number: {}".format(
-            self.type, self.kind, self.number
+        return "register type:{}, kind: {}, number: {}, is_ref: {}".format(
+            self.type, self.kind, self.number, self.is_reference
         )
 
     def __repr__(self):
-        return "register type:{}, kind: {}, number: {}".format(
-            self.type, self.kind, self.number
+        return "register type:{}, kind: {}, number: {},  is_ref: {}".format(
+            self.type, self.kind, self.number, self.is_reference
         )
 
 
@@ -1833,3 +2018,13 @@ class Label:
 class Array(Variable):
     def __init__(self):
         super().__init__()
+
+    def __str__(self):
+        return "Array name: {}, type: {}, value: {}, size: {}, is_reference: {}".format(
+            self.name, self.type, self.value, self.size, self.is_reference
+        )
+
+    def __repr__(self):
+        return "Array name: {}, type: {}, value: {}, size: {}, is_reference: {}".format(
+            self.name, self.type, self.value, self.size, self.is_reference
+        )

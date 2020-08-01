@@ -58,10 +58,7 @@ def main(argv):
     #     """
     # int main(){
     #     int x;
-    #     int y;
-    #     y = 3;
     #     x = 90;
-    #     print(90);
     #     print(x);
     # }
     # """
@@ -69,17 +66,28 @@ def main(argv):
 
     # print(codeGen.expr_tokens)
 
+    #     tree = parser.parse(
+    #         """
+    #    int main(){
+    #         int i;
+    #         i = 0;
+    #         while(true){
+    #             print(i);
+    #             i = i+1;
+    #         }
+    #     }
+    #     """
+    #     )
+
     tree = parser.parse(
         """
-   int main(){
-        int i;
-        i = 0;
-        while(true){
-            print(i);
-            i = i+1;
+       int main(){
+            double[] x;
+            x = NewArray(10, double);
+            x[5] = 1.2 * 2.3;
+            print(x[5]);
         }
-    }
-    """
+        """
     )
 
     # print(tree.pretty())
