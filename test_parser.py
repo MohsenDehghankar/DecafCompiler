@@ -82,10 +82,11 @@ def main(argv):
     tree = parser.parse(
         """
        int main(){
-            double[] x;
-            x = NewArray(10, double);
-            x[5] = 1.2 * 2.3;
-            print(x[5]);
+            int[][] x;
+            x = NewArray(10, int[]);
+            x[0] = NewArray(10, int);
+
+            x[0][1] = 3;
         }
         """
     )

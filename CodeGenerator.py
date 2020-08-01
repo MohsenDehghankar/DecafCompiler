@@ -362,14 +362,7 @@ s.d $f{}, frame_pointer($t{});
             current_code = self.append_code(
                 current_code, self.store_ref_reg(left_value, t1)
             )
-            current_code = self.append_code(
-                current_code,
-                """
-sw $t{}, ($t{});
-                """.format(
-                    t1, left_value.number
-                ),
-            )  # TODO: handle other types
+            # TODO: handle other types
 
             # free left_value register
             self.t_registers[left_value.number] = False
@@ -415,6 +408,7 @@ sb $t{}, frame_pointer($t{});
         return result  # after assignment, the left value will be returned for other assignment (nested)
 
     def store_ref_reg(self, reg, new_val):  # x[2] = 3, x[2] = 3.2, x[2] = true
+        code = ""
         if reg.type == "int":
             code = """
 sw $t{}, ($t{});

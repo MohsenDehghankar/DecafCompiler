@@ -30,29 +30,63 @@ sw $t0, frame_pointer($t1);
                 
 
 
-
-li.d $f0, 1.2;
-li.d $f2, 2.3;
-mul.d $f0, $f0, $f2
-            
+li $a0, 44;
+li $v0, 9;
+syscall
+li $t1 , 10;
+sw $t1, 0($v0);
+li $t1, 8
+sw $v0, frame_pointer($t1)
+        
 
 
 li $t0, 0;
 lw $t0, frame_pointer($t0);
-addi $t0, $t0, 24;
-        
+addi $t0, $t0, 4;
+            
+
+li $t1, 8;
+lw $t1, frame_pointer($t1);
+            
 
 
-s.d $f0, ($t0);
-                    
+sw $t1, ($t0);
+                
+
+
+
+
+li $t0, 0;
+lw $t0, frame_pointer($t0);
+addi $t0, $t0, 4;
+            
+
+lw $t1, ($t0);
+addi $t1, $t1, 8;
+            
+
+li $t2, 3;
+            
+
+sw $t2, ($t1);
+                
+
+sw $t2, ($t1);
+                
+
 
 
 
 li $t1, 0;
 lw $t1, frame_pointer($t1);
-addi $t1, $t1, 24;
-        
+addi $t1, $t1, 4;
+            
 
-li $v0, 3;
-l.d $f12, ($t1);
+lw $t2, ($t1);
+addi $t2, $t2, 12;
+            
+
+li $v0, 1;
+lw $a0, ($t2);
 syscall
+ 
