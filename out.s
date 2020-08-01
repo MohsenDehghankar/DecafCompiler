@@ -2,19 +2,12 @@
 frame_pointer:  .space  1000
 true_const:     .asciiz "true"
 false_const:    .asciiz "false"
+end_of_string:  .byte   0
 
 .text
 main:
 
 
-
-
-
-li $t0, 0;
-
-
-li $t1, 0;
-sw $t0, frame_pointer($t1);
 
 
 
