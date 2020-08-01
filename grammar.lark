@@ -1,7 +1,7 @@
-start: decl+
+start: decl+                                    -> add_codes
 
 decl : variabledec 
-        | funcdec               
+        | funcdec                               -> func_declare               
         | classdec 
         | interfacedec 
         | COMMENT
@@ -20,10 +20,13 @@ type : "int"            -> int_variable_declaraion
         | type "[]"     -> array_variable_declaration 
 
 //--------function dec--------
-funcdec : type IDENT "("formal")" stmtblock     -> non_void_func_declare
-        | "void" IDENT "("formal")" stmtblock   -> void_func_declare
+funcdec : type IDENT open_pr formal")" stmtblock             -> non_void_func_declare
+        | void_type IDENT open_pr formal")" stmtblock        -> void_func_declare
 
-formal : variable*
+open_pr : "("                                           -> save_function_type
+void_type : "void"                                      -> void_function_declaration
+
+formal : variable*                              -> formal_reduce
 
 stmtblock : "{" (variabledec|stmt|COMMENT)* "}" -> stmt_block
 
@@ -32,9 +35,9 @@ stmt : [expr]";"
         | if 
         | while 
         | for 
-        | return 
+        | return                -> return_from_func 
         | print 
-        | "break" ";"        -> pass_stmt
+        | "break" ";"           -> pass_stmt
 
 // -------expression---------
 expr_high_level : expr                                  -> end_of_expr                 // when the start and finish of expression is important (for, while)
@@ -82,7 +85,7 @@ one_operand_expr : "!"one_operand_expr  -> not_statement
 paranthes : "("expr")"          -> paranthes_action     // start of expression
         | high_proior           -> token_to_var         // start of expression 
 
-// bellow this, no code is generatd yet.
+// bellow this, no code is generated yet.
 
 high_proior : high_proior "." IDENT ("("actual?")")? 
         | high_proior"["expr"]"         -> access_to_array
@@ -90,7 +93,7 @@ high_proior : high_proior "." IDENT ("("actual?")")?
         | call                  -> call_action
         | constants             -> constant_operand     
 
-call : IDENT"("actual?")"       
+call : IDENT"("actual?")"               -> function_call      
         | "NewArray("expr","type")"     -> new_array
         | "ReadLine()"          -> read_line
         | "ReadInteger()"       -> read_integer
@@ -116,10 +119,6 @@ for : "for" "("[expr]";"expr";"[expr]")" stmt   -> _for
 return : "return" [expr] ";"
 print : ("Print"|"print") "("actual")" ";"      -> print
 
-//------helps finding which expr is empty---
-exp_or_nothing : expr_high_level                -> pass_high_level_expr
-                |                               -> false_expression
-
 //---------class dec----------
 classdec : "class" IDENT ["extends" IDENT] ["implements" (IDENT | IDENT",")+] "{"field*"}"
 field : variabledec | funcdec
@@ -142,7 +141,6 @@ NEWARRAY.4: "NewArray("
 // EMPTY: ""
 INT: /\d+/
 DOUBLE: /\d+\.\d*[E,e]\+?\d+/ | /\d+\.\d*/
-
 
 %import common.ESCAPED_STRING
 %import common._STRING_ESC_INNER

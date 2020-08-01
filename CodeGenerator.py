@@ -13,6 +13,9 @@ class CodeGenerator(Transformer):
         self.mips_code = ""
         # stores (var_name, var_obj)
         self.symbol_table = {}
+        # symbol_tables['function_name']['var_name'] is instance of Variable
+        # this is the main symbol_table
+        self.symbol_tables = {}
         # last declared type
         self.type_tmp = None
         # needed for multiple assignments in one line: x = y = z
@@ -27,13 +30,18 @@ class CodeGenerator(Transformer):
         self.label_count = 0
         # for generating double name
         self.tmp_double_count = 0
-        # for loop
-        self.expr_started = False
-        self.expr_tokens = []
         # object oriented code generator
         self.oo_gen = ObjectOrientedCodeGen(self)
+        # last declared function
+        self.func_type_tmp = None
+        self.current_function_name = None
+        # previous parser code generator
+        self.previous_pass = None
+        # is first pass
+        self.first_pass = False
         # array code generator
         self.arr_cgen = ArrayCodeGen(self)
+
 
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
@@ -46,12 +54,13 @@ class CodeGenerator(Transformer):
         self.write_code(
             """
 .data
-frame_pointer:  .space  1000
+frame_pointer:  .space  10000
 true_const:     .asciiz "true"
 false_const:    .asciiz "false"
 
 .text
 main:
+la $s0, frame_pointer;
         """
         )
 
@@ -100,8 +109,9 @@ main:
         variable.name = var_name
         variable.is_reference = is_ref
         variable.calc_size()
+        self.get_last_variable_in_frame()
         if self.last_var_in_fp == None:
-            variable.address_offset = 0
+            variable.address_offset = 8
         else:
             offset = self.last_var_in_fp.address_offset + self.last_var_in_fp.size
             # memory alignment
@@ -116,6 +126,20 @@ main:
             exit(4)
         self.symbol_table[var_name] = variable
         return variable
+
+    def get_last_variable_in_frame(self):
+        max_a = 0
+        last = None
+        for var in self.symbol_table.keys():
+            if self.symbol_table[var].address_offset >= max_a:
+                max_a = self.symbol_table[var].address_offset
+                last = self.symbol_table[var]
+        self.last_var_in_fp = last
+        if last is None:
+            var = Variable()
+            var.address_offset = 8
+            var.size = 0
+            self.last_var_in_fp = var
 
     """
     Getting the type of declared variable
@@ -137,10 +161,20 @@ main:
         self.type_tmp = "string"
         return "string"
 
+
+    def void_function_declaration(self, args):
+        self.type_tmp = "void"
+        return "void"
+
+    def save_function_type(self, args):
+        self.func_type_tmp = self.type_tmp
+        self.type_tmp = None
+
     def array_variable_declaration(self, args):
         print("array_declaration", args)
         self.type_tmp = "{}[]".format(args[0])
         return self.type_tmp
+
 
     """
     Read from console
@@ -160,13 +194,14 @@ li $v0, 9;
 li $a0, 16384;
 syscall
 li $t{}, {};
-sw $v0, frame_pointer($t{})
+add $t{}, $t{} ,$s0;
+sw $v0, ($t{})
 move $a0, $v0;
 li $v0, 8
 li $a1, 16384
 syscall
         """.format(
-                t, var.address_offset, t
+                t, var.address_offset, t, t, t
             )
         )
         # act as a new variable in rest of the tree
@@ -225,9 +260,10 @@ li $t{}, {};
     def code_for_moveing_int_var(self, t_reg, var):
         code = """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
             """.format(
-            t_reg, var.address_offset, t_reg, t_reg
+            t_reg, var.address_offset, t_reg, t_reg, t_reg, t_reg
         )
 
         return code
@@ -274,9 +310,10 @@ li.d $f{}, {};
                     code,
                     """
 li $t{}, {};
-l.d $f{}, frame_pointer($t{})
+add $t{}, $t{}, $s0;
+l.d $f{}, ($t{})
                     """.format(
-                        t1, right_opr.address_offset, f1, t1
+                        t1, right_opr.address_offset, t1, t1, f1, t1
                     ),
                 )
         # double register
@@ -307,11 +344,13 @@ s.d $f{}, ($t{});
                 code,
                 """
 li $t{}, {};
-s.d $f{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+s.d $f{}, ($t{});
                 """.format(
-                    t1, left_opr.address_offset, f1, t1
-                ),
-            )
+                t1, left_opr.address_offset, t1, t1, f1, t1
+            ),
+        )
+
         return code
 
     def assignment_calculated(self, args):
@@ -319,6 +358,8 @@ s.d $f{}, frame_pointer($t{});
         print(args)
         left_value = args[0]
         right_value = args[1]
+
+        # print("right value code: {}: " + right_value.code)
 
         self.type_checking_for_assignment(left_value, right_value)
 
@@ -359,8 +400,18 @@ s.d $f{}, frame_pointer($t{});
 
         # left
         if isinstance(left_value, Register):
-            current_code = self.append_code(
-                current_code, self.store_ref_reg(left_value, t1)
+
+            current_code = self.append_code(  # ?????????????
+                current_code,
+                """
+    move ${}, $t{};
+                """.format(
+                    left_value.kind + str(left_value.number), t1
+                ),
+# =======
+#            current_code = self.append_code(
+#                current_code, self.store_ref_reg(left_value, t1)
+# >>>>>>> master
             )
             # TODO: handle other types
 
@@ -378,9 +429,10 @@ s.d $f{}, frame_pointer($t{});
                     current_code,
                     """
 li $t{}, {};
-sw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+sw $t{}, ($t{});
                 """.format(
-                        t2, left_value.address_offset, t1, t2
+                        t2, left_value.address_offset, t2, t2, t1, t2
                     ),
                 )
             elif left_value.type == "bool":
@@ -389,9 +441,10 @@ sw $t{}, frame_pointer($t{});
                     current_code,
                     """
 li $t{}, {};
-sb $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+sb $t{}, ($t{});
                 """.format(
-                        t2, left_value.address_offset, t1, t2
+                        t2, left_value.address_offset, t2, t2, t1, t2
                     ),
                 )
 
@@ -448,7 +501,7 @@ sw $t{}, frame_pointer($t{});
         return args[0]
 
     def identifier_in_expression(self, args):
-        print("ident: {0}".format(args[0].value))
+        # print("ident: {0}".format(args[0].value))
         return args[0]
 
     """
@@ -464,9 +517,26 @@ sw $t{}, frame_pointer($t{});
         try:
             child = args[0]
             if isinstance(child, Token) and child.type == "IDENT":
-                if child.value in types:  # when identifier is a reserved token
-                    return child.value
-                return self.symbol_table[child.value]
+                try:
+                    if child.value in types:  # when identifier is a reserved token
+                        return child.value
+                    return self.symbol_table[child.value]
+                except KeyError:
+                    try:
+                        for par in self.oo_gen.current_function_signiture:
+                            if par.name == child.value:
+                                return par
+                        raise Exception
+                    except Exception:
+
+                        if self.first_pass:
+                            reg = Register("int", "t", 0)
+                            reg.code = ""
+                            return reg
+                        
+                        print("Variable Not Exists!")
+                        exit(4)
+
             elif isinstance(child, Variable) and child.type == "double":
                 return child
             else:
@@ -491,7 +561,7 @@ sw $t{}, frame_pointer($t{});
         var = args[0]
         if isinstance(var, Variable):
             if var.type == "int":
-                current_code = ""
+                current_code = var.code
                 t1 = self.get_a_free_t_register()
                 self.t_registers[t1] = True
                 t2 = self.get_a_free_t_register()
@@ -500,11 +570,12 @@ sw $t{}, frame_pointer($t{});
                     """
 li $t{}, -1;
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
 mult $t{}, $t{};
 mflo $t{};
                 """.format(
-                        t1, t2, var.address_offset, t2, t2, t1, t2, t1
+                        t1, t2, var.address_offset, t2, t2, t2, t2, t1, t2, t1
                     ),
                 )
                 reg = Register("int", "t", t1)
@@ -521,9 +592,10 @@ mflo $t{};
     def multiply(self, args):
         # print("multiply")
         # print(args)
-        current_code = ""
         opr1 = args[0]
         opr2 = args[1]
+        current_code = ""
+        current_code = opr1.code + "\n" + opr2.code
 
         self.check_type_for_math_expr(opr1, opr2, "*")
 
@@ -539,9 +611,10 @@ mflo $t{};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
                     """.format(
-                        t1, opr1.address_offset, t1, t1
+                        t1, opr1.address_offset, t1, t1, t1, t1
                     ),
                 )
             else:
@@ -561,7 +634,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
                 """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
         else:
@@ -572,9 +645,10 @@ move $t{}, ${};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
                     """.format(
-                        t2, opr2.address_offset, t2, t2
+                        t2, opr2.address_offset, t2, t2, t2, t2
                     ),
                 )
             else:
@@ -594,7 +668,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
                 """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
         else:
@@ -618,6 +692,8 @@ mflo $t{};
         current_code = ""
         opr1 = args[0]
         opr2 = args[1]
+        current_code = opr1.code + "\n" + opr2.code
+
 
         self.check_type_for_math_expr(opr1, opr2, "/")
 
@@ -634,9 +710,10 @@ mflo $t{};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
                     """.format(
-                        t1, opr1.address_offset, t1, t1
+                        t1, opr1.address_offset, t1, t1, t1, t1
                     ),
                 )
             else:
@@ -656,7 +733,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
         else:
@@ -667,9 +744,10 @@ move $t{}, ${};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
                 """.format(
-                        t2, opr2.address_offset, t2, t2
+                        t2, opr2.address_offset, t2, t2, t2, t2
                     ),
                 )
             else:
@@ -689,7 +767,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
         else:
@@ -714,6 +792,7 @@ mflo $t{};
         current_code = ""
         opr1 = args[0]
         opr2 = args[1]
+        current_code = opr1.code + "\n" + opr2.code
 
         self.check_type_for_math_expr(opr1, opr2, "%")
 
@@ -726,9 +805,10 @@ mflo $t{};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
                     """.format(
-                        t1, opr1.address_offset, t1, t1
+                        t1, opr1.address_offset, t1, t1, t1, t1
                     ),
                 )
             else:
@@ -748,7 +828,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
                 """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
         else:
@@ -759,9 +839,10 @@ move $t{}, ${};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
                     """.format(
-                        t2, opr2.address_offset, t2, t2
+                        t2, opr2.address_offset, t2, t2, t2, t2
                     ),
                 )
             else:
@@ -781,7 +862,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
                 """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
         else:
@@ -807,7 +888,7 @@ mfhi $t{};
         self.type_checking_for_logical_expr(args[0], args[0], "!")
 
         if isinstance(args[0], Variable):
-            current_code = ""
+            current_code = args[0].code
             t1 = self.get_a_free_t_register()
             self.t_registers[t1] = True
             lbl1 = self.get_new_label().name
@@ -816,7 +897,8 @@ mfhi $t{};
                 current_code,
                 """
 li $t{}, {};
-lb $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lb $t{}, ($t{});
 beq $t{}, $zero, {};
 move $t{}, $zero;
 j {};
@@ -826,6 +908,8 @@ li $t{}, 1;
              """.format(
                     t1,
                     args[0].address_offset,
+                    t1,
+                    t1,
                     t1,
                     t1,
                     t1,
@@ -844,7 +928,7 @@ li $t{}, 1;
         elif isinstance(args[0], Immediate):
             args[0].value = 0 if args[0].value == 1 else 1
         elif isinstance(args[0], Register):
-            current_code = ""
+            current_code = args[0].code
             t1 = self.get_a_free_t_register()
             lbl1 = self.get_new_label().name
             lbl2 = self.get_new_label().name
@@ -858,12 +942,12 @@ j {};
 li ${}, 1;
 {}:
                 """.format(
-                    args[0].type + str(args[0].number),
+                    args[0].kind + str(args[0].number),
                     lbl1,
-                    args[0].type + str(args[0].number),
+                    args[0].kind + str(args[0].number),
                     lbl2,
                     lbl1,
-                    args[0].type + str(args[0].number),
+                    args[0].kind + str(args[0].number),
                     lbl2,
                 ),
             )
@@ -901,10 +985,12 @@ li.d $f{}, {};
         return reg
 
     def add(self, args):
-        print("add")
-        print(args)
+        # print("add")
+        # print(args)
         opr1 = args[0]
         opr2 = args[1]
+        current_code = opr1.code + "\n" + opr2.code
+        
 
         # type checking
         self.check_type_for_math_expr(opr1, opr2, "add")
@@ -915,26 +1001,26 @@ li.d $f{}, {};
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
-        current_code = ""
         if isinstance(opr1, Register):
             current_code = self.append_code(
                 current_code,
                 """
 move $t{}, ${};
             """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
-            if opr1.type == "t":
+            if opr1.kind == "t":
                 self.t_registers[opr1.number] = False
         elif isinstance(opr1, Variable):
             current_code = self.append_code(
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
             """.format(
-                    t1, opr1.address_offset, t1, t1
+                    t1, opr1.address_offset, t1, t1, t1, t1
                 ),
             )
         elif isinstance(opr1, Immediate):
@@ -954,19 +1040,20 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
-            if opr2.type == "t":
+            if opr2.kind == "t":
                 self.t_registers[opr2.number] = False
         elif isinstance(opr2, Variable):
             current_code = self.append_code(
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
             """.format(
-                    t2, opr2.address_offset, t2, t2
+                    t2, opr2.address_offset, t2, t2, t2, t2
                 ),
             )
         elif isinstance(opr2, Immediate):
@@ -1002,12 +1089,14 @@ add $t{}, $t{}, $t{}
             )
             exit(4)
         if opr1.type != "int" and opr1.type != "double":
+            if self.first_pass:
+                return
             print("math expr (+,-,*,/,%) for {} are not allowed".format(opr1.type))
             exit(4)
 
     def sub(self, args):
-        print("sub")
-        print(args)
+        # print("sub")
+        # print(args)
 
         opr1 = args[0]
         opr2 = args[1]
@@ -1020,25 +1109,27 @@ add $t{}, $t{}, $t{}
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
         current_code = ""
+        current_code = opr1.code + "\n" + opr2.code
         if isinstance(opr1, Register):
             current_code = self.append_code(
                 current_code,
                 """
 move $t{}, ${};
             """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
-            if opr1.type == "t":
+            if opr1.kind == "t":
                 self.t_registers[opr1.number] = False
         elif isinstance(opr1, Variable):
             current_code = self.append_code(
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
             """.format(
-                    t1, opr1.address_offset, t1, t1
+                    t1, opr1.address_offset, t1, t1, t1, t1
                 ),
             )
         elif isinstance(opr1, Immediate):
@@ -1058,19 +1149,20 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
-            if opr2.type == "t":
+            if opr2.kind == "t":
                 self.t_registers[opr2.number] = False
         elif isinstance(opr2, Variable):
             current_code = self.append_code(
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
             """.format(
-                    t2, opr2.address_offset, t2, t2
+                    t2, opr2.address_offset, t2, t2, t2, t2
                 ),
             )
         elif isinstance(opr2, Immediate):
@@ -1113,19 +1205,20 @@ sub $t{}, $t{}, $t{}
                 """
 move $t{}, ${};
             """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
-            if opr1.type == "t":
+            if opr1.kind == "t":
                 self.t_registers[opr1.number] = False
         elif isinstance(opr1, Variable):
             current_code = self.append_code(
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
             """.format(
-                    t1, opr1.address_offset, t1, t1
+                    t1, opr1.address_offset,t1,t1, t1, t1
                 ),
             )
         elif isinstance(opr1, Immediate):
@@ -1145,19 +1238,20 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
-            if opr2.type == "t":
+            if opr2.kind == "t":
                 self.t_registers[opr2.number] = False
         elif isinstance(opr2, Variable):
             current_code = self.append_code(
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
             """.format(
-                    t2, opr2.address_offset, t2, t2
+                    t2, opr2.address_offset,t2,t2, t2, t2
                 ),
             )
         elif isinstance(opr2, Immediate):
@@ -1272,9 +1366,10 @@ li.d $f{}, {};
                     code,
                     """
 li $t{}, {};
-s.d $f{}, frame_pointer($t{})
+add $t{}, $t{}, $s0;
+s.d $f{}, ($t{})
                     """.format(
-                        t1, opr.address_offset, f1, t1
+                        t1, opr.address_offset,t1,t1, f1, t1
                     ),
                 )
         # double register
@@ -1397,7 +1492,7 @@ and $t{}, $t{}, $t{};
                 ),
             )
             self.t_registers[t2.number] = False
-            t1.is_bool = True
+            t1.type = "bool"
             t1.write_code(current_code)
             return t1
         else:
@@ -1422,7 +1517,7 @@ or $t{}, $t{}, $t{};
                 ),
             )
             self.t_registers[t2.number] = False
-            t1.is_bool = True
+            t1.type = "bool"
             t1.write_code(current_code)
             return t1
         else:
@@ -1610,6 +1705,8 @@ j {};
                 code = self.append_code(code, result.code)
         result = Result()
         result.code = code
+        # used when going to a new function
+        result.symbol_table = self.symbol_table
         return result
 
     def pass_stmt(self, args):
@@ -1723,7 +1820,8 @@ j {};
                     """
 li $v0, 1;
 li $a0, {};
-lw $a0, frame_pointer($a0);
+add $a0, $a0, $s0;
+lw $a0, ($a0);
 syscall
                 """.format(
                         args[0].address_offset
@@ -1750,10 +1848,11 @@ syscall
                         """
 li $v0, 3;
 li $t{}, {};
-l.d $f12, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+l.d $f12, ($t{});
 syscall
                 """.format(
-                            t1, args[0].address_offset, t1
+                            t1, args[0].address_offset,t1,t1, t1
                         ),
                     )
             elif args[0].type == "bool":
@@ -1764,7 +1863,8 @@ syscall
                     current_code,
                     """
 li $t{}, {};
-lb $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s0;
+lb $t{}, ($t{});
 li $v0, 4;
 beq $t{}, $zero, {};
 la $a0, true_const;
@@ -1774,7 +1874,7 @@ la $a0, false_const;
 {}:
 syscall
                 """.format(
-                        t1, args[0].address_offset, t1, t1, t1, lbl, lbl2, lbl, lbl2
+                        t1, args[0].address_offset,t1,t1, t1, t1, t1, lbl, lbl2, lbl, lbl2
                     ),
                 )
             else:
@@ -1814,9 +1914,10 @@ la $a0, false_const;
 li $v0, 4;
 syscall
                 """.format(
-                            reg, lbl1, lbl2, lbl1, lbl2
-                        ),
-                    )
+                        args[0].kind + str(args[0].number), lbl1, lbl2, lbl1, lbl2
+                    ),
+                )
+
             elif args[0].type == "double":
                 if args[0].is_reference == True:
                     current_code = self.append_code(
@@ -1870,7 +1971,7 @@ syscall
                 pass
                 # other types in Register
         elif isinstance(args[0], Immediate):
-            if args[0].is_bool:
+            if args[0].type == "bool":
                 pass  # todo
             else:
                 current_code = self.append_code(
@@ -1899,6 +2000,25 @@ syscall
     def void_func_declare(self, args):
         return self.oo_gen.void_func_declare(args)
 
+    def func_declare(self, args):
+        return self.oo_gen.func_declare(args)
+
+    def formal_reduce(self, args):
+        return self.oo_gen.formal_reduce(args)
+
+    def return_from_func(self, args):
+        return self.oo_gen.return_from_func(args)
+
+    def add_codes(self, args):
+        return self.oo_gen.add_codes(args)
+
+    def function_call(self, args):
+        return self.oo_gen.function_call(args)
+
+    """
+    Read Integer
+    """
+
     def read_integer(self, args):
         print("read integer", args)
         t1 = self.get_a_free_t_register()
@@ -1925,6 +2045,15 @@ move $t{}, $v0;
         return self.arr_cgen.access_to_array(args)
 
 
+    """
+    Previous Code Generator for multi pass
+    """
+    def set_last_code_gen(self, prev_code_gen):
+        self.previous_pass = prev_code_gen
+        # move all function calls to new code generator
+        self.oo_gen.last_pass_functions = prev_code_gen.oo_gen.functions
+
+
 """
 Other Classes
 """
@@ -1933,6 +2062,8 @@ Other Classes
 class Result:
     def __init__(self):
         self.code = ""
+        # When going to another function
+        self.symbol_table = {}
 
     def write_code(self, code):
         self.code += "\n" + code

@@ -3,7 +3,17 @@ import getopt
 from lark import Lark, UnexpectedInput
 from CodeGenerator import CodeGenerator
 
+
 grammar = open("grammar.lark", "r")
+grammar1 = open("grammar.lark", 'r')
+
+# first pass
+first_pass_code_gen = CodeGenerator()
+first_pass_code_gen.first_pass = True
+parser1 = Lark(grammar1, parser="lalr", transformer=first_pass_code_gen, debug=True)
+
+
+# second pass
 codeGen = CodeGenerator()
 parser = Lark(grammar, parser="lalr", transformer=codeGen, debug=True)
 
@@ -41,62 +51,36 @@ def main(argv):
     #     output_file.write(result)
 
     codeGen.create_data_segment()
+    # first_pass_code_gen.create_data_segment()
 
-    print("Parse Tree:")
-    #
-    # tree = parser.parse(
-    #     """
-    # int main(){
-    #     bool x;
-    #     x = true;
-    #     Print(!x);
-    # }
-    # """
-    # )
+    decaf_code = """
+int main(){
+    int z;
+    int u;
+    u = 100 + 1400;
+    z = 2 * (5 + 3) * (100 - 1);
+    z = z - u;
+    print(z + 1);
+}
+    """
 
-    # tree = parser.parse(
-    #     """
-    # int main(){
-    #     int x;
-    #     x = 90;
-    #     print(x);
-    # }
-    # """
-    # )
 
-    # print(codeGen.expr_tokens)
+    # first pass
+    # try:
+    print("--------------first pass------------")
+    parser1.parse(decaf_code)
+    # except Exception:
+        # print("exception in first codeGenerator")
+    print("----------end of first pass---------")
 
-    #     tree = parser.parse(
-    #         """
-    #    int main(){
-    #         int i;
-    #         i = 0;
-    #         while(true){
-    #             print(i);
-    #             i = i+1;
-    #         }
-    #     }
-    #     """
-    #     )
 
-    tree = parser.parse(
-        """
-       int main(){
-            int[][] x;
-            x = NewArray(10, int[]);
-            x[0] = NewArray(10, int);
-
-            x[0][1] = 3;
-        }
-        """
-    )
+    # second pass
+    codeGen.set_last_code_gen(first_pass_code_gen)
+    tree = parser.parse(decaf_code)
 
     # print(tree.pretty())
 
-    # add var declarations
-    # codeGen.generate_variable_declaration_codes()
-
-    print("symbol table: ")
+    print("---------------------------------------\nsymbol table: ")
     for var in codeGen.symbol_table.keys():
         var = codeGen.symbol_table[var]
         print(
@@ -105,7 +89,7 @@ def main(argv):
             )
         )
 
-    print("MIPS:")
+    print("---------------------------------------\nMIPS code:")
     print(codeGen.mips_code)
 
 
