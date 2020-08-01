@@ -422,9 +422,8 @@ move $t{}, $v0;
             )
         )
 
-        # 000
-        print("result register for {}: {}".format(func_name, t3))
-
+        # use t3 as result holder
+        self.main_code_gen.t_registers[t3] = True
         reg = CodeGenerator.Register(func.return_type, "t", t3)
         reg.code = code
 

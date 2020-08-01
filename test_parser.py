@@ -54,14 +54,22 @@ def main(argv):
     # first_pass_code_gen.create_data_segment()
 
     decaf_code = """
+int func1(int p){
+    return p;
+}
+int func2(){
+    int x;
+    x = 20;
+    return x;
+}
 int main(){
     int z;
-    int u;
-    u = 100 + 1400;
-    z = 2 * (5 + 3) * (100 - 1);
-    z = z - u;
-    print(z + 1);
+    int x;
+    x = 100;
+    z = func1(x) + func2();
+    print(z);
 }
+
     """
 
 
