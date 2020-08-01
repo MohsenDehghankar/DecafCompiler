@@ -10,6 +10,8 @@ class ObjectOrientedCodeGen:
         self.current_function_signiture = []
         # all functions
         self.functions = {}
+        # last pass functions
+        self.last_pass_functions = {}
         # return value of last defined functin
         self.return_value = None
 
@@ -33,8 +35,8 @@ jr $ra;
         return args
 
     def func_declare(self, args):
-        print("all functions:")
-        print(args)
+        # print("all functions:")
+        # print(args)
         # pass two above reductions
         args = args[0]
 
@@ -204,16 +206,41 @@ jr $ra;
     """
 
     def function_call(self, args):
-        # print("function_call")
-        # print(args)
+        print("function_call")
+        print(args)
+        
+        if self.main_code_gen.first_pass:
+            # not important what the code is
+            reg = CodeGenerator.Register("int", "t", 0)
+            reg.code = ""
+            return reg
+        
         func_name = args[0]
         func_name = func_name.value
         try:
             arguments = args[1].children
         except AttributeError:
             arguments = [args[1]]
+        except IndexError:
+            arguments = []
+            
 
-        func = self.functions[func_name]
+        try:
+            func = self.functions[func_name]
+        except KeyError:
+            try:
+                func = self.last_pass_functions[func_name]
+            except KeyError:
+                if self.main_code_gen.first_pass:
+                    # not important what the code is
+                    reg = CodeGenerator.Register("int", "t", 0)
+                    reg.code = ""
+                    return reg
+                else:
+                    print("function {} not exists".format(func_name))
+                    exit(4)
+
+
         # check number of inputs
         if len(func.arguments) != len(arguments):
             print("Invalid Parameters Type for Function!")
@@ -242,6 +269,10 @@ jr $ra;
         self.main_code_gen.t_registers[t2] = True
         t3 = self.main_code_gen.get_a_free_t_register()
         f1 = self.main_code_gen.get_a_free_f_register()
+
+        # ---------
+        print("function {} call".format(func_name))
+
         code = self.main_code_gen.append_code(
             code,
             """
@@ -312,7 +343,7 @@ move $t{}, ${};
 add $t{}, $t{}, $s0;
 sw $t{}, ($t{});
                     """.format(
-                            t3, input_var.type + str(input_var.number), t2, t2, t3, t2
+                            t3, input_var.kind + str(input_var.number), t2, t2, t3, t2
                         ),
                     )
                 elif var.type == "bool":
@@ -323,7 +354,7 @@ move $t{}, ${};
 add $t{}, $t{}, $s0;
 sb $t{}, ($t{});
                     """.format(
-                            t3, input_var.type + str(input_var.number), t2, t2, t3, t2
+                            t3, input_var.kind + str(input_var.number), t2, t2, t3, t2
                         ),
                     )
                 else:
@@ -382,6 +413,10 @@ move $t{}, $v0;
                 t3
             )
         )
+
+        # 000
+        print("result register for {}: {}".format(func_name, t3))
+
         reg = CodeGenerator.Register(func.return_type, "t", t3)
         reg.code = code
 

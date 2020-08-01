@@ -34,6 +34,10 @@ class CodeGenerator(Transformer):
         # last declared function
         self.func_type_tmp = None
         self.current_function_name = None
+        # previous parser code generator
+        self.previous_pass = None
+        # is first pass
+        self.first_pass = False
 
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
@@ -288,8 +292,8 @@ s.d $f{}, ($t{});
         return code
 
     def assignment_calculated(self, args):
-        # print("assignment calculated")
-        # print(args)
+        print("assignment calculated")
+        print(args)
         left_value = args[0]
         right_value = args[1]
 
@@ -335,7 +339,7 @@ s.d $f{}, ($t{});
                 """
     move ${}, $t{};
                 """.format(
-                    left_value.type + str(left_value.number), t1
+                    left_value.kind + str(left_value.number), t1
                 ),
             )
 
@@ -415,6 +419,12 @@ sb $t{}, ($t{});
                                 return par
                         raise Exception
                     except Exception:
+
+                        if self.first_pass:
+                            reg = Register("int", "t", 0)
+                            reg.code = ""
+                            return reg
+                        
                         print("Variable Not Exists!")
                         exit(4)
             elif isinstance(child, Variable) and child.type == "double":
@@ -513,7 +523,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
                 """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
         else:
@@ -547,7 +557,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
                 """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
         else:
@@ -610,7 +620,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
         else:
@@ -644,7 +654,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
         else:
@@ -704,7 +714,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
                 """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
         else:
@@ -738,7 +748,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
                 """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
         else:
@@ -818,12 +828,12 @@ j {};
 li ${}, 1;
 {}:
                 """.format(
-                    args[0].type + str(args[0].number),
+                    args[0].kind + str(args[0].number),
                     lbl1,
-                    args[0].type + str(args[0].number),
+                    args[0].kind + str(args[0].number),
                     lbl2,
                     lbl1,
-                    args[0].type + str(args[0].number),
+                    args[0].kind + str(args[0].number),
                     lbl2,
                 ),
             )
@@ -883,10 +893,10 @@ li.d $f{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
-            if opr1.type == "t":
+            if opr1.kind == "t":
                 self.t_registers[opr1.number] = False
         elif isinstance(opr1, Variable):
             current_code = self.append_code(
@@ -916,10 +926,10 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
-            if opr2.type == "t":
+            if opr2.kind == "t":
                 self.t_registers[opr2.number] = False
         elif isinstance(opr2, Variable):
             current_code = self.append_code(
@@ -965,6 +975,8 @@ add $t{}, $t{}, $t{}
             )
             exit(4)
         if opr1.type != "int" and opr1.type != "double":
+            if self.first_pass:
+                return
             print("math expr (+,-,*,/,%) for {} are not allowed".format(opr1.type))
             exit(4)
 
@@ -989,10 +1001,10 @@ add $t{}, $t{}, $t{}
                 """
 move $t{}, ${};
             """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
-            if opr1.type == "t":
+            if opr1.kind == "t":
                 self.t_registers[opr1.number] = False
         elif isinstance(opr1, Variable):
             current_code = self.append_code(
@@ -1022,10 +1034,10 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
-            if opr2.type == "t":
+            if opr2.kind == "t":
                 self.t_registers[opr2.number] = False
         elif isinstance(opr2, Variable):
             current_code = self.append_code(
@@ -1078,10 +1090,10 @@ sub $t{}, $t{}, $t{}
                 """
 move $t{}, ${};
             """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
-            if opr1.type == "t":
+            if opr1.kind == "t":
                 self.t_registers[opr1.number] = False
         elif isinstance(opr1, Variable):
             current_code = self.append_code(
@@ -1111,10 +1123,10 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
-            if opr2.type == "t":
+            if opr2.kind == "t":
                 self.t_registers[opr2.number] = False
         elif isinstance(opr2, Variable):
             current_code = self.append_code(
@@ -1768,7 +1780,7 @@ la $a0, false_const;
 {}:
 syscall
                 """.format(
-                        args[0].type + str(args[0].number), lbl1, lbl2, lbl1, lbl2
+                        args[0].kind + str(args[0].number), lbl1, lbl2, lbl1, lbl2
                     ),
                 )
             elif args[0].type == "double":
@@ -1861,6 +1873,15 @@ move $t{}, $v0;
         reg = Register("int", "t", t1)
         reg.write_code(code)
         return reg
+
+
+    """
+    Previous Code Generator for multi pass
+    """
+    def set_last_code_gen(self, prev_code_gen):
+        self.previous_pass = prev_code_gen
+        # move all function calls to new code generator
+        self.oo_gen.last_pass_functions = prev_code_gen.oo_gen.functions
 
 
 """

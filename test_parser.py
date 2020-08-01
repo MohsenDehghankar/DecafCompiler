@@ -3,7 +3,17 @@ import getopt
 from lark import Lark, UnexpectedInput
 from CodeGenerator import CodeGenerator
 
+
 grammar = open("grammar.lark", "r")
+grammar1 = open("grammar.lark", 'r')
+
+# first pass
+first_pass_code_gen = CodeGenerator()
+first_pass_code_gen.first_pass = True
+parser1 = Lark(grammar1, parser="lalr", transformer=first_pass_code_gen, debug=True)
+
+
+# second pass
 codeGen = CodeGenerator()
 parser = Lark(grammar, parser="lalr", transformer=codeGen, debug=True)
 
@@ -41,26 +51,28 @@ def main(argv):
     #     output_file.write(result)
 
     codeGen.create_data_segment()
+    # first_pass_code_gen.create_data_segment()
 
-    tree = parser.parse(
-        """
-    
-    void func2(int y){
-        y = y + 1;
-        print(y);
-    }
-    void func1 (int a){
-        print(a);
-        func2(a);
-    }
-    int main(){
-        int x;
-        x = 90;
-        func1(x);
-        print(x);
-    }
+    decaf_code = """
+int main(){
+    int z;
+    z = 2 * 5 + 3;
+    print(z);
+}
     """
-    )
+
+    # first pass
+    # try:
+    print("--------------first pass------------")
+    parser1.parse(decaf_code)
+    # except Exception:
+        # print("exception in first codeGenerator")
+    print("----------end of first pass---------")
+
+
+    # second pass
+    codeGen.set_last_code_gen(first_pass_code_gen)
+    tree = parser.parse(decaf_code)
 
     # print(tree.pretty())
 
@@ -73,7 +85,7 @@ def main(argv):
             )
         )
 
-    print("---------------------------------------\nMIPS:")
+    print("---------------------------------------\nMIPS code:")
     print(codeGen.mips_code)
 
 
