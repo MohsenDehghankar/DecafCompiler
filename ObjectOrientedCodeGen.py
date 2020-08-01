@@ -3,6 +3,7 @@ from lark.lexer import Lexer, Token
 import CodeGenerator
 
 
+
 class ObjectOrientedCodeGen:
     def __init__(self, main_code_gen):
         self.main_code_gen = main_code_gen
@@ -47,10 +48,17 @@ jr $ra;
             print("Error in Function Declaration!")
             exit(4)
 
+
         input_parameters = args[3]  # array of Trees
         function_body = args[4]  # type = Result
 
         # generate code if 'main'
+# =======
+#        input_parameters = args[2].children
+#        function_body = args[3]  # type = Result
+#
+#        # generate code
+# >>>>>>> master
         if function_name == "main" and func_return_type == "int":
             self.main_code_gen.write_code(
                 function_body.code
@@ -429,3 +437,7 @@ class Function:
         self.return_type = None
         self.arguments = None
 
+# =======
+#    def void_func_declare(self, args):
+#        pass
+# >>>>>>> master

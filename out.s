@@ -1,3 +1,4 @@
+
 .data
 frame_pointer:  .space  1000
 true_const:     .asciiz "true"
@@ -5,75 +6,87 @@ false_const:    .asciiz "false"
 
 .text
 main:
+        
 
 
 
 
+li $a0, 44;
+li $v0, 9;
+syscall
+li $t0 , 10;
+sw $t0, 0($v0);
+li $t0, 4
+sw $v0, frame_pointer($t0)
+        
 
-li $t0, 0;
 
+li $t0, 4;
+lw $t0, frame_pointer($t0);
+            
 
 li $t1, 0;
 sw $t0, frame_pointer($t1);
+                
 
 
+li $a0, 44;
+li $v0, 9;
+syscall
+li $t1 , 10;
+sw $t1, 0($v0);
+li $t1, 8
+sw $v0, frame_pointer($t1)
+        
 
 
-label3:
+li $t0, 0;
+lw $t0, frame_pointer($t0);
+addi $t0, $t0, 4;
+            
+
+li $t1, 8;
+lw $t1, frame_pointer($t1);
+            
+
+
+sw $t1, ($t0);
+                
 
 
 
 
 li $t0, 0;
 lw $t0, frame_pointer($t0);
+addi $t0, $t0, 4;
+            
 
+lw $t1, ($t0);
+addi $t1, $t1, 8;
+            
 
-li $t1, 10;
+li $t2, 3;
+            
 
+sw $t2, ($t1);
+                
 
-
-blt $t0, $t1, label1;
-
-
-
-
-add $t0, $zero, $zero;
-b label2;
-label1:
-addi $t0, $zero, 1;
-label2:
-
-
-beq $t0,$zero,label4;
-
-
-
-
-
-li $v0, 1;
-li $a0, 0;
-lw $a0, frame_pointer($a0);
-syscall
+sw $t2, ($t1);
+                
 
 
 
 
 li $t1, 0;
 lw $t1, frame_pointer($t1);
+addi $t1, $t1, 4;
+            
 
+lw $t2, ($t1);
+addi $t2, $t2, 12;
+            
 
-li $t2, 1;
-
-
-add $t1, $t1, $t2
-
-
-move $t2, $t1;
-
-
-li $t1, 0;
-sw $t2, frame_pointer($t1);
-
-
-j label3;
-label4:
+li $v0, 1;
+lw $a0, ($t2);
+syscall
+ 
