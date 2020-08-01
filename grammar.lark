@@ -1,6 +1,10 @@
 start: decl+
 
-decl : variabledec | funcdec | classdec | interfacedec | COMMENT
+decl : variabledec 
+        | funcdec               
+        | classdec 
+        | interfacedec 
+        | COMMENT
 
 //------variable dec-----------
 variabledec: variable";" -> variable_declare
@@ -16,8 +20,8 @@ type : "int"            -> int_variable_declaraion
         | type "[]"
 
 //--------function dec--------
-funcdec : type IDENT "("formal")" stmtblock
-        | "void" IDENT "("formal")" stmtblock
+funcdec : type IDENT "("formal")" stmtblock     -> non_void_func_declare
+        | "void" IDENT "("formal")" stmtblock   -> void_func_declare
 
 formal : variable*
 
@@ -36,6 +40,8 @@ stmt : [expr]";"
 expr_high_level : expr                                  -> end_of_expr                 // when the start and finish of expression is important (for, while)
 
 expr : assignment                                       -> exp_calculated
+
+// from here, Result is returned
 
 assignment : lvalue "=" assignment                      -> assignment_calculated       // todo: assignment as assignment
         | logical_expr                                  -> pass_assignment
@@ -84,10 +90,10 @@ high_proior : high_proior "." IDENT ("("actual?")")?
         | call                  -> call_action
         | constants             -> constant_operand     
 
-call : IDENT"("actual?")" 
+call : IDENT"("actual?")"       
         | "ReadLine()"          -> read_line
         | "NewArray("expr","type")" 
-        | "ReadInteger()"   
+        | "ReadInteger()"       -> read_integer
         | IDENT                 -> identifier_in_expression    
 
 constants : "this" 
@@ -97,19 +103,18 @@ actual : actual","expr
         | expr                  -> exp_to_actual
 
 constant : HEX_NUMBER 
-        | NUMBER 
-        | BOOL                  
+        | DOUBLE                
+        | INT
+        | BOOL                 
         | STRING_CONSTANT 
-        | "null"
+        | "null"                
 
 //------special statements----------
-if : if_stmt ("else" stmt)?     ->pass_if
-if_stmt:  if_expr stmt -> if_stmt
-if_expr : "if" "(" expr ")"     -> if_expr
-while : "while" "(" expr ")" stmt
-for : "for" "("exp_or_nothing";"expr_high_level";"exp_or_nothing")" stmt   -> _for
+if: "if" "(" expr ")" stmt ("else" stmt)?       -> _if
+while : "while" "(" expr ")" stmt               -> _while
+for : "for" "("[expr]";"expr";"[expr]")" stmt   -> _for
 return : "return" [expr] ";"
-print : ("Print"|"print") "("actual")" ";"      -> _print
+print : ("Print"|"print") "("actual")" ";"      -> print
 
 //------helps finding which expr is empty---
 exp_or_nothing : expr_high_level                -> pass_high_level_expr
@@ -128,16 +133,19 @@ prototype : type IDENT "(" formal ")" ";"
 STRING_CONSTANT : /"[^"^\n]*"/
 COMMENT : "//" /[^\n]*/
         | "/*" /(.|\n)+/ "*/"
-BOOL.2 : "true" | "false"
+BOOL.2 : "true" | "false"  
 IDENT : /[a-zA-Z]([\w]|[_]){0,30}/
 HEX_NUMBER.2: /0x[\da-f]*/
 READLINE.4: "ReadLine()"
+READINTEGER.2: "ReadInteger()"
 // EMPTY: ""
+INT: /\d+/
+DOUBLE: /\d+\.\d*[E,e]\+?\d+/ | /\d+\.\d*/
 
 
 %import common.ESCAPED_STRING
 %import common._STRING_ESC_INNER
-%import common.NUMBER
+// %import common.NUMBER
 %import common.WS
 
 %ignore WS

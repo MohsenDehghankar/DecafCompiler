@@ -54,36 +54,33 @@ def main(argv):
     # """
     # )
 
+    # tree = parser.parse(
+    #     """
+    # int main(){
+    #     int x;
+    #     int y;
+    #     y = 3;
+    #     x = 90;
+    #     print(90);
+    #     print(x);
+    # }
+    # """
+    # )
+
+    # print(codeGen.expr_tokens)
+
     tree = parser.parse(
         """
-    int main(){
-<<<<<<< Updated upstream
-    int x;
-    x = 8;
-       print(x);
-=======
+   int main(){
         int i;
-        for(i = 0; i<10; i=i+1){
+        i = 0;
+        while(true){
+            print(i);
+            i = i+1;
         }
->>>>>>> Stashed changes
     }
     """
     )
-    # string
-    # x;
-    # x = "salam";
-    # print(x);
-    # print(codeGen.expr_tokens)
-
-    # tree = parser.parse("""
-    # int main(){
-    #     int x;
-    #     if (3 <= 4)
-    #         x = 3;
-    #      else
-    #         x = 2;
-    # }
-    # """)
 
     # print(tree.pretty())
 
