@@ -40,6 +40,7 @@ frame_pointer:  .space  1000
 true_const:     .asciiz "true"
 false_const:    .asciiz "false"
 end_of_string:  .byte 0
+end_of_string:  .byte   0
 
 .text
 main:
@@ -168,6 +169,114 @@ syscall
     def assignment_calculated(self, args):
         print("assignment calculated")
         print(args)
+    def type_checking_for_assignment(self, l_opr, r_opr):
+        if l_opr.type != r_opr.type:
+            print(
+                "invalid type {} and {} for assignment".format(l_opr.type, r_opr.type)
+            )
+            exit(4)
+
+    def code_for_loading_int_reg(self, t_reg, _int):
+        code = """
+move $t{}, ${};
+                """.format(
+            t_reg, _int.kind + str(_int.number)
+        )
+
+        return code
+
+    def code_for_loading_int_Imm(self, t_reg, _Imm):
+        code = """
+li $t{}, {};
+            """.format(
+            t_reg, _Imm.value
+        )
+
+        return code
+
+    def code_for_loading_string_Imm(self, reg, str):
+        print("calculate string")
+        print("str is :::::", str)
+        print(reg)
+        code = """"""
+        code = """
+li $v0, 9;
+li $a0, {};
+syscall
+        """.format(len(str.value) + 1)
+        for i in range(len(str.value) + 1):
+            if i == len(str.value):
+                code = self.append_code(
+                    code, """
+lb $a0,end_of_string;
+sb $a0,{}($v0);
+                        """.format(i)
+                )
+            else:
+                code = self.append_code(
+                    code, """
+li $a0,'{}';
+sb $a0,{}($v0);
+                        """.format(str.value[i], i)
+                )
+
+        return code
+
+    def code_for_moveing_int_var(self, t_reg, var):
+        code = """
+li $t{}, {};
+lw $t{}, frame_pointer($t{});
+            """.format(
+            t_reg, var.address_offset, t_reg, t_reg
+        )
+
+        return code
+
+    def handle_double_assignment(self, left_opr, right_opr):
+
+        f1 = self.get_a_free_f_register()
+        t1 = self.get_a_free_t_register()
+        code = ""
+        if isinstance(right_opr, Variable):
+            if right_opr.address_offset == None:
+                code = self.append_code(
+                    code,
+                    """
+li.d $f{}, {};
+                    """.format(
+                        f1, right_opr.value
+                    ),
+                )
+            else:
+                code = self.append_code(
+                    code,
+                    """
+li $t{}, {};
+l.d $f{}, frame_pointer($t{})
+                    """.format(
+                        t1, right_opr.address_offset, f1, t1
+                    ),
+                )
+        # double register
+        else:
+            f1 = right_opr.number
+        code = self.append_code(
+            code,
+            """
+li $t{}, {};
+s.d $f{}, frame_pointer($t{});
+                """.format(
+                t1, left_opr.address_offset, f1, t1
+            ),
+        )
+        return code
+
+    def assignment_calculated(self, args):
+        print("assignment calculated")
+        print(args[0])
+        print("*****")
+        print(args[1])
+        print("******")
         left_value = args[0]
         right_value = args[1]
         t1 = self.get_a_free_t_register()
@@ -238,6 +347,16 @@ lw $t{}, frame_pointer($t{});
                     t1, right_value.address_offset, t1, t1
                 ),
             )
+            print(right_value)
+            if right_value.type == "string":
+                right_code = self.code_for_loading_string_Imm(t1, right_value)
+            else:
+                right_code = self.code_for_loading_int_Imm(t1, right_value)
+        elif isinstance(right_value, Variable):
+            # int or bool
+            right_code = self.code_for_moveing_int_var(t1, right_value)
+
+        current_code = self.append_code(current_code, right_code)
 
         # left
         if isinstance(left_value, Register):
@@ -261,6 +380,17 @@ sw $t{}, frame_pointer($t{});
                 """.format(
                         t2, left_value.address_offset, t1, t2
                     ),
+                )
+            elif left_value.type == "string":
+                t2 = self.get_a_free_t_register()
+                current_code = self.append_code(
+                    current_code,
+                    """
+li $t{}, {};
+sw $v0, frame_pointer($t{});
+                    """.format(
+                        t2, left_value.address_offset, t2
+                    )
                 )
             elif left_value.type == "bool":
                 t2 = self.get_a_free_t_register()
@@ -1384,6 +1514,25 @@ j {};
     There is a Constant operand in Expression
     """
 
+    def generate_name_for_double(self):
+        self.tmp_double_count += 1
+        return "double{}".format(self.tmp_double_count)
+
+    def get_the_string(self):
+
+        def calculate_value_of_double(self, val):
+            val = val.lower()
+            if "e" in val:
+                mantis, exponent = val.lower().split("e")
+                if exponent[0] == "+":
+                    exponent = int(exponent)
+                else:
+                    exponent = -int(exponent)
+                val = float(mantis) * 10 ** exponent
+                return val
+            else:
+                return float(val)
+
     def constant_operand(self, args):
         # print("constant operands")
         print(args)
@@ -1400,6 +1549,8 @@ j {};
                 imm = Immediate(str)
                 imm.type = "string"
                 return imm
+            elif args[0].type == "STRING_CONSTANT":
+                return Immediate(args[0].value[1:len(args[0].value) - 1], "string")
         return args
 
     def pass_constant(self, args):
