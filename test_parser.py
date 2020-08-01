@@ -72,7 +72,9 @@ def main(argv):
     tree = parser.parse(
         """
    int main(){
-        print("salam");
+        string s;
+        s = "salam";
+        print(s);
     }
     """
     )

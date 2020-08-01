@@ -40,6 +40,13 @@ lb $a0,end_of_string;
 sb $a0,5($v0);
 
 
-move $a0, $v0;
+li $t1, 0;
+sw $v0, frame_pointer($t1);
+
+
+
+
 li $v0, 4;
+li $a0, 0;
+lw $a0, frame_pointer($a0);
 syscall

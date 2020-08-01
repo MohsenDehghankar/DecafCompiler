@@ -1673,7 +1673,17 @@ syscall
                     ),
                 )
             elif args[0].type == "string":
-                pass
+                current_code = self.append_code(
+                    current_code,
+                    """
+li $v0, 4;
+li $a0, {};
+lw $a0, frame_pointer($a0);
+syscall
+                """.format(
+                        args[0].address_offset
+                    ),
+                )
             elif args[0].type == "double":
                 if args[0].address_offset == None:
                     current_code = self.append_code(
