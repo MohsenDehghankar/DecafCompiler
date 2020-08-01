@@ -56,8 +56,11 @@ def main(argv):
     decaf_code = """
 int main(){
     int z;
-    z = 2 * 5 + 3;
-    print(z);
+    int u;
+    u = 100 + 1400;
+    z = 2 * (5 + 3) * (100 - 1);
+    z = z - u;
+    print(z + 1);
 }
     """
 

@@ -154,9 +154,6 @@ la $s0, frame_pointer;
     def save_function_type(self, args):
         self.func_type_tmp = self.type_tmp
         self.type_tmp = None
-        # print("here")
-        # print(args)
-        # return args
 
     """
     Read from console
@@ -292,10 +289,12 @@ s.d $f{}, ($t{});
         return code
 
     def assignment_calculated(self, args):
-        print("assignment calculated")
-        print(args)
+        # print("assignment calculated")
+        # print(args)
         left_value = args[0]
         right_value = args[1]
+
+        # print("right value code: {}: " + right_value.code)
 
         self.type_checking_for_assignment(left_value, right_value)
 
@@ -451,7 +450,7 @@ sb $t{}, ($t{});
         var = args[0]
         if isinstance(var, Variable):
             if var.type == "int":
-                current_code = ""
+                current_code = var.code
                 t1 = self.get_a_free_t_register()
                 self.t_registers[t1] = True
                 t2 = self.get_a_free_t_register()
@@ -482,9 +481,10 @@ mflo $t{};
     def multiply(self, args):
         # print("multiply")
         # print(args)
-        current_code = ""
         opr1 = args[0]
         opr2 = args[1]
+        current_code = ""
+        current_code = opr1.code + "\n" + opr2.code
 
         self.check_type_for_math_expr(opr1, opr2, "*")
 
@@ -581,6 +581,8 @@ mflo $t{};
         current_code = ""
         opr1 = args[0]
         opr2 = args[1]
+        current_code = opr1.code + "\n" + opr2.code
+
 
         self.check_type_for_math_expr(opr1, opr2, "/")
 
@@ -679,6 +681,7 @@ mflo $t{};
         current_code = ""
         opr1 = args[0]
         opr2 = args[1]
+        current_code = opr1.code + "\n" + opr2.code
 
         self.check_type_for_math_expr(opr1, opr2, "%")
 
@@ -774,7 +777,7 @@ mfhi $t{};
         self.type_checking_for_logical_expr(args[0], args[0], "!")
 
         if isinstance(args[0], Variable):
-            current_code = ""
+            current_code = args[0].code
             t1 = self.get_a_free_t_register()
             self.t_registers[t1] = True
             lbl1 = self.get_new_label().name
@@ -814,7 +817,7 @@ li $t{}, 1;
         elif isinstance(args[0], Immediate):
             args[0].value = 0 if args[0].value == 1 else 1
         elif isinstance(args[0], Register):
-            current_code = ""
+            current_code = args[0].code
             t1 = self.get_a_free_t_register()
             lbl1 = self.get_new_label().name
             lbl2 = self.get_new_label().name
@@ -876,6 +879,8 @@ li.d $f{}, {};
         # print(args)
         opr1 = args[0]
         opr2 = args[1]
+        current_code = opr1.code + "\n" + opr2.code
+        
 
         # type checking
         self.check_type_for_math_expr(opr1, opr2, "add")
@@ -886,7 +891,6 @@ li.d $f{}, {};
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
-        current_code = ""
         if isinstance(opr1, Register):
             current_code = self.append_code(
                 current_code,
@@ -981,8 +985,8 @@ add $t{}, $t{}, $t{}
             exit(4)
 
     def sub(self, args):
-        print("sub")
-        print(args)
+        # print("sub")
+        # print(args)
 
         opr1 = args[0]
         opr2 = args[1]
@@ -995,6 +999,7 @@ add $t{}, $t{}, $t{}
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
         current_code = ""
+        current_code = opr1.code + "\n" + opr2.code
         if isinstance(opr1, Register):
             current_code = self.append_code(
                 current_code,
