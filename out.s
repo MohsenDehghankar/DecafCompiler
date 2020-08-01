@@ -11,62 +11,35 @@ main:
 
 
 
-
-label3:
-
-
-
-
-li $t0, 0;
-lw $t0, frame_pointer($t0);
-
-
-li $t1, 10;
-
-
-
-blt $t0, $t1, label1;
-
-
-
-
-add $t0, $zero, $zero;
-b label2;
-label1:
-addi $t0, $zero, 1;
-label2:
-
-
-beq $t0,$zero,label4;
-
-
-
-
-
-li $v0, 1;
-li $a0, 0;
-lw $a0, frame_pointer($a0);
+li $v0, 9;
+li $a0, 6;
 syscall
 
 
+li $a0,'s';
+sb $a0,0($v0);
 
 
-li $t1, 0;
-lw $t1, frame_pointer($t1);
+li $a0,'a';
+sb $a0,1($v0);
 
 
-li $t2, 1;
+li $a0,'l';
+sb $a0,2($v0);
 
 
-add $t1, $t1, $t2
+li $a0,'a';
+sb $a0,3($v0);
 
 
-move $t2, $t1;
+li $a0,'m';
+sb $a0,4($v0);
 
 
-li $t1, 0;
-sw $t2, frame_pointer($t1);
+lb $a0,end_of_string;
+sb $a0,5($v0);
 
 
-j label3;
-label4:
+move $a0, $v0;
+li $v0, 4;
+syscall

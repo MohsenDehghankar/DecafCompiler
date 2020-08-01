@@ -58,7 +58,7 @@ main:
     """
 
     def variable_declare(self, args):
-        # print("var_declare", args)
+        print("print is being used", args)
         variable_name = args[0].children[1].value
 
         if variable_name in self.symbol_table.keys():
@@ -1654,8 +1654,9 @@ j {};
         return args[0]
 
     def print(self, args):
-        # print("print")
-        # print(args)
+        print("print")
+        print(args)
+        print(args[0].type)
         current_code = args[0].code
 
         if isinstance(args[0], Variable):
@@ -1768,8 +1769,37 @@ syscall
                 pass
                 # other types in Register
         elif isinstance(args[0], Immediate):
-            if args[0].is_bool:
+            if args[0].type == "bool":
                 pass  # todo
+            if args[0].type == "string":
+                current_code = self.append_code(
+                    current_code,"""
+li $v0, 9;
+li $a0, {};
+syscall
+                            """.format(len(args[0].value) + 1))
+                for i in range(len(args[0].value) + 1):
+                    if i == len(args[0].value):
+                        current_code = self.append_code(
+                            current_code, """
+lb $a0,end_of_string;
+sb $a0,{}($v0);
+                            """.format(i)
+                        )
+                    else:
+                        current_code = self.append_code(
+                            current_code, """
+li $a0,'{}';
+sb $a0,{}($v0);
+                            """.format(args[0].value[i], i)
+                        )
+                current_code = self.append_code(
+                    current_code, """
+move $a0, $v0;
+li $v0, 4;
+syscall
+                    """
+                )
             else:
                 current_code = self.append_code(
                     current_code,
