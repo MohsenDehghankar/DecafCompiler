@@ -1,6 +1,6 @@
 start: decl+                                    -> add_codes
 
-decl : variabledec 
+decl : variabledec                              -> global_var_declare
         | funcdec                               -> func_declare               
         | classdec 
         | interfacedec 
@@ -20,15 +20,18 @@ type : "int"            -> int_variable_declaraion
         | type "[]"     -> array_variable_declaration 
 
 //--------function dec--------
-funcdec : type IDENT open_pr formal")" stmtblock             -> non_void_func_declare
-        | void_type IDENT open_pr formal")" stmtblock        -> void_func_declare
+funcdec : type function_name open_pr formal")" stmtblock             -> non_void_func_declare
+        | void_type function_name open_pr formal")" stmtblock        -> void_func_declare
 
+function_name : IDENT                                                -> function_name
 open_pr : "("                                           -> save_function_type
 void_type : "void"                                      -> void_function_declaration
 
 formal : variable*                              -> formal_reduce
 
-stmtblock : "{" (variabledec|stmt|COMMENT)* "}" -> stmt_block
+stmtblock : start_of_block (variabledec|stmt|COMMENT)* "}" -> end_block
+
+start_of_block : "{"                                       -> start_block
 
 stmt : [expr]";"                                
         | stmtblock 

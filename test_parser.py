@@ -2,10 +2,11 @@ import sys
 import getopt
 from lark import Lark, UnexpectedInput
 from CodeGenerator import CodeGenerator
+from ObjectOrientedCodeGen import SymbolTable
 
 
 grammar = open("grammar.lark", "r")
-grammar1 = open("grammar.lark", 'r')
+grammar1 = open("grammar.lark", "r")
 
 # first pass
 first_pass_code_gen = CodeGenerator()
@@ -50,29 +51,38 @@ def main(argv):
     # with open("out/" + outputfile, "w") as output_file:
     #     output_file.write(result)
 
+    # -------------start-------------------
+
     codeGen.create_data_segment()
-    # first_pass_code_gen.create_data_segment()
 
     decaf_code = """
-int main(){
-    int z;
-    int u;
-    u = 100 + 1400;
-    z = 2 * (5 + 3) * (100 - 1);
-    z = z - u;
-    print(z + 1);
+void fun(){
+    test = 44;
 }
+int main(){
+    x = 10;
+    fun();
+    print(x);
+    int x;
+    func();
+}
+void recurs(int a){
+    //if (a == 0){
+    //    return;
+    //}
+    print(a);
+    recurs(a - 1);
+}
+void func(){
+    print(test);
+}
+int test;
     """
 
-
     # first pass
-    # try:
     print("--------------first pass------------")
     parser1.parse(decaf_code)
-    # except Exception:
-        # print("exception in first codeGenerator")
     print("----------end of first pass---------")
-
 
     # second pass
     codeGen.set_last_code_gen(first_pass_code_gen)
@@ -80,9 +90,22 @@ int main(){
 
     # print(tree.pretty())
 
+    '''
+    print("\n\n------------symbol tables-------------------")
+    for table in first_pass_code_gen.symbol_tables:
+        print(
+            "{} --> {} : {}".format(
+                table.name,
+                table.parent.name if table.parent is not None else table.parent,
+                table.variables
+            )
+        )
+    print("---------------end--------------------------\n\n")
+    '''
+    '''
     print("---------------------------------------\nsymbol table: ")
-    for var in codeGen.symbol_table.keys():
-        var = codeGen.symbol_table[var]
+    for var in codeGen.symbol_table.variables.keys():
+        var = codeGen.symbol_table.variables[var]
         print(
             "name: {}, offset: {}, size: {}".format(
                 var.name, var.address_offset, var.size
@@ -90,6 +113,7 @@ int main(){
         )
 
     print("---------------------------------------\nMIPS code:")
+    '''
     print(codeGen.mips_code)
 
 
