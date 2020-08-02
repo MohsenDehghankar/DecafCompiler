@@ -2,10 +2,11 @@ import sys
 import getopt
 from lark import Lark, UnexpectedInput
 from CodeGenerator import CodeGenerator
+from ObjectOrientedCodeGen import SymbolTable
 
 
 grammar = open("grammar.lark", "r")
-grammar1 = open("grammar.lark", 'r')
+grammar1 = open("grammar.lark", "r")
 
 # first pass
 first_pass_code_gen = CodeGenerator()
@@ -54,33 +55,36 @@ def main(argv):
     # first_pass_code_gen.create_data_segment()
 
     decaf_code = """
+int test;
 int func1(int p){
     return p;
 }
-int func2(){
-    int x;
-    x = 20;
-    return x;
-}
 int main(){
+    test = 1;
     int z;
     int x;
     x = 100;
     z = func1(x) + func2();
     print(z);
 }
+int func2(){
+    int x;
+    x = test + 20;
+    return x;
+}
 
     """
-
 
     # first pass
     # try:
     print("--------------first pass------------")
     parser1.parse(decaf_code)
     # except Exception:
-        # print("exception in first codeGenerator")
+    # print("exception in first codeGenerator")
     print("----------end of first pass---------")
 
+    # reset symbol table naming after first pass
+    SymbolTable.id = 2
 
     # second pass
     codeGen.set_last_code_gen(first_pass_code_gen)
@@ -88,9 +92,20 @@ int main(){
 
     # print(tree.pretty())
 
+    print("\n\n------------symbol tables-------------------")
+    for table in first_pass_code_gen.symbol_tables:
+        print(
+            "{} --> {} : {}".format(
+                table.function_name,
+                table.parent.name if table.parent is not None else table.parent,
+                table.variables
+            )
+        )
+    print("---------------end--------------------------\n\n")
+
     print("---------------------------------------\nsymbol table: ")
-    for var in codeGen.symbol_table.keys():
-        var = codeGen.symbol_table[var]
+    for var in codeGen.symbol_table.variables.keys():
+        var = codeGen.symbol_table.variables[var]
         print(
             "name: {}, offset: {}, size: {}".format(
                 var.name, var.address_offset, var.size

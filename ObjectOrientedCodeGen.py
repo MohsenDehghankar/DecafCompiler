@@ -3,10 +3,12 @@ from lark.lexer import Lexer, Token
 import CodeGenerator
 
 
-
 class ObjectOrientedCodeGen:
     def __init__(self, main_code_gen):
         self.main_code_gen = main_code_gen
+        self.main_code_gen.symbol_table = SymbolTable()
+        self.main_code_gen.symbol_table.function_name = "7777global7777"
+        self.main_code_gen.symbol_tables = [self.main_code_gen.symbol_table]
         # saving parameters for function
         self.current_function_signiture = []
         # all functions
@@ -15,6 +17,8 @@ class ObjectOrientedCodeGen:
         self.last_pass_functions = {}
         # return value of last defined functin
         self.return_value = None
+        # function declaration started
+        self.func_start = False
 
     """
     Function Declaration
@@ -28,7 +32,9 @@ class ObjectOrientedCodeGen:
     def void_func_declare(self, args):
         # print("void func")
         # print(args)
-        args[4].code += """
+        args[
+            4
+        ].code += """
 lw $ra, 4($s0);
 lw $s0, ($s0)
 jr $ra;
@@ -48,17 +54,22 @@ jr $ra;
             print("Error in Function Declaration!")
             exit(4)
 
-
         input_parameters = args[3]  # array of Trees
         function_body = args[4]  # type = Result
 
+        # remove one symbol table from the stack (for func arguments)
+        # print("sym after func {}: {}".format(function_name, self.main_code_gen.symbol_table.name))
+        self.main_code_gen.symbol_table = self.main_code_gen.symbol_table.parent
+        self.main_code_gen.symbol_tables.append(self.main_code_gen.symbol_table)
+        self.func_start = False
+
         # generate code if 'main'
-# =======
-#        input_parameters = args[2].children
-#        function_body = args[3]  # type = Result
-#
-#        # generate code
-# >>>>>>> master
+        # =======
+        #        input_parameters = args[2].children
+        #        function_body = args[3]  # type = Result
+        #
+        #        # generate code
+        # >>>>>>> master
         if function_name == "main" and func_return_type == "int":
             self.main_code_gen.write_code(
                 function_body.code
@@ -75,10 +86,7 @@ syscall;
         func = Function(function_name)
         func.arguments = self.current_function_signiture
         func.return_type = func_return_type
-        # create symbol table for this function
-        self.main_code_gen.symbol_tables[function_name] = function_body.symbol_table
-        # clear last symbol table
-        self.main_code_gen.symbol_table = {}
+
         # clear function_signiture
         self.current_function_signiture = []
         # add to function list
@@ -111,6 +119,9 @@ sw $ra, 4($s0);
     def formal_reduce(self, args):
         # print("formal reduce....")
         # print(args)
+
+        # flag for start of function declaration
+        self.func_start = True
 
         # set variables above the frame
         last_offset = 0
@@ -214,15 +225,15 @@ jr $ra;
     """
 
     def function_call(self, args):
-        print("function_call")
-        print(args)
-        
+        # print("function_call")
+        # print(args)
+
         if self.main_code_gen.first_pass:
             # not important what the code is
             reg = CodeGenerator.Register("int", "t", 0)
             reg.code = ""
             return reg
-        
+
         func_name = args[0]
         func_name = func_name.value
         try:
@@ -231,7 +242,6 @@ jr $ra;
             arguments = [args[1]]
         except IndexError:
             arguments = []
-            
 
         try:
             func = self.functions[func_name]
@@ -247,7 +257,6 @@ jr $ra;
                 else:
                     print("function {} not exists".format(func_name))
                     exit(4)
-
 
         # check number of inputs
         if len(func.arguments) != len(arguments):
@@ -279,7 +288,7 @@ jr $ra;
         f1 = self.main_code_gen.get_a_free_f_register()
 
         # ---------
-        print("function {} call".format(func_name))
+        # print("function {} call".format(func_name))
 
         code = self.main_code_gen.append_code(
             code,
@@ -311,33 +320,54 @@ add $t{}, $t{}, $t{};
                     code = self.main_code_gen.append_code(
                         code,
                         """
-lw $t{}, {}($s0);
-add $t{}, $t{}, $s0;
+lw $t{}, {}($s{});
+add $t{}, $t{}, $s{};
 sw $t{}, ($t{});
                     """.format(
-                            t3, input_var.address_offset, t2, t2, t3, t2
+                            t3,
+                            input_var.address_offset,
+                            1 if input_var.is_global else 0,
+                            t2,
+                            t2,
+                            1 if input_var.is_global else 0,
+                            t3,
+                            t2,
                         ),
                     )
                 elif var.type == "bool":
                     code = self.main_code_gen.append_code(
                         code,
                         """
-lb $t{}, {}($s0);
-add $t{}, $t{}, $s0;
+lb $t{}, {}($s{});
+add $t{}, $t{}, $s{};
 sb $t{}, ($t{});
                     """.format(
-                            t3, input_var.address_offset, t2, t2, t3, t2
+                            t3,
+                            input_var.address_offset,
+                            1 if input_var.is_global else 0,
+                            t2,
+                            t2,
+                            1 if input_var.is_global else 0,
+                            t3,
+                            t2,
                         ),
                     )
                 elif var.type == "double":
                     code = self.main_code_gen.append_code(
                         code,
                         """
-l.d $f{}, {}($s0);
-add $t{}, $t{}, $s0;
+l.d $f{}, {}($s{});
+add $t{}, $t{}, $s{};
 s.d $f{}, ($t{});
                     """.format(
-                            f1, input_var.address_offset, t2, t2, f1, t2
+                            f1,
+                            input_var.address_offset,
+                            1 if input_var.is_global else 0,
+                            t2,
+                            t2,
+                            1 if input_var.is_global else 0,
+                            f1,
+                            t2,
                         ),
                     )
                 else:
@@ -400,16 +430,16 @@ jal {};
         )
 
         # returning from function
-#         code = (
-#             code
-#             + "\n"
-#             + """
-# li $t{}, {};
-# lw $s0, ($t{});
-#         """.format(
-#                 t3, new_offset, t3
-#             )
-#         )
+        #         code = (
+        #             code
+        #             + "\n"
+        #             + """
+        # li $t{}, {};
+        # lw $s0, ($t{});
+        #         """.format(
+        #                 t3, new_offset, t3
+        #             )
+        #         )
 
         # get output
         code = (
@@ -429,12 +459,46 @@ move $t{}, $v0;
 
         return reg
 
+    def start_block(self):
+
+        # function arguments block
+        if self.func_start:
+            func_args_symbol_table = SymbolTable()
+            func_args_symbol_table.function_name = (
+                self.main_code_gen.current_function_name
+            )
+            func_args_symbol_table.parent = self.main_code_gen.symbol_table
+            self.main_code_gen.symbol_table = func_args_symbol_table
+            self.main_code_gen.symbol_tables.append(func_args_symbol_table)
+            for var in self.current_function_signiture:
+                func_args_symbol_table.variables[var.name] = var
+        # ------------------------
+
+        sym_tbl = SymbolTable()
+        sym_tbl.function_name = self.main_code_gen.current_function_name
+        sym_tbl.parent = self.main_code_gen.symbol_table
+        self.main_code_gen.symbol_tables.append(sym_tbl)
+        self.main_code_gen.symbol_table = sym_tbl
+
 
 class Function:
     def __init__(self, name):
         self.name = name
         self.return_type = None
         self.arguments = None
+
+
+class SymbolTable:
+    id = 0
+
+    def __init__(self):
+        super().__init__()
+        self.variables = {}
+        self.parent = None
+        self.name = SymbolTable.id
+        SymbolTable.id += 1
+        self.function_name = None
+
 
 # =======
 #    def void_func_declare(self, args):
