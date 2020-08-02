@@ -60,11 +60,18 @@ void fun(){
     test = 44;
 }
 int main(){
-    x= 10;
-    print(x);
+    x = 10;
     fun();
+    print(x);
     int x;
     func();
+}
+void recurs(int a){
+    //if (a == 0){
+    //    return;
+    //}
+    print(a);
+    recurs(a - 1);
 }
 void func(){
     print(test);

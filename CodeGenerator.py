@@ -141,6 +141,10 @@ la $s1, global_pointer;
         sym_tbl_tmp = self.symbol_table
         fnc_name = sym_tbl_tmp.function_name
 
+        # search in first pass generated symbol tables
+        if not self.first_pass:
+            sym_tbl_tmp = self.get_symbol_table_from_last_pass(sym_tbl_tmp.name)
+
         # search in all blocks for the function
         while sym_tbl_tmp.function_name == fnc_name:
             for var in sym_tbl_tmp.variables.keys():
