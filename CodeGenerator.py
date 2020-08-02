@@ -42,6 +42,8 @@ class CodeGenerator(Transformer):
         self.first_pass = False
         # array code generator
         self.arr_cgen = ArrayCodeGen(self)
+        # previous code generator (prev pass)
+        self.prev_code_gen = None
 
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
@@ -573,6 +575,13 @@ sw $t{}, ($t{});
                     # print(child.value)
                     if child.value in sym_tbl.variables.keys():
                         return sym_tbl.variables[child.value]
+                    
+                    if not self.first_pass:
+                        # from last pass symbol
+                        last_pass_sym = self.get_symbol_table_from_last_pass(sym_tbl.name)
+                        if last_pass_sym and (child.value in last_pass_sym.variables.keys()):
+                            return last_pass_sym.variables[child.value]
+
                     sym_tbl = sym_tbl.parent
 
                 if self.first_pass:
@@ -2188,6 +2197,14 @@ move $t{}, $v0;
         self.previous_pass = prev_code_gen
         # move all function calls to new code generator
         self.oo_gen.last_pass_functions = prev_code_gen.oo_gen.functions
+        # move symbol tables (move every thing from last pass)
+        self.prev_code_gen = prev_code_gen
+
+    def get_symbol_table_from_last_pass(self, sym_id):
+        for sym in self.prev_code_gen.symbol_tables:
+            if sym.name == sym_id:
+                return sym
+        return None
 
     """
     Global Variable

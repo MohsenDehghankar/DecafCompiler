@@ -51,40 +51,31 @@ def main(argv):
     # with open("out/" + outputfile, "w") as output_file:
     #     output_file.write(result)
 
+    # -------------start-------------------
+
     codeGen.create_data_segment()
-    # first_pass_code_gen.create_data_segment()
 
     decaf_code = """
-int test;
-int func1(int p){
-    return p;
+void fun(){
+    test = 44;
 }
 int main(){
-    test = 1;
-    int z;
+    x= 10;
+    print(x);
+    fun();
     int x;
-    x = 100;
-    z = func1(x) + func2();
-    print(z);
+    func();
 }
-int func2(){
-    int x;
-    x = test + 20;
-    return x;
+void func(){
+    print(test);
 }
-
+int test;
     """
 
     # first pass
-    # try:
     print("--------------first pass------------")
     parser1.parse(decaf_code)
-    # except Exception:
-    # print("exception in first codeGenerator")
     print("----------end of first pass---------")
-
-    # reset symbol table naming after first pass
-    SymbolTable.id = 2
 
     # second pass
     codeGen.set_last_code_gen(first_pass_code_gen)
@@ -92,17 +83,19 @@ int func2(){
 
     # print(tree.pretty())
 
+    '''
     print("\n\n------------symbol tables-------------------")
     for table in first_pass_code_gen.symbol_tables:
         print(
             "{} --> {} : {}".format(
-                table.function_name,
+                table.name,
                 table.parent.name if table.parent is not None else table.parent,
                 table.variables
             )
         )
     print("---------------end--------------------------\n\n")
-
+    '''
+    '''
     print("---------------------------------------\nsymbol table: ")
     for var in codeGen.symbol_table.variables.keys():
         var = codeGen.symbol_table.variables[var]
@@ -113,6 +106,7 @@ int func2(){
         )
 
     print("---------------------------------------\nMIPS code:")
+    '''
     print(codeGen.mips_code)
 
 

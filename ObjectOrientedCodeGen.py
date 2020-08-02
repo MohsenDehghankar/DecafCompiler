@@ -5,8 +5,12 @@ import CodeGenerator
 
 class ObjectOrientedCodeGen:
     def __init__(self, main_code_gen):
+        # symbol table id
+        self.symbol_table_id = 1000
+
         self.main_code_gen = main_code_gen
-        self.main_code_gen.symbol_table = SymbolTable()
+        self.main_code_gen.symbol_table = SymbolTable(self.symbol_table_id)
+        self.symbol_table_id += 1
         self.main_code_gen.symbol_table.function_name = "7777global7777"
         self.main_code_gen.symbol_tables = [self.main_code_gen.symbol_table]
         # saving parameters for function
@@ -19,6 +23,7 @@ class ObjectOrientedCodeGen:
         self.return_value = None
         # function declaration started
         self.func_start = False
+        
 
     """
     Function Declaration
@@ -62,6 +67,7 @@ jr $ra;
         self.main_code_gen.symbol_table = self.main_code_gen.symbol_table.parent
         self.main_code_gen.symbol_tables.append(self.main_code_gen.symbol_table)
         self.func_start = False
+        self.main_code_gen.current_function_name = "7777global7777"
 
         # generate code if 'main'
         # =======
@@ -463,7 +469,8 @@ move $t{}, $v0;
 
         # function arguments block
         if self.func_start:
-            func_args_symbol_table = SymbolTable()
+            func_args_symbol_table = SymbolTable(self.symbol_table_id)
+            self.symbol_table_id += 1
             func_args_symbol_table.function_name = (
                 self.main_code_gen.current_function_name
             )
@@ -474,7 +481,8 @@ move $t{}, $v0;
                 func_args_symbol_table.variables[var.name] = var
         # ------------------------
 
-        sym_tbl = SymbolTable()
+        sym_tbl = SymbolTable(self.symbol_table_id)
+        self.symbol_table_id += 1
         sym_tbl.function_name = self.main_code_gen.current_function_name
         sym_tbl.parent = self.main_code_gen.symbol_table
         self.main_code_gen.symbol_tables.append(sym_tbl)
@@ -491,12 +499,11 @@ class Function:
 class SymbolTable:
     id = 0
 
-    def __init__(self):
+    def __init__(self, id):
         super().__init__()
         self.variables = {}
         self.parent = None
-        self.name = SymbolTable.id
-        SymbolTable.id += 1
+        self.name = id
         self.function_name = None
 
 
