@@ -60,6 +60,7 @@ frame_pointer:  .space  10000
 global_pointer: .space  10000
 true_const:     .asciiz "true"
 false_const:    .asciiz "false"
+end_of_string:  .byte   0
 newline:        .asciiz "\\n"
 
 .text
@@ -142,8 +143,8 @@ la $s1, global_pointer;
         fnc_name = sym_tbl_tmp.function_name
 
         # search in first pass generated symbol tables
-        if not self.first_pass:
-            sym_tbl_tmp = self.get_symbol_table_from_last_pass(sym_tbl_tmp.name)
+        # if not self.first_pass:
+        #     sym_tbl_tmp = self.get_symbol_table_from_last_pass(sym_tbl_tmp.name)
 
         # search in all blocks for the function
         while sym_tbl_tmp.function_name == fnc_name:
@@ -155,6 +156,7 @@ la $s1, global_pointer;
             if sym_tbl_tmp is None:
                 break
 
+        print("last var in frame: {}".format(last))
         self.last_var_in_fp = last
         if last is None:
             var = Variable()
@@ -273,6 +275,42 @@ li $t{}, {};
             """.format(
             t_reg, _Imm.value
         )
+
+        return code
+
+    def code_for_loading_string_Imm(self, reg, str):
+        # print("calculate string")
+        # print("str is :::::", str)
+        # print(reg)
+        code = """
+li $v0, 9;
+li $a0, {};
+syscall
+        """.format(
+            len(str.value) + 1
+        )
+
+        for i in range(len(str.value) + 1):
+            if i == len(str.value):
+                code = self.append_code(
+                    code,
+                    """
+lb $a0,end_of_string;
+sb $a0,{}($v0);
+                            """.format(
+                        i
+                    ),
+                )
+            else:
+                code = self.append_code(
+                    code,
+                    """
+li $a0,'{}';
+sb $a0,{}($v0);
+                            """.format(
+                        str.value[i], i
+                    ),
+                )
 
         return code
 
@@ -427,7 +465,10 @@ s.d $f{}, ($t{});
                 self.t_registers[right_value.number] = False
 
         elif isinstance(right_value, Immediate):
-            right_code = self.code_for_loading_int_Imm(t1, right_value)
+            if right_value.type == "string":
+                right_code = self.code_for_loading_string_Imm(t1, right_value)
+            else:
+                right_code = self.code_for_loading_int_Imm(t1, right_value)
 
         elif isinstance(right_value, Variable):
             # int or bool
@@ -475,6 +516,23 @@ sw $t{}, ($t{});
                         t2,
                         1 if left_value.is_global else 0,
                         t1,
+                        t2,
+                    ),
+                )
+            elif left_value.type == "string":
+                t2 = self.get_a_free_t_register()
+                current_code = self.append_code(
+                    current_code,
+                    """
+li $t{}, {};
+add $t{}, $t{}, $s{};
+sw $v0, ($t{});
+                    """.format(
+                        t2,
+                        left_value.address_offset,
+                        t2,
+                        t2,
+                        1 if left_value.is_global else 0,
                         t2,
                     ),
                 )
@@ -550,6 +608,10 @@ sw $t{}, ($t{});
         print("bool", args)
         return args[0]
 
+    def pass_bool(self, args):
+        print("bool", args)
+        return args[0]
+
     def identifier_in_expression(self, args):
         # print("ident: {0}".format(args[0].value))
         return args[0]
@@ -579,11 +641,15 @@ sw $t{}, ($t{});
                     # print(child.value)
                     if child.value in sym_tbl.variables.keys():
                         return sym_tbl.variables[child.value]
-                    
+
                     if not self.first_pass:
                         # from last pass symbol
-                        last_pass_sym = self.get_symbol_table_from_last_pass(sym_tbl.name)
-                        if last_pass_sym and (child.value in last_pass_sym.variables.keys()):
+                        last_pass_sym = self.get_symbol_table_from_last_pass(
+                            sym_tbl.name
+                        )
+                        if last_pass_sym and (
+                            child.value in last_pass_sym.variables.keys()
+                        ):
                             return last_pass_sym.variables[child.value]
 
                     sym_tbl = sym_tbl.parent
@@ -612,8 +678,8 @@ sw $t{}, ($t{});
             exit(4)
 
     def minus(self, args):
-        print("minus:")
-        print(args)
+        # print("minus:")
+        # print(args)
 
         self.type_checking_for_minus(args[0])
 
@@ -768,8 +834,8 @@ mflo $t{};
         return reg
 
     def divide(self, args):
-        print("divide")
-        print(args)
+        # print("divide")
+        # print(args)
         current_code = ""
         opr1 = args[0]
         opr2 = args[1]
@@ -986,8 +1052,8 @@ mfhi $t{};
         return reg
 
     def not_statement(self, args):
-        print("not statement")
-        print(args)
+        # print("not statement")
+        # print(args)
 
         self.type_checking_for_logical_expr(args[0], args[0], "!")
 
@@ -1423,6 +1489,9 @@ addi $t{}, $zero, 1;
         if left_opr.type == "double":
             return self.handle_condition_for_double(left_opr, right_opr, inst)
 
+        if left_opr.type == "string":
+            return self.handle_condition_for_string(left_opr, right_opr, inst)
+
         _map = {
             "<": "blt",
             ">": "bgt",
@@ -1487,6 +1556,173 @@ s.d $f{}, ($t{})
             f1 = opr.number
         reg = Register("double", "f", f1)
         reg.write_code(code)
+        return reg
+
+    def load_string_to_reg(self, opr):
+        # print("loading string here")
+        register = self.get_a_free_t_register()
+        self.t_registers[register] = True
+        code = ""
+        if isinstance(opr, Variable):
+            # print("it has address offset")
+            code = self.append_code(
+                code,
+                """
+li $t{}, {};
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
+            """.format(
+                    register,
+                    opr.address_offset,
+                    register,
+                    register,
+                    1 if opr.is_global else 0,
+                    register,
+                    register,
+                ),
+            )
+
+        if isinstance(opr, Immediate):
+            print("is instance immediate")
+
+        reg = Register("string", "t", register)
+        reg.write_code(code)
+        return reg
+
+    def handle_condition_for_string(self, left_opr, right_opr, inst):
+        # print("operands are : ")
+        # print(left_opr)
+        # print(right_opr)
+        right_reg = None
+        left_reg = None
+        if isinstance(right_opr, Variable):
+            right_reg = self.load_string_to_reg(right_opr)
+        elif isinstance(right_opr, Immediate):
+            reg = self.get_a_free_t_register()
+            self.t_registers[reg] = True
+            right_reg = Register("string", "t", reg)
+            right_reg.code = self.code_for_loading_string_Imm(reg, right_opr)
+            right_reg.code = self.append_code(
+                right_reg.code,
+                """
+move $t{},$v0;
+            """.format(
+                    reg
+                ),
+            )
+
+        if isinstance(left_opr, Variable):
+            left_reg = self.load_string_to_reg(left_opr)
+        elif isinstance(left_opr, Immediate):
+            reg = self.get_a_free_t_register()
+            self.t_registers[reg] = True
+            left_reg = Register("string", "t", reg)
+            left_reg.code = self.code_for_loading_string_Imm(reg, left_opr)
+            left_reg.code = self.append_code(
+                left_reg.code,
+                """
+move $t{},$v0;
+            """.format(
+                    reg
+                ),
+            )
+
+        code = self.append_code(left_reg.code, right_reg.code)
+
+        result = self.get_a_free_t_register()
+        self.t_registers[result] = True
+        t0 = self.get_a_free_t_register()
+        self.t_registers[t0] = True
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+
+        loop = self.get_new_label()
+        loop_end = self.get_new_label()
+        not_equal = self.get_new_label()
+        end = self.get_new_label()
+        equal = self.get_new_label()
+
+        eq = 0
+        neq = 0
+
+        if inst == "==":
+            eq = 1
+            neq = 0
+        elif inst == "!=":
+            print("instruction is not equal")
+            eq = 0
+            neq = 1
+        else:
+            pass
+
+        code = self.append_code(
+            code,
+            """
+li $t{}, 0
+{}:
+lb $t{}, 0($t{})
+lb $t{}, 0($t{})
+add $t{}, $t{}, 1
+add $t{}, $t{}, 1
+beqz $t{}, {}
+beqz $t{}, {}
+bne $t{}, $t{}, {}
+beq $t{}, $t{}, {}
+{}:
+li $t{}, {}
+j {}
+{}:
+li $t{}, {}
+j {}
+{}:
+beq $t{}, $t{}, {}
+{}:
+                """.format(
+                result,
+                loop.name,
+                t0,
+                right_reg.number,
+                t1,
+                left_reg.number,
+                right_reg.number,
+                right_reg.number,
+                left_reg.number,
+                left_reg.number,
+                t0,
+                loop_end.name,
+                t1,
+                loop_end.name,
+                t0,
+                t1,
+                not_equal.name,
+                t0,
+                t1,
+                loop.name,
+                not_equal.name,
+                result,
+                neq,
+                end.name,
+                equal.name,
+                result,
+                eq,
+                end.name,
+                loop_end.name,
+                t0,
+                t1,
+                equal.name,
+                end.name,
+            ),
+        )
+        self.t_registers[left_reg.number] = False
+        self.t_registers[right_reg.number] = False
+        self.t_registers[t0] = False
+        self.t_registers[t1] = False
+        if isinstance(right_opr, Immediate):
+            self.t_registers[right_reg.number] = False
+        if isinstance(left_opr, Immediate):
+            self.t_registers[left_reg.number] = False
+        reg = Register("bool", "t", result)
+        reg.code = code
         return reg
 
     def handle_condition_for_double(self, left_opr, right_opr, inst):
@@ -1732,6 +1968,53 @@ beq ${}{},$zero,{};
                 ),
             )
         if isinstance(args[len(args) - 1], Tree):
+            # print(args[len(args) - 1].children[0].code)
+            current_code = self.append_code(
+                current_code, args[len(args) - 1].children[0].code
+            )
+        else:
+            print("not handled")
+
+        if len(args) == 4:
+            current_code = self.append_code(current_code, args[2].code)
+        elif len(args) == 3 and isinstance(args[0], Register):
+            current_code = self.append_code(current_code, args[1].code)
+        current_code = self.append_code(
+            current_code,
+            """
+j {};
+{}:
+                """.format(
+                condition_label.name
+            ),
+        )
+
+        if (
+            len(args) == 4
+            or len(args) == 2
+            or (len(args) == 3 and isinstance(args[1], Register))
+        ):
+            current_code = self.append_code(current_code, args[1].code)
+            current_code = self.append_code(
+                current_code,
+                """
+beq ${}{},$zero,{};
+                            """.format(
+                    args[1].kind, args[1].number, end_label.name
+                ),
+            )
+        else:
+            # print(args[0].code)
+            current_code = self.append_code(current_code, args[0].code)
+            current_code = self.append_code(
+                current_code,
+                """
+beq ${}{},$zero,{};
+                            """.format(
+                    args[0].kind, args[0].number, end_label.name
+                ),
+            )
+        if isinstance(args[len(args) - 1], Tree):
             print(args[len(args) - 1].children[0].code)
             current_code = self.append_code(
                 current_code, args[len(args) - 1].children[0].code
@@ -1864,6 +2147,24 @@ j {};
         else:
             return float(val)
 
+    def generate_name_for_double(self):
+        self.tmp_double_count += 1
+        return "double{}".format(self.tmp_double_count)
+
+    def get_the_string(self):
+        def calculate_value_of_double(self, val):
+            val = val.lower()
+            if "e" in val:
+                mantis, exponent = val.lower().split("e")
+                if exponent[0] == "+":
+                    exponent = int(exponent)
+                else:
+                    exponent = -int(exponent)
+                val = float(mantis) * 10 ** exponent
+                return val
+            else:
+                return float(val)
+
     def constant_operand(self, args):
         # print("constant operands")
         # print(args)
@@ -1879,6 +2180,8 @@ j {};
             elif args[0].type == "BOOL":
                 imm = Immediate(1 if args[0].value == "true" else 0, "bool")
                 return imm
+            elif args[0].type == "STRING_CONSTANT":
+                return Immediate(args[0].value[1 : len(args[0].value) - 1], "string")
         return args
 
     def pass_constant(self, args):
@@ -1930,7 +2233,7 @@ j {};
         #         self.expr_started = False
         return args[0]
 
-    def print(self, args):
+    def _print(self, args):
         # print("print")
         # print(args)
         current_code = args[0].code
@@ -1950,7 +2253,18 @@ syscall
                     ),
                 )
             elif args[0].type == "string":
-                pass
+                current_code = self.append_code(
+                    current_code,
+                    """
+li $v0, 4;
+li $a0, {};
+add $a0, $a0, $s{};
+lw $a0, ($a0);
+syscall
+                """.format(
+                        args[0].address_offset, 1 if args[0].is_global else 0
+                    ),
+                )
             elif args[0].type == "double":
                 if args[0].address_offset == None:
                     current_code = self.append_code(
@@ -2111,6 +2425,46 @@ syscall
         elif isinstance(args[0], Immediate):
             if args[0].type == "bool":
                 pass  # todo
+            if args[0].type == "string":
+                current_code = self.append_code(
+                    current_code,
+                    """
+li $v0, 9;
+li $a0, {};
+syscall
+                            """.format(
+                        len(args[0].value) + 1
+                    ),
+                )
+                for i in range(len(args[0].value) + 1):
+                    if i == len(args[0].value):
+                        current_code = self.append_code(
+                            current_code,
+                            """
+lb $a0,end_of_string;
+sb $a0,{}($v0);
+                            """.format(
+                                i
+                            ),
+                        )
+                    else:
+                        current_code = self.append_code(
+                            current_code,
+                            """
+li $a0,'{}';
+sb $a0,{}($v0);
+                            """.format(
+                                args[0].value[i], i
+                            ),
+                        )
+                current_code = self.append_code(
+                    current_code,
+                    """
+move $a0, $v0;
+li $v0, 4;
+syscall
+                    """,
+                )
             else:
                 current_code = self.append_code(
                     current_code,
