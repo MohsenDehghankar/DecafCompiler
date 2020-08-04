@@ -55,6 +55,7 @@ def main(argv):
 
     codeGen.create_data_segment()
 
+
     decaf_code = """
 
 
@@ -77,6 +78,17 @@ int main(){
     f2 = open("tests", 'a')
     # f2.write(decaf_code + "\n---------------\n\n---------------")
 
+
+    decaf_code = """
+    int main(){
+        int[][] x;
+        int[] y;
+        x = NewArray(10, int[]);
+        y = NewArray(4, int);
+        y[1] = x.length();
+        print(y[1]);
+        }
+"""
     # first pass
     print("--------------first pass------------")
     parser1.parse(decaf_code)
@@ -88,19 +100,17 @@ int main(){
 
     # print(tree.pretty())
 
-    '''
     print("\n\n------------symbol tables-------------------")
     for table in first_pass_code_gen.symbol_tables:
         print(
             "{} --> {} : {}".format(
                 table.name,
                 table.parent.name if table.parent is not None else table.parent,
-                table.variables
+                table.variables,
             )
         )
     print("---------------end--------------------------\n\n")
-    '''
-    '''
+    """
     print("---------------------------------------\nsymbol table: ")
     for var in codeGen.symbol_table.variables.keys():
         var = codeGen.symbol_table.variables[var]
@@ -111,7 +121,7 @@ int main(){
         )
 
     print("---------------------------------------\nMIPS code:")
-    '''
+    """
     print(codeGen.mips_code)
 
 

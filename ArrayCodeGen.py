@@ -27,9 +27,19 @@ syscall
 li $t{} , {};
 sw $t{}, 0($v0);
 li $t{}, {}
-sw $v0, frame_pointer($t{})
+add $t{}, $t{}, $s{};
+sw $v0, ($t{})
         """.format(
-            arr_size, t1, arr_len, t1, t1, var.address_offset, t1
+            arr_size,
+            t1,
+            arr_len,
+            t1,
+            t1,
+            var.address_offset,
+            t1,
+            t1,
+            1 if var.is_global else 0,
+            t1,
         )
         var.write_code(code)
         return var
@@ -59,15 +69,25 @@ sw $v0, frame_pointer($t{})
         index = int(args[1].value)
 
         if isinstance(arr_name, Token):
-            arr = self.main_code_gen.symbol_table[arr_name]
+            arr = self.main_code_gen.symbol_table.variables[arr_name]
             t1 = self.main_code_gen.get_a_free_t_register()
             self.main_code_gen.t_registers[t1] = True
             code = """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{}
+lw $t{}, ($t{});
 addi $t{}, $t{}, {};
             """.format(
-                t1, arr.address_offset, t1, t1, t1, t1, (index + 1) * arr.size
+                t1,
+                arr.address_offset,
+                t1,
+                t1,
+                1 if arr.is_global else 0,
+                t1,
+                t1,
+                t1,
+                t1,
+                (index + 1) * arr.size,
             )
             output_type = self.get_output_type(arr.type)  # int[][] -> int[]
             reg = CodeGenerator.Register(output_type, "t", t1)
@@ -112,6 +132,18 @@ addi $t{}, $t{}, {};
                 size = 8
         return size
 
-    def arr_length(self, args):
-        print("arr.length()", args)
-        return args
+    def arr_length(self, arr):
+        print("arr.length()", arr)
+        t1 = self.main_code_gen.get_a_free_t_register()
+        self.main_code_gen.t_registers[t1] = True
+        code = """
+li $t{}, {};
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
+lw $t{}, ($t{});
+            """.format(
+            t1, arr.address_offset, t1, t1, 1 if arr.is_global else 0, t1, t1, t1, t1
+        )
+        reg = CodeGenerator.Register("int", "t", t1)
+        reg.write_code(code)
+        return reg
