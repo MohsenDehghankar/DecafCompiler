@@ -61,20 +61,11 @@ def main(argv):
 int main(){
 
 
-    int x;
-    x = 4 + 5;
-    print(x);
+    
 
-    x = 4 + 6 - 10;
-    print(x);
-
-    x = (9 + 10) - 100;
-    print(x);
-
-    x = -50;
-    x = x + 10;
-    x = x + -9 + (6 + 7);
-    print(x);
+    double y;
+    y = 3.1415;
+    print(y);
 
 
 }
@@ -82,6 +73,9 @@ int main(){
 
 
     """
+    # write test
+    f2 = open("tests", 'a')
+    # f2.write(decaf_code + "\n---------------\n\n---------------")
 
     # first pass
     print("--------------first pass------------")
