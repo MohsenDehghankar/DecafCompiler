@@ -75,10 +75,9 @@ def main(argv):
     string x;
     x= "salam";
     string y;
-    y= "Salam";
+    y= "salam";
     bool z;
-    z = x==y;
-    print(z);
+    z = x == y;
 }
     """
     )

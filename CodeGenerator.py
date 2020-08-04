@@ -1271,7 +1271,6 @@ lw $t{}, frame_pointer($t{});
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
 
-        compare = self.get_new_label()
         loop = self.get_new_label()
         loop_end = self.get_new_label()
         not_equal = self.get_new_label()
@@ -1285,6 +1284,7 @@ lw $t{}, frame_pointer($t{});
             eq = 1
             neq = 0
         elif inst == "!=":
+            print("instruction is not equal")
             eq = 0
             neq = 1
         else:

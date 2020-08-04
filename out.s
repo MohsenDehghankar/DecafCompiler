@@ -93,24 +93,24 @@ lw $t1, frame_pointer($t1);
 
 
 li $t2, 0
-label2:
+label1:
 lb $t3, 0($t1)
 lb $t4, 0($t0)
 add $t1, $t1, 1
 add $t0, $t0, 1
-beqz $t3, label3
-beqz $t4, label3
-bne $t3, $t4, label4
-beq $t3, $t4, label2
-label4:
-li $t2, 0
-j label5
-label6:
-li $t2, 1
-j label5
+beqz $t3, label2
+beqz $t4, label2
+bne $t3, $t4, label3
+beq $t3, $t4, label1
 label3:
-beq $t3, $t4, label6
+li $t2, 1
+j label4
 label5:
+li $t2, 0
+j label4
+label2:
+beq $t3, $t4, label5
+label4:
 
 
 move $t0, $t2;
@@ -125,10 +125,10 @@ sb $t0, frame_pointer($t1);
 li $t0, 8;
 lb $t0, frame_pointer($t0);
 li $v0, 4;
-beq $t0, $zero, label7;
+beq $t0, $zero, label6;
 la $a0, true_const;
-j label8;
-label7:
+j label7;
+label6:
 la $a0, false_const;
-label8:
+label7:
 syscall
