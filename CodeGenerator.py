@@ -1172,6 +1172,9 @@ addi $t{}, $zero, 1;
         if left_opr.type == "double":
             return self.handle_condition_for_double(left_opr, right_opr, inst)
 
+        if left_opr.type == "string":
+            return self.handle_condition_for_string(left_opr, right_opr, inst)
+
         _map = {
             "<": "blt",
             ">": "bgt",
@@ -1229,6 +1232,96 @@ s.d $f{}, frame_pointer($t{})
             f1 = opr.number
         reg = Register("double", "f", f1)
         reg.write_code(code)
+        return reg
+
+    def load_string_to_reg(self, opr):
+        print("loading string here")
+        register = self.get_a_free_t_register()
+        self.t_registers[register] = True
+        code = ""
+        if isinstance(opr, Variable):
+            print("it has address offset")
+            code = self.append_code(
+                code,
+                """
+li $t{}, {};
+lw $t{}, frame_pointer($t{});
+            """.format(
+                    register, opr.address_offset, register, register
+                ),
+            )
+
+        if isinstance(opr, Immediate):
+            print("is instance immediate")
+
+        reg = Register("string", "t", register)
+        reg.write_code(code)
+        return reg
+
+    def handle_condition_for_string(self, left_opr, right_opr, inst):
+        left_reg = self.load_string_to_reg(left_opr)
+        right_reg = self.load_string_to_reg(right_opr)
+
+        result = self.get_a_free_t_register()
+        self.t_registers[result] = True
+
+        code = self.append_code(left_reg.code, right_reg.code)
+        t0 = self.get_a_free_t_register()
+        self.t_registers[t0] = True
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+
+        compare = self.get_new_label()
+        loop = self.get_new_label()
+        loop_end = self.get_new_label()
+        not_equal = self.get_new_label()
+        end = self.get_new_label()
+        equal = self.get_new_label()
+
+        eq = 0
+        neq = 0
+
+        if inst == "==":
+            eq = 1
+            neq = 0
+        elif inst == "!=":
+            eq = 0
+            neq = 1
+        else:
+            pass
+
+        code = self.append_code(
+            code, """
+li $t{}, 0
+{}:
+lb $t{}, 0($t{})
+lb $t{}, 0($t{})
+add $t{}, $t{}, 1
+add $t{}, $t{}, 1
+beqz $t{}, {}
+beqz $t{}, {}
+bne $t{}, $t{}, {}
+beq $t{}, $t{}, {}
+{}:
+li $t{}, {}
+j {}
+{}:
+li $t{}, {}
+j {}
+{}:
+beq $t{}, $t{}, {}
+{}:
+                """.format(result, loop.name, t0, right_reg.number, t1, left_reg.number, right_reg.number, right_reg.number,
+                           left_reg.number, left_reg.number, t0, loop_end.name, t1, loop_end.name, t0, t1, not_equal.name,
+                           t0, t1, loop.name, not_equal.name, result, neq, end.name, equal.name, result, eq, end.name,
+                           loop_end.name, t0, t1, equal.name, end.name)
+        )
+        self.t_registers[left_reg.number] = False
+        self.t_registers[right_reg.number] = False
+        self.t_registers[t0] = False
+        self.t_registers[t1] = False
+        reg = Register("bool", "t", result)
+        reg.code = code
         return reg
 
     def handle_condition_for_double(self, left_opr, right_opr, inst):
@@ -1783,7 +1876,7 @@ syscall
                 pass  # todo
             if args[0].type == "string":
                 current_code = self.append_code(
-                    current_code,"""
+                    current_code, """
 li $v0, 9;
 li $a0, {};
 syscall

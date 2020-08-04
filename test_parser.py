@@ -72,10 +72,14 @@ def main(argv):
     tree = parser.parse(
         """
    int main(){
-        string s;
-        s = "salam";
-        print(s);
-    }
+    string x;
+    x= "salam";
+    string y;
+    y= "Salam";
+    bool z;
+    z = x==y;
+    print(z);
+}
     """
     )
 
