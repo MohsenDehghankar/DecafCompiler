@@ -277,7 +277,6 @@ li $t{}, {};
 
         return code
 
-
     def code_for_loading_string_Imm(self, reg, str):
         # print("calculate string")
         # print("str is :::::", str)
@@ -525,9 +524,15 @@ sw $t{}, ($t{});
                     current_code,
                     """
 li $t{}, {};
-sw $v0, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+sw $v0, ($t{});
                     """.format(
-                        t2, left_value.address_offset, t2
+                        t2,
+                        left_value.address_offset,
+                        t2,
+                        t2,
+                        1 if left_value.is_global else 0,
+                        t2,
                     ),
                 )
             elif left_value.type == "bool":
@@ -635,11 +640,15 @@ sw $t{}, ($t{});
                     # print(child.value)
                     if child.value in sym_tbl.variables.keys():
                         return sym_tbl.variables[child.value]
-                    
+
                     if not self.first_pass:
                         # from last pass symbol
-                        last_pass_sym = self.get_symbol_table_from_last_pass(sym_tbl.name)
-                        if last_pass_sym and (child.value in last_pass_sym.variables.keys()):
+                        last_pass_sym = self.get_symbol_table_from_last_pass(
+                            sym_tbl.name
+                        )
+                        if last_pass_sym and (
+                            child.value in last_pass_sym.variables.keys()
+                        ):
                             return last_pass_sym.variables[child.value]
 
                     sym_tbl = sym_tbl.parent
@@ -1246,14 +1255,13 @@ add $t{}, $t{}, $t{}
                 "invalid type {} and {} for {}".format(
                     opr1.type, opr2.type, instruction
                 )
-            )    
+            )
             exit(4)
         if opr1.type != "int" and opr1.type != "double":
             if self.first_pass:
                 return
             print("math expr (+,-,*,/,%) for {} are not allowed".format(opr1.type))
             exit(4)
-            
 
     def sub(self, args):
         # print("sub")
@@ -1550,19 +1558,26 @@ s.d $f{}, ($t{})
         return reg
 
     def load_string_to_reg(self, opr):
-        print("loading string here")
+        # print("loading string here")
         register = self.get_a_free_t_register()
         self.t_registers[register] = True
         code = ""
         if isinstance(opr, Variable):
-            print("it has address offset")
+            # print("it has address offset")
             code = self.append_code(
                 code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
             """.format(
-                    register, opr.address_offset, register, register
+                    register,
+                    opr.address_offset,
+                    register,
+                    register,
+                    1 if left_value.is_global else 0,
+                    register,
+                    register,
                 ),
             )
 
@@ -1586,9 +1601,14 @@ lw $t{}, frame_pointer($t{});
             self.t_registers[reg] = True
             right_reg = Register("string", "t", reg)
             right_reg.code = self.code_for_loading_string_Imm(reg, right_opr)
-            right_reg.code = self.append_code(right_reg.code, """
+            right_reg.code = self.append_code(
+                right_reg.code,
+                """
 move $t{},$v0;
-            """.format(reg))
+            """.format(
+                    reg
+                ),
+            )
 
         if isinstance(left_opr, Variable):
             left_reg = self.load_string_to_reg(left_opr)
@@ -1597,9 +1617,14 @@ move $t{},$v0;
             self.t_registers[reg] = True
             left_reg = Register("string", "t", reg)
             left_reg.code = self.code_for_loading_string_Imm(reg, left_opr)
-            left_reg.code = self.append_code(left_reg.code, """
+            left_reg.code = self.append_code(
+                left_reg.code,
+                """
 move $t{},$v0;
-            """.format(reg))
+            """.format(
+                    reg
+                ),
+            )
 
         code = self.append_code(left_reg.code, right_reg.code)
 
@@ -1651,12 +1676,41 @@ j {}
 {}:
 beq $t{}, $t{}, {}
 {}:
-                """.format(result, loop.name, t0, right_reg.number, t1, left_reg.number, right_reg.number,
-                           right_reg.number,
-                           left_reg.number, left_reg.number, t0, loop_end.name, t1, loop_end.name, t0, t1,
-                           not_equal.name,
-                           t0, t1, loop.name, not_equal.name, result, neq, end.name, equal.name, result, eq, end.name,
-                           loop_end.name, t0, t1, equal.name, end.name)
+                """.format(
+                result,
+                loop.name,
+                t0,
+                right_reg.number,
+                t1,
+                left_reg.number,
+                right_reg.number,
+                right_reg.number,
+                left_reg.number,
+                left_reg.number,
+                t0,
+                loop_end.name,
+                t1,
+                loop_end.name,
+                t0,
+                t1,
+                not_equal.name,
+                t0,
+                t1,
+                loop.name,
+                not_equal.name,
+                result,
+                neq,
+                end.name,
+                equal.name,
+                result,
+                eq,
+                end.name,
+                loop_end.name,
+                t0,
+                t1,
+                equal.name,
+                end.name,
+            ),
         )
         self.t_registers[left_reg.number] = False
         self.t_registers[right_reg.number] = False
@@ -2203,10 +2257,11 @@ syscall
                     """
 li $v0, 4;
 li $a0, {};
-lw $a0, frame_pointer($a0);
+add $a0, $a0, $s{};
+lw $a0, ($a0);
 syscall
                 """.format(
-                        args[0].address_offset
+                        args[0].address_offset, 1 if left_value.is_global else 0
                     ),
                 )
             elif args[0].type == "double":
