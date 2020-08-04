@@ -120,7 +120,7 @@ if: "if" "(" expr ")" stmt ("else" stmt)?       -> _if
 while : "while" "(" expr ")" stmt               -> _while
 for : "for" "("[expr]";"expr";"[expr]")" stmt   -> _for
 return : "return" [expr] ";"
-print : ("Print"|"print") "("actual")" ";"      -> print
+print : ("Print"|"print") "("actual")" ";"      -> _print
 
 //---------class dec----------
 classdec : "class" IDENT ["extends" IDENT] ["implements" (IDENT | IDENT",")+] "{"field*"}"

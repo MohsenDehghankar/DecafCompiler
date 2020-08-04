@@ -2232,7 +2232,7 @@ j {};
         #         self.expr_started = False
         return args[0]
 
-    def print(self, args):
+    def _print(self, args):
         # print("print")
         # print(args)
         current_code = args[0].code
