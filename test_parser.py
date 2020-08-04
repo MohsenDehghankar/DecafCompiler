@@ -80,13 +80,15 @@ def main(argv):
     #     """
 
     decaf_code = """
-int main(){
-    double x;
-    x = 1.2;
-    print(1.234);
-}
-    """
-
+    int main(){
+        int[][] x;
+        int[] y;
+        x = NewArray(10, int[]);
+        y = NewArray(4, int);
+        y[1] = x.length();
+        print(y[1]);
+        }
+"""
     # first pass
     print("--------------first pass------------")
     parser1.parse(decaf_code)

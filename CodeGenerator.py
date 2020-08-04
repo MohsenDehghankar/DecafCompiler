@@ -478,19 +478,28 @@ s.d $f{}, ($t{});
 
         # left
         if isinstance(left_value, Register):
-
-            current_code = self.append_code(  # ?????????????
-                current_code,
-                """
-    move ${}, $t{};
-                """.format(
-                    left_value.kind + str(left_value.number), t1
-                ),
-                # =======
-                #            current_code = self.append_code(
-                #                current_code, self.store_ref_reg(left_value, t1)
-                # >>>>>>> master
-            )
+            if left_value.is_reference == True:
+                current_code = self.append_code(  # ?????????????
+                    current_code,
+                    """
+sw $t{}, ($t{});
+                    """.format(
+                        t1, left_value.number
+                    ),
+                )
+            else:
+                current_code = self.append_code(  # ?????????????
+                    current_code,
+                    """
+move ${}, $t{};
+                    """.format(
+                        left_value.kind + str(left_value.number), t1
+                    ),
+                    # =======
+                    #            current_code = self.append_code(
+                    #                current_code, self.store_ref_reg(left_value, t1)
+                    # >>>>>>> master
+                )
             # TODO: handle other types
 
             # free left_value register
@@ -621,8 +630,8 @@ sw $t{}, ($t{});
     """
 
     def token_to_var(self, args):
-        # print("high prior: ")
-        # print(args)
+        print("high prior: ")
+        print(args)
 
         types = ["int", "bool", "double", "string"]
 
@@ -2523,6 +2532,11 @@ syscall
 
     def function_call(self, args):
         return self.oo_gen.function_call(args)
+
+    def method_call(self, args):
+        var = self.symbol_table.variables[args[0]]
+        if isinstance(var, Array):
+            return self.arr_cgen.arr_length(var)
 
     """
     Read Integer

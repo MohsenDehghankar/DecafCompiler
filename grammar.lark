@@ -90,7 +90,7 @@ paranthes : "("expr")"          -> paranthes_action     // start of expression
 
 // bellow this, no code is generated yet.
 
-high_proior : high_proior "." IDENT ("("actual?")")? 
+high_proior : high_proior "." IDENT ("("actual?")")?    -> method_call
         | high_proior"["expr"]"         -> access_to_array
         | "new" IDENT
         | call                  -> call_action
