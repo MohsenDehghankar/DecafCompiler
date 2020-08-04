@@ -1,7 +1,9 @@
 from lark import Transformer, Tree
 from lark.lexer import Lexer, Token
 from ObjectOrientedCodeGen import ObjectOrientedCodeGen
+from ArrayCodeGen import ArrayCodeGen
 import uuid
+from ObjectOrientedCodeGen import SymbolTable
 
 
 class CodeGenerator(Transformer):
@@ -11,7 +13,10 @@ class CodeGenerator(Transformer):
         super().__init__(visit_tokens=visit_tokens)
         self.mips_code = ""
         # stores (var_name, var_obj)
-        self.symbol_table = {}
+        self.symbol_table = None
+        # symbol_tables['function_name']['var_name'] is instance of Variable
+        # this is the main symbol_table
+        self.symbol_tables = []
         # last declared type
         self.type_tmp = None
         # needed for multiple assignments in one line: x = y = z
@@ -26,11 +31,19 @@ class CodeGenerator(Transformer):
         self.label_count = 0
         # for generating double name
         self.tmp_double_count = 0
-        # for loop
-        self.expr_started = False
-        self.expr_tokens = []
         # object oriented code generator
         self.oo_gen = ObjectOrientedCodeGen(self)
+        # last declared function
+        self.func_type_tmp = None
+        self.current_function_name = "7777global7777"
+        # previous parser code generator
+        self.previous_pass = None
+        # is first pass
+        self.first_pass = False
+        # array code generator
+        self.arr_cgen = ArrayCodeGen(self)
+        # previous code generator (prev pass)
+        self.prev_code_gen = None
 
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
@@ -43,13 +56,17 @@ class CodeGenerator(Transformer):
         self.write_code(
             """
 .data
-frame_pointer:  .space  1000
+frame_pointer:  .space  10000
+global_pointer: .space  10000
 true_const:     .asciiz "true"
 false_const:    .asciiz "false"
 end_of_string:  .byte   0
+newline:        .asciiz "\\n"
 
 .text
 main:
+la $s0, frame_pointer;
+la $s1, global_pointer;
         """
         )
 
@@ -61,7 +78,7 @@ main:
         # print("var_declare", args)
         variable_name = args[0].children[1].value
 
-        if variable_name in self.symbol_table.keys():
+        if variable_name in self.symbol_table.variables.keys():
             print("Variable with name {} already exists".format(variable_name))
             exit(4)
 
@@ -74,7 +91,10 @@ main:
             print("Type of Variable {} unknown".format(variable_name))
             exit(4)
 
-        self.create_variable(self.type_tmp, variable_name)
+        if "[]" in self.type_tmp:
+            self.create_variable(self.type_tmp, variable_name, True)
+        else:
+            self.create_variable(self.type_tmp, variable_name, False)
         self.type_tmp = None
         return Result()
 
@@ -82,14 +102,25 @@ main:
     Create a variable in Memory and add to Symbol Table
     """
 
-    def create_variable(self, var_type, var_name):
+    def create_variable(self, var_type, var_name, is_ref=False):
         # dynamic allocation
-        variable = Variable()
+        variable = None
+
+        if "[]" in var_type:
+            variable = Array()
+        else:
+            variable = Variable()
+
         variable.type = var_type
         variable.name = var_name
+        variable.is_reference = is_ref
         variable.calc_size()
+        if self.current_function_name == "7777global7777":
+            variable.is_global = True
+
+        self.get_last_variable_in_frame()
         if self.last_var_in_fp == None:
-            variable.address_offset = 0
+            variable.address_offset = 8
         else:
             offset = self.last_var_in_fp.address_offset + self.last_var_in_fp.size
             # memory alignment
@@ -102,8 +133,35 @@ main:
         if variable.address_offset + variable.size > 1000:
             print("Local Variables are more than frame size!")
             exit(4)
-        self.symbol_table[var_name] = variable
+        self.symbol_table.variables[var_name] = variable
         return variable
+
+    def get_last_variable_in_frame(self):
+        max_a = 0
+        last = None
+        sym_tbl_tmp = self.symbol_table
+        fnc_name = sym_tbl_tmp.function_name
+
+        # search in first pass generated symbol tables
+        if not self.first_pass:
+            sym_tbl_tmp = self.get_symbol_table_from_last_pass(sym_tbl_tmp.name)
+
+        # search in all blocks for the function
+        while sym_tbl_tmp.function_name == fnc_name:
+            for var in sym_tbl_tmp.variables.keys():
+                if sym_tbl_tmp.variables[var].address_offset >= max_a:
+                    max_a = sym_tbl_tmp.variables[var].address_offset
+                    last = sym_tbl_tmp.variables[var]
+            sym_tbl_tmp = sym_tbl_tmp.parent
+            if sym_tbl_tmp is None:
+                break
+
+        self.last_var_in_fp = last
+        if last is None:
+            var = Variable()
+            var.address_offset = 8
+            var.size = 0
+            self.last_var_in_fp = var
 
     """
     Getting the type of declared variable
@@ -125,6 +183,19 @@ main:
         self.type_tmp = "string"
         return "string"
 
+    def void_function_declaration(self, args):
+        self.type_tmp = "void"
+        return "void"
+
+    def save_function_type(self, args):
+        self.func_type_tmp = self.type_tmp
+        self.type_tmp = None
+
+    def array_variable_declaration(self, args):
+        print("array_declaration", args)
+        self.type_tmp = "{}[]".format(args[0])
+        return self.type_tmp
+
     """
     Read from console
     """
@@ -143,13 +214,14 @@ li $v0, 9;
 li $a0, 16384;
 syscall
 li $t{}, {};
-sw $v0, frame_pointer($t{})
+add $t{}, $t{} ,$s{};
+sw $v0, ($t{})
 move $a0, $v0;
 li $v0, 8
 li $a1, 16384
 syscall
         """.format(
-                t, var.address_offset, t
+                t, var.address_offset, t, t, 1 if var.is_global else 0, t
             )
         )
         # act as a new variable in rest of the tree
@@ -245,12 +317,41 @@ sb $a0,{}($v0);
     def code_for_moveing_int_var(self, t_reg, var):
         code = """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
             """.format(
-            t_reg, var.address_offset, t_reg, t_reg
+            t_reg,
+            var.address_offset,
+            t_reg,
+            t_reg,
+            1 if var.is_global else 0,
+            t_reg,
+            t_reg,
         )
 
         return code
+
+    def code_for_loading_ref_reg(self, t_reg, reg):
+        #         if reg.type == "double":
+        #             code = """
+        # lwc1 $f{}, ($f{});
+        #             """.format(
+        #                 t_reg, reg.number
+        #             )
+        #             return code
+
+        code = """
+lw $t{}, ($t{});
+        """.format(
+            t_reg, reg.number
+        )
+        return code
+
+    def code_for_loading_ref_var(self, t_reg, var):
+        code = """
+
+
+        """.format()
 
     def handle_double_assignment(self, left_opr, right_opr):
 
@@ -272,49 +373,91 @@ li.d $f{}, {};
                     code,
                     """
 li $t{}, {};
-l.d $f{}, frame_pointer($t{})
+add $t{}, $t{}, $s{};
+l.d $f{}, ($t{})
                     """.format(
-                        t1, right_opr.address_offset, f1, t1
+                        t1,
+                        right_opr.address_offset,
+                        t1,
+                        t1,
+                        1 if right_opr.is_global else 0,
+                        f1,
+                        t1,
                     ),
                 )
         # double register
+        elif isinstance(right_opr, Register):
+            if right_opr.is_reference == True:
+                code = self.append_code(
+                    code,
+                    """
+l.d $f{}, ($t{});
+                    """.format(
+                        f1, right_opr.number
+                    ),
+                )
+            else:
+                f1 = right_opr.number
+
+        if left_opr.is_reference == True:
+            code = self.append_code(
+                code,
+                """
+s.d $f{}, ($t{});
+                    """.format(
+                    f1, left_opr.number
+                ),
+            )
         else:
-            f1 = right_opr.number
-        code = self.append_code(
-            code,
-            """
+            code = self.append_code(
+                code,
+                """
 li $t{}, {};
-s.d $f{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+s.d $f{}, ($t{});
                 """.format(
-                t1, left_opr.address_offset, f1, t1
-            ),
-        )
+                    t1,
+                    left_opr.address_offset,
+                    t1,
+                    t1,
+                    1 if left_opr.is_global else 0,
+                    f1,
+                    t1,
+                ),
+            )
+
         return code
 
     def assignment_calculated(self, args):
-        print("assignment calculated")
-        print(args)
+        # print("assignment calculated")
+        # print(args)
         left_value = args[0]
         right_value = args[1]
+
+        # print("right value code: {}: " + right_value.code)
 
         self.type_checking_for_assignment(left_value, right_value)
 
         if left_value.type == "double":
-            code = right_value.code
+            code = self.append_code(right_value.code, left_value.code)
             assign_code = self.handle_double_assignment(left_value, right_value)
             code = self.append_code(code, assign_code)
-            args[0].write_code(code)
-            return args[0]
+            # args[0].write_code(code)
+            result = Result()
+            result.code = code
+            return result
 
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
 
-        current_code = right_value.code
+        current_code = self.append_code(right_value.code, left_value.code)
         right_code = ""
 
         # right
         if isinstance(right_value, Register):
-            if right_value.type == "int" or right_value.type == "bool":
+            if right_value.is_reference == True:
+                right_code = self.code_for_loading_ref_reg(t1, right_value)
+            elif right_value.type == "int" or right_value.type == "bool":
                 right_code = self.code_for_loading_int_reg(t1, right_value)
 
             # now right register can be free
@@ -335,27 +478,45 @@ s.d $f{}, frame_pointer($t{});
 
         # left
         if isinstance(left_value, Register):
+
             current_code = self.append_code(  # ?????????????
                 current_code,
                 """
     move ${}, $t{};
                 """.format(
-                    left_value.type + str(left_value.number), t1
+                    left_value.kind + str(left_value.number), t1
                 ),
+                # =======
+                #            current_code = self.append_code(
+                #                current_code, self.store_ref_reg(left_value, t1)
+                # >>>>>>> master
             )
+            # TODO: handle other types
 
             # free left_value register
             self.t_registers[left_value.number] = False
         else:
-            if left_value.type == "int":
+            if left_value.is_reference:
+                current_code = self.append_code(
+                    current_code, self.store_ref_var(left_value, t1)
+                )
+
+            elif left_value.type == "int":
                 t2 = self.get_a_free_t_register()
                 current_code = self.append_code(
                     current_code,
                     """
 li $t{}, {};
-sw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+sw $t{}, ($t{});
                 """.format(
-                        t2, left_value.address_offset, t1, t2
+                        t2,
+                        left_value.address_offset,
+                        t2,
+                        t2,
+                        1 if left_value.is_global else 0,
+                        t1,
+                        t2,
                     ),
                 )
             elif left_value.type == "string":
@@ -375,11 +536,19 @@ sw $v0, frame_pointer($t{});
                     current_code,
                     """
 li $t{}, {};
-sb $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+sb $t{}, ($t{});
                 """.format(
-                        t2, left_value.address_offset, t1, t2
+                        t2,
+                        left_value.address_offset,
+                        t2,
+                        t2,
+                        1 if left_value.is_global else 0,
+                        t1,
+                        t2,
                     ),
                 )
+
             else:
                 # other types
                 pass
@@ -392,13 +561,41 @@ sb $t{}, frame_pointer($t{});
         # return something for nested equalities
         return result  # after assignment, the left value will be returned for other assignment (nested)
 
+    def store_ref_reg(self, reg, new_val):  # x[2] = 3, x[2] = 3.2, x[2] = true
+        code = ""
+        if reg.type == "int":
+            code = """
+sw $t{}, ($t{});
+                """.format(
+                new_val, reg.number
+            )
+        elif reg.type == "bool":
+            code = """
+sb $t{}, ($t{});
+                """.format(
+                new_val, reg.number
+            )
+
+        return code
+
+    def store_ref_var(self, var, new_ref):  # x = newArray(4, int)
+        t2 = self.get_a_free_t_register()
+        code = """
+li $t{}, {};
+add $t{}, $t{}, $s{};
+sw $t{}, ($t{});
+                """.format(
+            t2, var.address_offset, t2, t2, 1 if var.is_global else 0, new_ref, t2
+        )
+        return code
+
     """
     Check if a Variable, Register or Immediate is 'bool'
     """
 
     def lvalue_calculated(self, args):
-        print("lvalue calculated")
-        print(args)
+        # print("lvalue calculated")
+        # print(args)
         return args[0]
 
     def pass_bool(self, args):
@@ -410,7 +607,7 @@ sb $t{}, frame_pointer($t{});
         return args[0]
 
     def identifier_in_expression(self, args):
-        print("ident: {0}".format(args[0].value))
+        # print("ident: {0}".format(args[0].value))
         return args[0]
 
     """
@@ -421,10 +618,40 @@ sb $t{}, frame_pointer($t{});
         # print("high prior: ")
         # print(args)
 
+        types = ["int", "bool", "double", "string"]
+
         try:
             child = args[0]
             if isinstance(child, Token) and child.type == "IDENT":
-                return self.symbol_table[child.value]
+
+                if child.value in types:  # when identifier is a reserved token
+                    return child.value
+
+                # search in all symbol table stack
+                sym_tbl = self.symbol_table
+
+                while sym_tbl:
+                    # print("sym: {}: {}".format(sym_tbl.function_name, sym_tbl.variables))
+                    # print(child.value)
+                    if child.value in sym_tbl.variables.keys():
+                        return sym_tbl.variables[child.value]
+                    
+                    if not self.first_pass:
+                        # from last pass symbol
+                        last_pass_sym = self.get_symbol_table_from_last_pass(sym_tbl.name)
+                        if last_pass_sym and (child.value in last_pass_sym.variables.keys()):
+                            return last_pass_sym.variables[child.value]
+
+                    sym_tbl = sym_tbl.parent
+
+                if self.first_pass:
+                    reg = Register("int", "t", 0)
+                    reg.code = ""
+                    return reg
+
+                print("Variable Not Exists!")
+                exit(4)
+
             elif isinstance(child, Variable) and child.type == "double":
                 return child
             else:
@@ -449,7 +676,7 @@ sb $t{}, frame_pointer($t{});
         var = args[0]
         if isinstance(var, Variable):
             if var.type == "int":
-                current_code = ""
+                current_code = var.code
                 t1 = self.get_a_free_t_register()
                 self.t_registers[t1] = True
                 t2 = self.get_a_free_t_register()
@@ -458,11 +685,22 @@ sb $t{}, frame_pointer($t{});
                     """
 li $t{}, -1;
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
 mult $t{}, $t{};
 mflo $t{};
                 """.format(
-                        t1, t2, var.address_offset, t2, t2, t1, t2, t1
+                        t1,
+                        t2,
+                        var.address_offset,
+                        t2,
+                        t2,
+                        1 if var.is_global else 0,
+                        t2,
+                        t2,
+                        t1,
+                        t2,
+                        t1,
                     ),
                 )
                 reg = Register("int", "t", t1)
@@ -479,9 +717,10 @@ mflo $t{};
     def multiply(self, args):
         # print("multiply")
         # print(args)
-        current_code = ""
         opr1 = args[0]
         opr2 = args[1]
+        current_code = ""
+        current_code = opr1.code + "\n" + opr2.code
 
         self.check_type_for_math_expr(opr1, opr2, "*")
 
@@ -497,9 +736,16 @@ mflo $t{};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
                     """.format(
-                        t1, opr1.address_offset, t1, t1
+                        t1,
+                        opr1.address_offset,
+                        t1,
+                        t1,
+                        1 if opr1.is_global else 0,
+                        t1,
+                        t1,
                     ),
                 )
             else:
@@ -519,7 +765,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
                 """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
         else:
@@ -530,9 +776,16 @@ move $t{}, ${};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
                     """.format(
-                        t2, opr2.address_offset, t2, t2
+                        t2,
+                        opr2.address_offset,
+                        t2,
+                        t2,
+                        1 if opr2.is_global else 0,
+                        t2,
+                        t2,
                     ),
                 )
             else:
@@ -552,7 +805,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
                 """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
         else:
@@ -576,6 +829,7 @@ mflo $t{};
         current_code = ""
         opr1 = args[0]
         opr2 = args[1]
+        current_code = opr1.code + "\n" + opr2.code
 
         self.check_type_for_math_expr(opr1, opr2, "/")
 
@@ -592,9 +846,16 @@ mflo $t{};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
                     """.format(
-                        t1, opr1.address_offset, t1, t1
+                        t1,
+                        opr1.address_offset,
+                        t1,
+                        t1,
+                        1 if opr1.is_global else 0,
+                        t1,
+                        t1,
                     ),
                 )
             else:
@@ -614,7 +875,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
         else:
@@ -625,9 +886,16 @@ move $t{}, ${};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
                 """.format(
-                        t2, opr2.address_offset, t2, t2
+                        t2,
+                        opr2.address_offset,
+                        t2,
+                        t2,
+                        1 if opr2.is_global else 0,
+                        t2,
+                        t2,
                     ),
                 )
             else:
@@ -647,7 +915,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
         else:
@@ -672,6 +940,7 @@ mflo $t{};
         current_code = ""
         opr1 = args[0]
         opr2 = args[1]
+        current_code = opr1.code + "\n" + opr2.code
 
         self.check_type_for_math_expr(opr1, opr2, "%")
 
@@ -684,9 +953,16 @@ mflo $t{};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
                     """.format(
-                        t1, opr1.address_offset, t1, t1
+                        t1,
+                        opr1.address_offset,
+                        t1,
+                        t1,
+                        1 if opr1.is_global else 0,
+                        t1,
+                        t1,
                     ),
                 )
             else:
@@ -706,7 +982,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
                 """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
         else:
@@ -717,9 +993,16 @@ move $t{}, ${};
                     current_code,
                     """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
                     """.format(
-                        t2, opr2.address_offset, t2, t2
+                        t2,
+                        opr2.address_offset,
+                        t2,
+                        t2,
+                        1 if opr2.is_global else 0,
+                        t2,
+                        t2,
                     ),
                 )
             else:
@@ -739,7 +1022,7 @@ li $t{}, {};
                 """
 move $t{}, ${};
                 """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
         else:
@@ -765,7 +1048,7 @@ mfhi $t{};
         self.type_checking_for_logical_expr(args[0], args[0], "!")
 
         if isinstance(args[0], Variable):
-            current_code = ""
+            current_code = args[0].code
             t1 = self.get_a_free_t_register()
             self.t_registers[t1] = True
             lbl1 = self.get_new_label().name
@@ -774,7 +1057,8 @@ mfhi $t{};
                 current_code,
                 """
 li $t{}, {};
-lb $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lb $t{}, ($t{});
 beq $t{}, $zero, {};
 move $t{}, $zero;
 j {};
@@ -784,6 +1068,9 @@ li $t{}, 1;
              """.format(
                     t1,
                     args[0].address_offset,
+                    t1,
+                    t1,
+                    1 if args[0].is_global else 0,
                     t1,
                     t1,
                     t1,
@@ -802,7 +1089,7 @@ li $t{}, 1;
         elif isinstance(args[0], Immediate):
             args[0].value = 0 if args[0].value == 1 else 1
         elif isinstance(args[0], Register):
-            current_code = ""
+            current_code = args[0].code
             t1 = self.get_a_free_t_register()
             lbl1 = self.get_new_label().name
             lbl2 = self.get_new_label().name
@@ -816,12 +1103,12 @@ j {};
 li ${}, 1;
 {}:
                 """.format(
-                    args[0].type + str(args[0].number),
+                    args[0].kind + str(args[0].number),
                     lbl1,
-                    args[0].type + str(args[0].number),
+                    args[0].kind + str(args[0].number),
                     lbl2,
                     lbl1,
-                    args[0].type + str(args[0].number),
+                    args[0].kind + str(args[0].number),
                     lbl2,
                 ),
             )
@@ -842,7 +1129,6 @@ li ${}, 1;
     def double_operation(self, opr1, opr2, instruction):
         f1 = self.get_a_free_f_register()
         self.f_registers[f1] = True
-        # self.f_registers[f1 + 1] = True
         f2 = self.get_a_free_f_register()
         current_code = ""
         current_code = self.append_code(
@@ -850,7 +1136,7 @@ li ${}, 1;
             """
 li.d $f{}, {};
 li.d $f{}, {};
-{}.d $f{}, $f{}, $f{} 
+{}.d $f{}, $f{}, $f{}
             """.format(
                 f1, opr1.value, f2, opr2.value, instruction, f1, f1, f2
             ),
@@ -860,10 +1146,11 @@ li.d $f{}, {};
         return reg
 
     def add(self, args):
-        print("add")
-        print(args)
+        # print("add")
+        # print(args)
         opr1 = args[0]
         opr2 = args[1]
+        current_code = opr1.code + "\n" + opr2.code
 
         # type checking
         self.check_type_for_math_expr(opr1, opr2, "add")
@@ -874,26 +1161,26 @@ li.d $f{}, {};
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
-        current_code = ""
         if isinstance(opr1, Register):
             current_code = self.append_code(
                 current_code,
                 """
 move $t{}, ${};
             """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
-            if opr1.type == "t":
+            if opr1.kind == "t":
                 self.t_registers[opr1.number] = False
         elif isinstance(opr1, Variable):
             current_code = self.append_code(
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
             """.format(
-                    t1, opr1.address_offset, t1, t1
+                    t1, opr1.address_offset, t1, t1, 1 if opr1.is_global else 0, t1, t1
                 ),
             )
         elif isinstance(opr1, Immediate):
@@ -913,19 +1200,20 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
-            if opr2.type == "t":
+            if opr2.kind == "t":
                 self.t_registers[opr2.number] = False
         elif isinstance(opr2, Variable):
             current_code = self.append_code(
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
             """.format(
-                    t2, opr2.address_offset, t2, t2
+                    t2, opr2.address_offset, t2, t2, 1 if opr2.is_global else 0, t2, t2
                 ),
             )
         elif isinstance(opr2, Immediate):
@@ -961,13 +1249,15 @@ add $t{}, $t{}, $t{}
             )    
             exit(4)
         if opr1.type != "int" and opr1.type != "double":
+            if self.first_pass:
+                return
             print("math expr (+,-,*,/,%) for {} are not allowed".format(opr1.type))
             exit(4)
             
 
     def sub(self, args):
-        print("sub")
-        print(args)
+        # print("sub")
+        # print(args)
 
         opr1 = args[0]
         opr2 = args[1]
@@ -980,25 +1270,27 @@ add $t{}, $t{}, $t{}
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
         current_code = ""
+        current_code = opr1.code + "\n" + opr2.code
         if isinstance(opr1, Register):
             current_code = self.append_code(
                 current_code,
                 """
 move $t{}, ${};
             """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
-            if opr1.type == "t":
+            if opr1.kind == "t":
                 self.t_registers[opr1.number] = False
         elif isinstance(opr1, Variable):
             current_code = self.append_code(
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
             """.format(
-                    t1, opr1.address_offset, t1, t1
+                    t1, opr1.address_offset, t1, t1, 1 if opr1.is_global else 0, t1, t1
                 ),
             )
         elif isinstance(opr1, Immediate):
@@ -1018,19 +1310,20 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
-            if opr2.type == "t":
+            if opr2.kind == "t":
                 self.t_registers[opr2.number] = False
         elif isinstance(opr2, Variable):
             current_code = self.append_code(
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
             """.format(
-                    t2, opr2.address_offset, t2, t2
+                    t2, opr2.address_offset, t2, t2, 1 if opr2.is_global else 0, t2, t2
                 ),
             )
         elif isinstance(opr2, Immediate):
@@ -1073,19 +1366,20 @@ sub $t{}, $t{}, $t{}
                 """
 move $t{}, ${};
             """.format(
-                    t1, opr1.type + str(opr1.number)
+                    t1, opr1.kind + str(opr1.number)
                 ),
             )
-            if opr1.type == "t":
+            if opr1.kind == "t":
                 self.t_registers[opr1.number] = False
         elif isinstance(opr1, Variable):
             current_code = self.append_code(
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
             """.format(
-                    t1, opr1.address_offset, t1, t1
+                    t1, opr1.address_offset, t1, t1, 1 if opr1.is_global else 0, t1, t1
                 ),
             )
         elif isinstance(opr1, Immediate):
@@ -1105,19 +1399,20 @@ li $t{}, {};
                 """
 move $t{}, ${};
             """.format(
-                    t2, opr2.type + str(opr2.number)
+                    t2, opr2.kind + str(opr2.number)
                 ),
             )
-            if opr2.type == "t":
+            if opr2.kind == "t":
                 self.t_registers[opr2.number] = False
         elif isinstance(opr2, Variable):
             current_code = self.append_code(
                 current_code,
                 """
 li $t{}, {};
-lw $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
             """.format(
-                    t2, opr2.address_offset, t2, t2
+                    t2, opr2.address_offset, t2, t2, 1 if opr2.is_global else 0, t2, t2
                 ),
             )
         elif isinstance(opr2, Immediate):
@@ -1235,9 +1530,16 @@ li.d $f{}, {};
                     code,
                     """
 li $t{}, {};
-s.d $f{}, frame_pointer($t{})
+add $t{}, $t{}, $s{};
+s.d $f{}, ($t{})
                     """.format(
-                        t1, opr.address_offset, f1, t1
+                        t1,
+                        opr.address_offset,
+                        t1,
+                        t1,
+                        1 if opr.is_global else 0,
+                        f1,
+                        t1,
                     ),
                 )
         # double register
@@ -1481,7 +1783,7 @@ and $t{}, $t{}, $t{};
                 ),
             )
             self.t_registers[t2.number] = False
-            t1.is_bool = True
+            t1.type = "bool"
             t1.write_code(current_code)
             return t1
         else:
@@ -1506,7 +1808,7 @@ or $t{}, $t{}, $t{};
                 ),
             )
             self.t_registers[t2.number] = False
-            t1.is_bool = True
+            t1.type = "bool"
             t1.write_code(current_code)
             return t1
         else:
@@ -1628,6 +1930,53 @@ beq ${}{},$zero,{};
 j {};
 {}:
                 """.format(
+                condition_label.name
+            ),
+        )
+
+        if (
+            len(args) == 4
+            or len(args) == 2
+            or (len(args) == 3 and isinstance(args[1], Register))
+        ):
+            current_code = self.append_code(current_code, args[1].code)
+            current_code = self.append_code(
+                current_code,
+                """
+beq ${}{},$zero,{};
+                            """.format(
+                    args[1].kind, args[1].number, end_label.name
+                ),
+            )
+        else:
+            # print(args[0].code)
+            current_code = self.append_code(current_code, args[0].code)
+            current_code = self.append_code(
+                current_code,
+                """
+beq ${}{},$zero,{};
+                            """.format(
+                    args[0].kind, args[0].number, end_label.name
+                ),
+            )
+        if isinstance(args[len(args) - 1], Tree):
+            print(args[len(args) - 1].children[0].code)
+            current_code = self.append_code(
+                current_code, args[len(args) - 1].children[0].code
+            )
+        else:
+            print("not handled")
+
+        if len(args) == 4:
+            current_code = self.append_code(current_code, args[2].code)
+        elif len(args) == 3 and isinstance(args[0], Register):
+            current_code = self.append_code(current_code, args[1].code)
+        current_code = self.append_code(
+            current_code,
+            """
+j {};
+{}:
+                """.format(
                 condition_label.name, end_label.name
             ),
         )
@@ -1682,10 +2031,13 @@ j {};
     def pass_equality(self, args):
         return args[0]
 
-    def stmt_block(self, args):
+    def end_block(self, args):
         # print("stmt_block")
         # print(args)
+        code = ""
         for result in args:
+            if result is None:
+                continue
             if isinstance(result, Tree):
                 for child in result.children:
                     code = self.append_code(code, child.code)
@@ -1693,7 +2045,19 @@ j {};
                 code = self.append_code(code, result.code)
         result = Result()
         result.code = code
+
+        # used when going to a new function
+
+        #
+        self.symbol_table = self.symbol_table.parent
+        self.symbol_tables.append(self.symbol_table)
+
         return result
+
+    def start_block(self, args):
+        self.oo_gen.start_block()
+
+    # --------------------------------------------
 
     def pass_stmt(self, args):
         # print(args, 'pass_stmt')
@@ -1747,8 +2111,8 @@ j {};
                 return float(val)
 
     def constant_operand(self, args):
-        print("constant operands")
-        print(args)
+        # print("constant operands")
+        # print(args)
         if isinstance(args[0], Token):
             if args[0].type == "INT":
                 return Immediate(args[0].value, "int")
@@ -1771,8 +2135,8 @@ j {};
         return args[0].children[0]
 
     def call_action(self, args):
-        print("call")
-        print(args)
+        # print("call")
+        # print(args)
         return args[0]
 
     def paranthes_action(self, args):
@@ -1815,9 +2179,8 @@ j {};
         return args[0]
 
     def print(self, args):
-        print("print")
-        print(args)
-        print(args[0].type)
+        # print("print")
+        # print(args)
         current_code = args[0].code
 
         if isinstance(args[0], Variable):
@@ -1827,10 +2190,11 @@ j {};
                     """
 li $v0, 1;
 li $a0, {};
-lw $a0, frame_pointer($a0);
+add $a0, $a0, $s{};
+lw $a0, ($a0);
 syscall
                 """.format(
-                        args[0].address_offset
+                        args[0].address_offset, 1 if args[0].is_global else 0
                     ),
                 )
             elif args[0].type == "string":
@@ -1864,10 +2228,16 @@ syscall
                         """
 li $v0, 3;
 li $t{}, {};
-l.d $f12, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+l.d $f12, ($t{});
 syscall
                 """.format(
-                            t1, args[0].address_offset, t1
+                            t1,
+                            args[0].address_offset,
+                            t1,
+                            t1,
+                            1 if args[0].is_global else 0,
+                            t1,
                         ),
                     )
             elif args[0].type == "bool":
@@ -1878,7 +2248,8 @@ syscall
                     current_code,
                     """
 li $t{}, {};
-lb $t{}, frame_pointer($t{});
+add $t{}, $t{}, $s{};
+lb $t{}, ($t{});
 li $v0, 4;
 beq $t{}, $zero, {};
 la $a0, true_const;
@@ -1888,7 +2259,18 @@ la $a0, false_const;
 {}:
 syscall
                 """.format(
-                        t1, args[0].address_offset, t1, t1, t1, lbl, lbl2, lbl, lbl2
+                        t1,
+                        args[0].address_offset,
+                        t1,
+                        t1,
+                        1 if args[0].is_global else 0,
+                        t1,
+                        t1,
+                        t1,
+                        lbl,
+                        lbl2,
+                        lbl,
+                        lbl2,
                     ),
                 )
             else:
@@ -1897,44 +2279,89 @@ syscall
             if args[0].type == "bool":
                 lbl1 = self.get_new_label().name
                 lbl2 = self.get_new_label().name
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $v0, 4;
+                reg = args[0].kind + str(args[0].number)
+                if args[0].is_reference == True:
+                    current_code = self.append_code(
+                        current_code,
+                        """
+lw ${}, (${})
 beq ${}, $zero, {};
 la $a0, true_const;
 j {};
 {}:
 la $a0, false_const;
 {}:
+li $v0, 4;
+syscall
+                    """.format(
+                            reg, reg, reg, lbl1, lbl2, lbl1, lbl2
+                        ),
+                    )
+                else:
+                    current_code = self.append_code(
+                        current_code,
+                        """
+beq ${}, $zero, {};
+la $a0, true_const;
+j {};
+{}:
+la $a0, false_const;
+{}:
+li $v0, 4;
 syscall
                 """.format(
-                        args[0].type + str(args[0].number), lbl1, lbl2, lbl1, lbl2
-                    ),
-                )
+                            args[0].kind + str(args[0].number), lbl1, lbl2, lbl1, lbl2
+                        ),
+                    )
+
             elif args[0].type == "double":
-                current_code = self.append_code(
-                    current_code,
-                    """
+                if args[0].is_reference == True:
+                    current_code = self.append_code(
+                        current_code,
+                        """
 li $v0, 3;
-mov.d $f12, {};
+l.d $f12, ($t{});
 syscall
                 """.format(
-                        args[0].number
-                    ),
-                )
+                            args[0].number
+                        ),
+                    )
+                else:
+                    current_code = self.append_code(
+                        current_code,
+                        """
+li $v0, 3;
+mov.d $f12, $f{};
+syscall
+                """.format(
+                            args[0].number
+                        ),
+                    )
 
             elif args[0].type == "int":
-                current_code = self.append_code(
-                    current_code,
-                    """
+                if args[0].is_reference == True:
+                    current_code = self.append_code(
+                        current_code,
+                        """
 li $v0, 1;
-move $a0, $t{};
+lw $a0, ($t{});
 syscall
-                """.format(
-                        args[0].number
-                    ),
-                )
+                    """.format(
+                            args[0].number
+                        ),
+                    )
+                else:
+
+                    current_code = self.append_code(
+                        current_code,
+                        """
+    li $v0, 1;
+    move $a0, $t{};
+    syscall
+                    """.format(
+                            args[0].number
+                        ),
+                    )
 
             else:
                 pass
@@ -1996,6 +2423,17 @@ syscall
         else:
             pass  # other types
         result = Result()
+
+        # newline after print
+        current_code = (
+            current_code
+            + "\n"
+            + """
+li $v0, 4;
+la $a0, newline;
+syscall
+        """
+        )
         result.write_code(current_code)
         return result
 
@@ -2008,6 +2446,25 @@ syscall
 
     def void_func_declare(self, args):
         return self.oo_gen.void_func_declare(args)
+
+    def func_declare(self, args):
+        return self.oo_gen.func_declare(args)
+
+    def formal_reduce(self, args):
+        return self.oo_gen.formal_reduce(args)
+
+    def return_from_func(self, args):
+        return self.oo_gen.return_from_func(args)
+
+    def add_codes(self, args):
+        return self.oo_gen.add_codes(args)
+
+    def function_call(self, args):
+        return self.oo_gen.function_call(args)
+
+    """
+    Read Integer
+    """
 
     def read_integer(self, args):
         print("read integer", args)
@@ -2024,6 +2481,46 @@ move $t{}, $v0;
         reg.write_code(code)
         return reg
 
+    """
+    array methods
+    """
+
+    def new_array(self, args):
+        return self.arr_cgen.new_array(args)
+
+    def access_to_array(self, args):
+        return self.arr_cgen.access_to_array(args)
+
+    """
+    Previous Code Generator for multi pass
+    """
+
+    def set_last_code_gen(self, prev_code_gen):
+        self.previous_pass = prev_code_gen
+        # move all function calls to new code generator
+        self.oo_gen.last_pass_functions = prev_code_gen.oo_gen.functions
+        # move symbol tables (move every thing from last pass)
+        self.prev_code_gen = prev_code_gen
+
+    def get_symbol_table_from_last_pass(self, sym_id):
+        for sym in self.prev_code_gen.symbol_tables:
+            if sym.name == sym_id:
+                return sym
+        return None
+
+    """
+    Global Variable
+    """
+
+    def global_var_declare(self, args):
+        return Result()
+
+    def function_name(self, args):
+        # print("function name")
+        # print(args[0])
+        self.current_function_name = args[0]
+        return args[0]
+
 
 """
 Other Classes
@@ -2033,6 +2530,8 @@ Other Classes
 class Result:
     def __init__(self):
         self.code = ""
+        # When going to another function
+        self.symbol_table = None
 
     def write_code(self, code):
         self.code += "\n" + code
@@ -2046,26 +2545,32 @@ class Variable(Result):
         self.value = None
         self.address_offset = None  # address from the start of frame pointer
         self.size = None  # in bytes
+        self.is_reference = False
+        self.is_global = False
 
     def calc_size(self):
-        if self.type == "int":
+        if self.is_reference == True:
             self.size = 4
-        if self.type == "bool":
-            self.size = 1
-        if self.type == "string":
-            self.size = 4  # address of string
-        if self.type == "double":
-            self.size = 8
+        else:
+            if self.type == "int":
+                self.size = 4
+            if self.type == "bool":
+                self.size = 1
+            if self.type == "string":
+                self.size = 4  # address of string
+            if self.type == "double":
+                self.size = 8
+
         # var type is an object
 
     def __str__(self):
-        return "Variable name: {}, type: {}, value: {}, size: {}".format(
-            self.name, self.type, self.value, self.size
+        return "Variable name: {}, type: {}, value: {}, size: {}, is_reference: {}".format(
+            self.name, self.type, self.value, self.size, self.is_reference
         )
 
     def __repr__(self):
-        return "Variable name: {}, type: {}, value: {}, size: {}".format(
-            self.name, self.type, self.value, self.size
+        return "Variable name: {}, type: {}, value: {}, size: {}, is_reference: {}".format(
+            self.name, self.type, self.value, self.size, self.is_reference
         )
 
 
@@ -2079,13 +2584,13 @@ class Register(Result):
         self.is_reference = False  # later
 
     def __str__(self):
-        return "register type:{}, kind: {}, number: {}".format(
-            self.type, self.kind, self.number
+        return "register type:{}, kind: {}, number: {}, is_ref: {}".format(
+            self.type, self.kind, self.number, self.is_reference
         )
 
     def __repr__(self):
-        return "register type:{}, kind: {}, number: {}".format(
-            self.type, self.kind, self.number
+        return "register type:{}, kind: {}, number: {},  is_ref: {}".format(
+            self.type, self.kind, self.number, self.is_reference
         )
 
 
@@ -2107,3 +2612,13 @@ class Label:
 class Array(Variable):
     def __init__(self):
         super().__init__()
+
+    def __str__(self):
+        return "Array name: {}, type: {}, value: {}, size: {}, is_reference: {}".format(
+            self.name, self.type, self.value, self.size, self.is_reference
+        )
+
+    def __repr__(self):
+        return "Array name: {}, type: {}, value: {}, size: {}, is_reference: {}".format(
+            self.name, self.type, self.value, self.size, self.is_reference
+        )

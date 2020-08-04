@@ -2,8 +2,19 @@ import sys
 import getopt
 from lark import Lark, UnexpectedInput
 from CodeGenerator import CodeGenerator
+from ObjectOrientedCodeGen import SymbolTable
+
 
 grammar = open("grammar.lark", "r")
+grammar1 = open("grammar.lark", "r")
+
+# first pass
+first_pass_code_gen = CodeGenerator()
+first_pass_code_gen.first_pass = True
+parser1 = Lark(grammar1, parser="lalr", transformer=first_pass_code_gen, debug=True)
+
+
+# second pass
 codeGen = CodeGenerator()
 parser = Lark(grammar, parser="lalr", transformer=codeGen, debug=True)
 
@@ -40,62 +51,69 @@ def main(argv):
     # with open("out/" + outputfile, "w") as output_file:
     #     output_file.write(result)
 
+    # -------------start-------------------
+
     codeGen.create_data_segment()
 
-    print("Parse Tree:")
-    #
-    # tree = parser.parse(
-    #     """
-    # int main(){
-    #     bool x;
-    #     x = true;
-    #     Print(!x);
-    # }
-    # """
-    # )
-
-    # tree = parser.parse(
-    #     """
-    # int main(){
-    #     int x;
-    #     int y;
-    #     y = 3;
-    #     x = 90;
-    #     print(90);
-    #     print(x);
-    # }
-    # """
-    # )
-
-    # print(codeGen.expr_tokens)
-
-    tree = parser.parse(
-        """
-   int main(){
-    bool z;
-    string x;
-    x = "hey";
-    z = x != "salam";
-    print(z);
+    decaf_code = """
+void fun(){
+    test = 44;
 }
+int main(){
+    x = 10;
+    fun();
+    print(x);
+    int x;
+    func();
+}
+void recurs(int a){
+    //if (a == 0){
+    //    return;
+    //}
+    print(a);
+    recurs(a - 1);
+}
+void func(){
+    print(test);
+}
+int test;
     """
-    )
+
+    # first pass
+    print("--------------first pass------------")
+    parser1.parse(decaf_code)
+    print("----------end of first pass---------")
+
+    # second pass
+    codeGen.set_last_code_gen(first_pass_code_gen)
+    tree = parser.parse(decaf_code)
 
     # print(tree.pretty())
 
-    # add var declarations
-    # codeGen.generate_variable_declaration_codes()
-
-    print("symbol table: ")
-    for var in codeGen.symbol_table.keys():
-        var = codeGen.symbol_table[var]
+    '''
+    print("\n\n------------symbol tables-------------------")
+    for table in first_pass_code_gen.symbol_tables:
+        print(
+            "{} --> {} : {}".format(
+                table.name,
+                table.parent.name if table.parent is not None else table.parent,
+                table.variables
+            )
+        )
+    print("---------------end--------------------------\n\n")
+    '''
+    '''
+    print("---------------------------------------\nsymbol table: ")
+    for var in codeGen.symbol_table.variables.keys():
+        var = codeGen.symbol_table.variables[var]
         print(
             "name: {}, offset: {}, size: {}".format(
                 var.name, var.address_offset, var.size
             )
         )
 
-    print("MIPS:")
+    print("---------------------------------------\nMIPS code:")
+    '''
     print(codeGen.mips_code)
 
 
