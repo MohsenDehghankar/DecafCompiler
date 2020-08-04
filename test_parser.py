@@ -56,9 +56,31 @@ def main(argv):
     codeGen.create_data_segment()
 
     decaf_code = """
+
+
 int main(){
-    print(2, 3, 4);
+
+
+    int x;
+    x = 4 + 5;
+    print(x);
+
+    x = 4 + 6 - 10;
+    print(x);
+
+    x = (9 + 10) - 100;
+    print(x);
+
+    x = -50;
+    x = x + 10;
+    x = x + -9 + (6 + 7);
+    print(x);
+
+
 }
+
+
+
     """
 
     # first pass

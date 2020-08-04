@@ -2197,6 +2197,9 @@ j {};
         # print("print")
         # print(args)
         current_code = ""
+
+        if not isinstance(args[0], list):
+            args[0] = [args[0]]
         
         for inp in args[0]:
             current_code += "\n" + inp.code

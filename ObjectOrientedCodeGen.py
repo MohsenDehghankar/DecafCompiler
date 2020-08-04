@@ -264,7 +264,10 @@ jr $ra;
         try:
             arguments = args[1].children
         except AttributeError:
-            arguments = args[1]
+            if isinstance(args[1], list):
+                arguments = args[1]
+            else:
+                arguments = [args[1]]
         except IndexError:
             arguments = []
 
