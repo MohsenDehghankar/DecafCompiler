@@ -1486,6 +1486,7 @@ addi $t{}, $zero, 1;
             pass  # todo: handle type checking for string
 
     def handle_condition(self, left_opr, right_opr, inst):
+        print(left_opr, right_opr)
         if left_opr.type == "double":
             return self.handle_condition_for_double(left_opr, right_opr, inst)
 
@@ -1871,7 +1872,7 @@ or $t{}, $t{}, $t{};
         return args[0]
 
     def _if(self, args):
-        # print("_if", args)
+        print("_if", args)
         expr_result_reg = args[0]
         end_if_stmt_label = self.get_new_label()
         end_if_else_label = self.get_new_label()
@@ -1899,18 +1900,19 @@ b {};
         )
         if len(args) == 3:
             else_stmt = args[2]
-        for child in else_stmt.children:
-            current_code = self.append_code(current_code, child.code)
+            for child in else_stmt.children:
+                current_code = self.append_code(current_code, child.code)
         current_code = self.append_code(
             current_code,
             """
 {}:
-        """.format(
+            """.format(
                 end_if_else_label.name
             ),
         )
         result = Result()
         result.write_code(current_code)
+
         return result
 
     def false_expression(self, args):
@@ -2270,8 +2272,9 @@ syscall
                     current_code = self.append_code(
                         current_code,
                         """
-li $v0, 3;
+li $v0, 2;
 li.d $f12, {};
+cvt.s.d $f12, $f12
 syscall
                 """.format(
                             args[0].value
@@ -2282,10 +2285,11 @@ syscall
                     current_code = self.append_code(
                         current_code,
                         """
-li $v0, 3;
+li $v0, 2;
 li $t{}, {};
 add $t{}, $t{}, $s{};
 l.d $f12, ($t{});
+cvt.s.d $f12, $f12
 syscall
                 """.format(
                             t1,
@@ -2375,8 +2379,9 @@ syscall
                     current_code = self.append_code(
                         current_code,
                         """
-li $v0, 3;
+li $v0, 2;
 l.d $f12, ($t{});
+cvt.s.d $f12, $f12
 syscall
                 """.format(
                             args[0].number
@@ -2386,8 +2391,9 @@ syscall
                     current_code = self.append_code(
                         current_code,
                         """
-li $v0, 3;
+li $v0, 2;
 mov.d $f12, $f{};
+cvt.s.d $f12, $f12
 syscall
                 """.format(
                             args[0].number
