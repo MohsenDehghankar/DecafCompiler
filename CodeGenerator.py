@@ -2233,8 +2233,8 @@ j {};
         return args[0]
 
     def _print(self, args):
-        # print("print")
-        # print(args)
+        print("print")
+        print(args)
         current_code = args[0].code
 
         if isinstance(args[0], Variable):

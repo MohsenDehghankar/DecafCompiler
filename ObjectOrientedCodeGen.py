@@ -231,8 +231,8 @@ jr $ra;
     """
 
     def function_call(self, args):
-        # print("function_call")
-        # print(args)
+        print("function_call")
+        print(args)
 
         if self.main_code_gen.first_pass:
             # not important what the code is
