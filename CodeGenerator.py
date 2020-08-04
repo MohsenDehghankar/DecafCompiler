@@ -1272,13 +1272,37 @@ lw $t{}, frame_pointer($t{});
         return reg
 
     def handle_condition_for_string(self, left_opr, right_opr, inst):
-        left_reg = self.load_string_to_reg(left_opr)
-        right_reg = self.load_string_to_reg(right_opr)
+        print("operands are : ")
+        print(left_opr)
+        print(right_opr)
+        right_reg = None
+        left_reg = None
+        if isinstance(right_opr, Variable):
+            right_reg = self.load_string_to_reg(right_opr)
+        elif isinstance(right_opr, Immediate):
+            reg = self.get_a_free_t_register()
+            self.t_registers[reg] = True
+            right_reg = Register("string", "t", reg)
+            right_reg.code = self.code_for_loading_string_Imm(reg, right_opr)
+            right_reg.code = self.append_code(right_reg.code, """
+move $t{},$v0;
+            """.format(reg))
+
+        if isinstance(left_opr, Variable):
+            left_reg = self.load_string_to_reg(left_opr)
+        elif isinstance(left_opr, Immediate):
+            reg = self.get_a_free_t_register()
+            self.t_registers[reg] = True
+            left_reg = Register("string", "t", reg)
+            left_reg.code = self.code_for_loading_string_Imm(reg, left_opr)
+            left_reg.code = self.append_code(left_reg.code, """
+move $t{},$v0;
+            """.format(reg))
+
+        code = self.append_code(left_reg.code, right_reg.code)
 
         result = self.get_a_free_t_register()
         self.t_registers[result] = True
-
-        code = self.append_code(left_reg.code, right_reg.code)
         t0 = self.get_a_free_t_register()
         self.t_registers[t0] = True
         t1 = self.get_a_free_t_register()
@@ -1325,46 +1349,21 @@ j {}
 {}:
 beq $t{}, $t{}, {}
 {}:
-                """.format(
-                result,
-                loop.name,
-                t0,
-                right_reg.number,
-                t1,
-                left_reg.number,
-                right_reg.number,
-                right_reg.number,
-                left_reg.number,
-                left_reg.number,
-                t0,
-                loop_end.name,
-                t1,
-                loop_end.name,
-                t0,
-                t1,
-                not_equal.name,
-                t0,
-                t1,
-                loop.name,
-                not_equal.name,
-                result,
-                neq,
-                end.name,
-                equal.name,
-                result,
-                eq,
-                end.name,
-                loop_end.name,
-                t0,
-                t1,
-                equal.name,
-                end.name,
-            ),
+                """.format(result, loop.name, t0, right_reg.number, t1, left_reg.number, right_reg.number,
+                           right_reg.number,
+                           left_reg.number, left_reg.number, t0, loop_end.name, t1, loop_end.name, t0, t1,
+                           not_equal.name,
+                           t0, t1, loop.name, not_equal.name, result, neq, end.name, equal.name, result, eq, end.name,
+                           loop_end.name, t0, t1, equal.name, end.name)
         )
         self.t_registers[left_reg.number] = False
         self.t_registers[right_reg.number] = False
         self.t_registers[t0] = False
         self.t_registers[t1] = False
+        if isinstance(right_opr, Immediate):
+            self.t_registers[right_reg.number] = False
+        if isinstance(left_opr, Immediate):
+            self.t_registers[left_reg.number] = False
         reg = Register("bool", "t", result)
         reg.code = code
         return reg
