@@ -143,8 +143,8 @@ la $s1, global_pointer;
         fnc_name = sym_tbl_tmp.function_name
 
         # search in first pass generated symbol tables
-        if not self.first_pass:
-            sym_tbl_tmp = self.get_symbol_table_from_last_pass(sym_tbl_tmp.name)
+        # if not self.first_pass:
+        #     sym_tbl_tmp = self.get_symbol_table_from_last_pass(sym_tbl_tmp.name)
 
         # search in all blocks for the function
         while sym_tbl_tmp.function_name == fnc_name:
@@ -156,6 +156,7 @@ la $s1, global_pointer;
             if sym_tbl_tmp is None:
                 break
 
+        print("last var in frame: {}".format(last))
         self.last_var_in_fp = last
         if last is None:
             var = Variable()
@@ -677,8 +678,8 @@ sw $t{}, ($t{});
             exit(4)
 
     def minus(self, args):
-        print("minus:")
-        print(args)
+        # print("minus:")
+        # print(args)
 
         self.type_checking_for_minus(args[0])
 
@@ -833,8 +834,8 @@ mflo $t{};
         return reg
 
     def divide(self, args):
-        print("divide")
-        print(args)
+        # print("divide")
+        # print(args)
         current_code = ""
         opr1 = args[0]
         opr2 = args[1]
@@ -1051,8 +1052,8 @@ mfhi $t{};
         return reg
 
     def not_statement(self, args):
-        print("not statement")
-        print(args)
+        # print("not statement")
+        # print(args)
 
         self.type_checking_for_logical_expr(args[0], args[0], "!")
 
@@ -1589,9 +1590,9 @@ lw $t{}, ($t{});
         return reg
 
     def handle_condition_for_string(self, left_opr, right_opr, inst):
-        print("operands are : ")
-        print(left_opr)
-        print(right_opr)
+        # print("operands are : ")
+        # print(left_opr)
+        # print(right_opr)
         right_reg = None
         left_reg = None
         if isinstance(right_opr, Variable):
@@ -1967,7 +1968,7 @@ beq ${}{},$zero,{};
                 ),
             )
         if isinstance(args[len(args) - 1], Tree):
-            print(args[len(args) - 1].children[0].code)
+            # print(args[len(args) - 1].children[0].code)
             current_code = self.append_code(
                 current_code, args[len(args) - 1].children[0].code
             )
