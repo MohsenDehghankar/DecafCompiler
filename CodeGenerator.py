@@ -58,7 +58,7 @@ main:
     """
 
     def variable_declare(self, args):
-        print("print is being used", args)
+        # print("var_declare", args)
         variable_name = args[0].children[1].value
 
         if variable_name in self.symbol_table.keys():
@@ -205,29 +205,39 @@ li $t{}, {};
 
         return code
 
+
     def code_for_loading_string_Imm(self, reg, str):
-        print("calculate string")
-        print("str is :::::", str)
-        print(reg)
+        # print("calculate string")
+        # print("str is :::::", str)
+        # print(reg)
         code = """
 li $v0, 9;
 li $a0, {};
 syscall
-            """.format(len(str.value) + 1)
+        """.format(
+            len(str.value) + 1
+        )
+
         for i in range(len(str.value) + 1):
             if i == len(str.value):
                 code = self.append_code(
-                    code, """
+                    code,
+                    """
 lb $a0,end_of_string;
 sb $a0,{}($v0);
-                            """.format(i)
+                            """.format(
+                        i
+                    ),
                 )
             else:
                 code = self.append_code(
-                    code, """
+                    code,
+                    """
 li $a0,'{}';
 sb $a0,{}($v0);
-                            """.format(str.value[i], i)
+                            """.format(
+                        str.value[i], i
+                    ),
                 )
 
         return code
@@ -282,8 +292,8 @@ s.d $f{}, frame_pointer($t{});
         return code
 
     def assignment_calculated(self, args):
-        # print("assignment calculated")
-        # print(args)
+        print("assignment calculated")
+        print(args)
         left_value = args[0]
         right_value = args[1]
 
@@ -293,10 +303,8 @@ s.d $f{}, frame_pointer($t{});
             code = right_value.code
             assign_code = self.handle_double_assignment(left_value, right_value)
             code = self.append_code(code, assign_code)
-            # args[0].write_code(code)
-            result = Result()
-            result.code = code
-            return result
+            args[0].write_code(code)
+            return args[0]
 
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
@@ -330,7 +338,7 @@ s.d $f{}, frame_pointer($t{});
             current_code = self.append_code(  # ?????????????
                 current_code,
                 """
-move ${}, $t{};
+    move ${}, $t{};
                 """.format(
                     left_value.type + str(left_value.number), t1
                 ),
@@ -359,7 +367,7 @@ li $t{}, {};
 sw $v0, frame_pointer($t{});
                     """.format(
                         t2, left_value.address_offset, t2
-                    )
+                    ),
                 )
             elif left_value.type == "bool":
                 t2 = self.get_a_free_t_register()
@@ -389,8 +397,12 @@ sb $t{}, frame_pointer($t{});
     """
 
     def lvalue_calculated(self, args):
-        # print("lvalue calculated")
-        # print(args)
+        print("lvalue calculated")
+        print(args)
+        return args[0]
+
+    def pass_bool(self, args):
+        print("bool", args)
         return args[0]
 
     def pass_bool(self, args):
@@ -946,11 +958,12 @@ add $t{}, $t{}, $t{}
                 "invalid type {} and {} for {}".format(
                     opr1.type, opr2.type, instruction
                 )
-            )
+            )    
             exit(4)
         if opr1.type != "int" and opr1.type != "double":
             print("math expr (+,-,*,/,%) for {} are not allowed".format(opr1.type))
             exit(4)
+            
 
     def sub(self, args):
         print("sub")
@@ -1291,7 +1304,8 @@ lw $t{}, frame_pointer($t{});
             pass
 
         code = self.append_code(
-            code, """
+            code,
+            """
 li $t{}, 0
 {}:
 lb $t{}, 0($t{})
@@ -1311,10 +1325,41 @@ j {}
 {}:
 beq $t{}, $t{}, {}
 {}:
-                """.format(result, loop.name, t0, right_reg.number, t1, left_reg.number, right_reg.number, right_reg.number,
-                           left_reg.number, left_reg.number, t0, loop_end.name, t1, loop_end.name, t0, t1, not_equal.name,
-                           t0, t1, loop.name, not_equal.name, result, neq, end.name, equal.name, result, eq, end.name,
-                           loop_end.name, t0, t1, equal.name, end.name)
+                """.format(
+                result,
+                loop.name,
+                t0,
+                right_reg.number,
+                t1,
+                left_reg.number,
+                right_reg.number,
+                right_reg.number,
+                left_reg.number,
+                left_reg.number,
+                t0,
+                loop_end.name,
+                t1,
+                loop_end.name,
+                t0,
+                t1,
+                not_equal.name,
+                t0,
+                t1,
+                loop.name,
+                not_equal.name,
+                result,
+                neq,
+                end.name,
+                equal.name,
+                result,
+                eq,
+                end.name,
+                loop_end.name,
+                t0,
+                t1,
+                equal.name,
+                end.name,
+            ),
         )
         self.t_registers[left_reg.number] = False
         self.t_registers[right_reg.number] = False
@@ -1533,30 +1578,44 @@ b {};
         if len(args) == 4 or (len(args) == 3 and isinstance(args[1], Register)):
             current_code = self.append_code(current_code, args[0].code)
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 {}:
-                """.format(condition_label.name)
+                """.format(
+                condition_label.name
+            ),
         )
 
-        if len(args) == 4 or len(args) == 2 or (len(args) == 3 and isinstance(args[1], Register)):
+        if (
+            len(args) == 4
+            or len(args) == 2
+            or (len(args) == 3 and isinstance(args[1], Register))
+        ):
             current_code = self.append_code(current_code, args[1].code)
             current_code = self.append_code(
-                current_code, """
+                current_code,
+                """
 beq ${}{},$zero,{};
-                            """.format(args[1].kind, args[1].number, end_label.name)
+                            """.format(
+                    args[1].kind, args[1].number, end_label.name
+                ),
             )
         else:
             # print(args[0].code)
             current_code = self.append_code(current_code, args[0].code)
             current_code = self.append_code(
-                current_code, """
+                current_code,
+                """
 beq ${}{},$zero,{};
-                            """.format(args[0].kind, args[0].number, end_label.name)
+                            """.format(
+                    args[0].kind, args[0].number, end_label.name
+                ),
             )
         if isinstance(args[len(args) - 1], Tree):
             print(args[len(args) - 1].children[0].code)
             current_code = self.append_code(
-                current_code, args[len(args) - 1].children[0].code)
+                current_code, args[len(args) - 1].children[0].code
+            )
         else:
             print("not handled")
 
@@ -1565,10 +1624,13 @@ beq ${}{},$zero,{};
         elif len(args) == 3 and isinstance(args[0], Register):
             current_code = self.append_code(current_code, args[1].code)
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 j {};
 {}:
-                """.format(condition_label.name, end_label.name)
+                """.format(
+                condition_label.name, end_label.name
+            ),
         )
         result = Result()
         result.write_code(current_code)
@@ -1581,26 +1643,34 @@ j {};
         loop_lable = self.get_new_label()
         end_lable = self.get_new_label()
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 {}:
-            """.format(loop_lable.name)
+            """.format(
+                loop_lable.name
+            ),
         )
         current_code = self.append_code(current_code, args[0].code)
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 beq ${}{},$zero,{};
-            """.format(args[0].kind, args[0].number, end_lable.name)
+            """.format(
+                args[0].kind, args[0].number, end_lable.name
+            ),
         )
         if isinstance(args[1], Tree):
-            current_code = self.append_code(
-                current_code, args[1].children[0].code)
+            current_code = self.append_code(current_code, args[1].children[0].code)
         else:
             print("not handled")
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 j {};
 {}:
-            """.format(loop_lable.name, end_lable.name)
+            """.format(
+                loop_lable.name, end_lable.name
+            ),
         )
         result = Result()
         result.write_code(current_code)
@@ -1616,7 +1686,6 @@ j {};
     def stmt_block(self, args):
         # print("stmt_block")
         # print(args)
-        code = ""
         for result in args:
             if isinstance(result, Tree):
                 for child in result.children:
@@ -1679,8 +1748,8 @@ j {};
                 return float(val)
 
     def constant_operand(self, args):
-        # print("constant operands")
-        # print(args)
+        print("constant operands")
+        print(args)
         if isinstance(args[0], Token):
             if args[0].type == "INT":
                 return Immediate(args[0].value, "int")
@@ -1694,7 +1763,7 @@ j {};
                 imm = Immediate(1 if args[0].value == "true" else 0, "bool")
                 return imm
             elif args[0].type == "STRING_CONSTANT":
-                return Immediate(args[0].value[1:len(args[0].value) - 1], "string")
+                return Immediate(args[0].value[1 : len(args[0].value) - 1], "string")
         return args
 
     def pass_constant(self, args):
@@ -1703,8 +1772,8 @@ j {};
         return args[0].children[0]
 
     def call_action(self, args):
-        # print("call")
-        # print(args)
+        print("call")
+        print(args)
         return args[0]
 
     def paranthes_action(self, args):
@@ -1849,7 +1918,7 @@ syscall
                     current_code,
                     """
 li $v0, 3;
-mov.d $f12, $f{};
+mov.d $f12, {};
 syscall
                 """.format(
                         args[0].number
@@ -1876,32 +1945,43 @@ syscall
                 pass  # todo
             if args[0].type == "string":
                 current_code = self.append_code(
-                    current_code, """
+                    current_code,
+                    """
 li $v0, 9;
 li $a0, {};
 syscall
-                            """.format(len(args[0].value) + 1))
+                            """.format(
+                        len(args[0].value) + 1
+                    ),
+                )
                 for i in range(len(args[0].value) + 1):
                     if i == len(args[0].value):
                         current_code = self.append_code(
-                            current_code, """
+                            current_code,
+                            """
 lb $a0,end_of_string;
 sb $a0,{}($v0);
-                            """.format(i)
+                            """.format(
+                                i
+                            ),
                         )
                     else:
                         current_code = self.append_code(
-                            current_code, """
+                            current_code,
+                            """
 li $a0,'{}';
 sb $a0,{}($v0);
-                            """.format(args[0].value[i], i)
+                            """.format(
+                                args[0].value[i], i
+                            ),
                         )
                 current_code = self.append_code(
-                    current_code, """
+                    current_code,
+                    """
 move $a0, $v0;
 li $v0, 4;
 syscall
-                    """
+                    """,
                 )
             else:
                 current_code = self.append_code(
