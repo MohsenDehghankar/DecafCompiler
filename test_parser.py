@@ -56,27 +56,11 @@ def main(argv):
     codeGen.create_data_segment()
 
     decaf_code = """
-void fun(){
-    test = 44;
-}
 int main(){
-    x = 10;
-    fun();
-    print(x);
-    int x;
-    func();
+    string s;
+    s= "salam";
+    print("salaaaam");
 }
-void recurs(int a){
-    //if (a == 0){
-    //    return;
-    //}
-    print(a);
-    recurs(a - 1);
-}
-void func(){
-    print(test);
-}
-int test;
     """
 
     # first pass

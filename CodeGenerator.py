@@ -1575,7 +1575,7 @@ lw $t{}, ($t{});
                     opr.address_offset,
                     register,
                     register,
-                    1 if left_value.is_global else 0,
+                    1 if opr.is_global else 0,
                     register,
                     register,
                 ),
@@ -2261,7 +2261,7 @@ add $a0, $a0, $s{};
 lw $a0, ($a0);
 syscall
                 """.format(
-                        args[0].address_offset, 1 if left_value.is_global else 0
+                        args[0].address_offset, 1 if args[0].is_global else 0
                     ),
                 )
             elif args[0].type == "double":
