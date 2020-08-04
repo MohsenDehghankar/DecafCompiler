@@ -55,6 +55,7 @@ def main(argv):
 
     codeGen.create_data_segment()
 
+<<<<<<< HEAD
     #     decaf_code = """
     # void fun(){
     #     test = 44;
@@ -78,6 +79,18 @@ def main(argv):
     # }
     # int test;
     #     """
+=======
+    decaf_code = """
+int main(){
+    string s;
+    s = "salam";
+    bool z;
+    z = "Hey" != "hey";
+    print(z);
+    
+}
+    """
+>>>>>>> 19b79c83c1d709729defd376735cbeb818168453
 
     decaf_code = """
     int main(){
