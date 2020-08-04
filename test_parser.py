@@ -57,9 +57,10 @@ def main(argv):
 
     decaf_code = """
 int main(){
-    string s;
-    s= "salam";
-    print("salaaaam");
+    int i;
+    for(i=0; i<10; i=i+1){
+        print(i);
+    }
 }
     """
 
