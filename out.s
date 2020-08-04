@@ -77,21 +77,6 @@ addi $t0, $t0, 8;
 move $t2, $t1;
                 
 
-<<<<<<< HEAD
-sw $t2, ($t0);
-                    
-
-
-
-li $t0, 12;
-add $t0, $t0, $s0
-lw $t0, ($t0);
-addi $t0, $t0, 8;
-            
-
-li $v0, 1;
-lw $a0, ($t0);
-=======
 li $t1, 8;
 add $t1, $t1, $s0;
 sw $v0, ($t1);
@@ -188,7 +173,6 @@ j label7;
 label6:
 la $a0, false_const;
 label7:
->>>>>>> 19b79c83c1d709729defd376735cbeb818168453
 syscall
                     
 
