@@ -647,7 +647,7 @@ sw $t{}, ($t{});
                             sym_tbl.name
                         )
                         if last_pass_sym and (
-                                child.value in last_pass_sym.variables.keys()
+                            child.value in last_pass_sym.variables.keys()
                         ):
                             return last_pass_sym.variables[child.value]
 
@@ -1933,30 +1933,44 @@ b {};
         if len(args) == 4 or (len(args) == 3 and isinstance(args[1], Register)):
             current_code = self.append_code(current_code, args[0].code)
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 {}:
-                    """.format(condition_label.name)
+                    """.format(
+                condition_label.name
+            ),
         )
 
-        if len(args) == 4 or len(args) == 2 or (len(args) == 3 and isinstance(args[1], Register)):
+        if (
+            len(args) == 4
+            or len(args) == 2
+            or (len(args) == 3 and isinstance(args[1], Register))
+        ):
             current_code = self.append_code(current_code, args[1].code)
             current_code = self.append_code(
-                current_code, """
+                current_code,
+                """
 beq ${}{},$zero,{};
-                                """.format(args[1].kind, args[1].number, end_label.name)
+                                """.format(
+                    args[1].kind, args[1].number, end_label.name
+                ),
             )
         else:
             # print(args[0].code)
             current_code = self.append_code(current_code, args[0].code)
             current_code = self.append_code(
-                current_code, """
+                current_code,
+                """
 beq ${}{},$zero,{};
-                                """.format(args[0].kind, args[0].number, end_label.name)
+                                """.format(
+                    args[0].kind, args[0].number, end_label.name
+                ),
             )
         if isinstance(args[len(args) - 1], Tree):
             # print(args[len(args) - 1].children[0].code)
             current_code = self.append_code(
-                current_code, args[len(args) - 1].children[0].code)
+                current_code, args[len(args) - 1].children[0].code
+            )
         else:
             print("not handled")
 
@@ -1965,10 +1979,13 @@ beq ${}{},$zero,{};
         elif len(args) == 3 and isinstance(args[0], Register):
             current_code = self.append_code(current_code, args[1].code)
         current_code = self.append_code(
-            current_code, """
+            current_code,
+            """
 j {};
 {}:
-                    """.format(condition_label.name, end_label.name)
+                    """.format(
+                condition_label.name, end_label.name
+            ),
         )
         result = Result()
         result.write_code(current_code)
@@ -2116,7 +2133,7 @@ j {};
                 imm = Immediate(1 if args[0].value == "true" else 0, "bool")
                 return imm
             elif args[0].type == "STRING_CONSTANT":
-                return Immediate(args[0].value[1: len(args[0].value) - 1], "string")
+                return Immediate(args[0].value[1 : len(args[0].value) - 1], "string")
         return args
 
     def pass_constant(self, args):
@@ -2152,6 +2169,14 @@ j {};
         # print("exp to actual")
         # print(args)
         return args[0]
+
+    def prevent_tree_generation_for_actual(self, args):
+        print("prevent_tree_generation_for_actual")
+        # print(args)
+        if isinstance(args[0], list):
+            args = args[0] + [args[1]]
+        print(args)
+        return args
 
     def exp_calculated(self, args):
         # print("exp calculated")
@@ -2417,9 +2442,9 @@ syscall
 
         # newline after print
         current_code = (
-                current_code
-                + "\n"
-                + """
+            current_code
+            + "\n"
+            + """
 li $v0, 4;
 la $a0, newline;
 syscall

@@ -23,7 +23,6 @@ class ObjectOrientedCodeGen:
         self.return_value = None
         # function declaration started
         self.func_start = False
-        
 
     """
     Function Declaration
@@ -70,12 +69,6 @@ jr $ra;
         self.main_code_gen.current_function_name = "7777global7777"
 
         # generate code if 'main'
-        # =======
-        #        input_parameters = args[2].children
-        #        function_body = args[3]  # type = Result
-        #
-        #        # generate code
-        # >>>>>>> master
         if function_name == "main" and func_return_type == "int":
             self.main_code_gen.write_code(
                 function_body.code
@@ -149,18 +142,11 @@ sw $ra, 4($s0);
                 last_offset = variable.address_offset
                 last_size = variable.size
                 self.current_function_signiture.append(variable)
-
-        # show
-        # for v in self.current_function_signiture:
-        #     print(
-        #         "name: {}, type: {}, offset: {}".format(
-        #             self.current_function_signiture[v].name,
-        #             self.current_function_signiture[v].type,
-        #             self.current_function_signiture[v].address_offset,
-        #         )
-        #     )
-
         return args
+
+    """ 
+    return to $v0
+    """
 
     def return_from_func(self, args):
         # print("return")
@@ -180,6 +166,7 @@ jr $ra;
                 exit(4)
         else:
             result = expr[0]
+            code = result.code
             if isinstance(result, CodeGenerator.Variable):
                 # print(result.type)
                 # print(self.main_code_gen.func_type_tmp)
@@ -187,7 +174,7 @@ jr $ra;
                     # if type is double, return value is in $f0
                     # other wise the return value is in $v0
                     if result.type == "double":
-                        code = """
+                        code += """
 lw $ra, 4($s0);
 l.d $f0, {}($s0);
 lw $s0, ($s0)
@@ -196,7 +183,7 @@ jr $ra;
                             result.address_offset
                         )
                     else:
-                        code = """
+                        code += """
 lw $ra, 4($s0);
 lw $v0, {}($s0);
 lw $s0, ($s0)
@@ -208,8 +195,40 @@ jr $ra;
                 else:
                     print("Invalid Return Type!")
                     exit(4)
+            elif isinstance(result, CodeGenerator.Register):
+                if not self.main_code_gen.func_type_tmp == result.type:
+                    print("Invalid return type!")
+                    exit(4)
+                code += """
+lw $ra, 4($s0);
+move $v0, ${};
+lw $s0, ($s0);
+jr $ra;
+                """.format(
+                    result.kind + str(result.number)
+                )
+            elif isinstance(result, CodeGenerator.Immediate):
+                if not self.main_code_gen.func_type_tmp == result.type:
+                    print("Invalid return type!")
+                    exit(4)
+                if result.type == "string":
+                    pass  # todo
+                elif result.type == "bool":
+                    pass  # todo
+                elif result.type == "double":
+                    pass  # todo
+                else:
+                    code += """
+lw $ra, 4($s0);
+move $v0, {};
+lw $s0, ($s0);
+jr $ra;
+                    """.format(
+                        result.value
+                    )
             else:
-                pass  # todo other types
+                print("Unknown Type in Return!")
+                exit(4)
         result = CodeGenerator.Result()
         result.code = code
         return result
@@ -231,8 +250,8 @@ jr $ra;
     """
 
     def function_call(self, args):
-        print("function_call")
-        print(args)
+        # print("function_call")
+        # print(args)
 
         if self.main_code_gen.first_pass:
             # not important what the code is
@@ -245,7 +264,7 @@ jr $ra;
         try:
             arguments = args[1].children
         except AttributeError:
-            arguments = [args[1]]
+            arguments = args[1]
         except IndexError:
             arguments = []
 
@@ -293,9 +312,6 @@ jr $ra;
         t3 = self.main_code_gen.get_a_free_t_register()
         f1 = self.main_code_gen.get_a_free_f_register()
 
-        # ---------
-        # print("function {} call".format(func_name))
-
         code = self.main_code_gen.append_code(
             code,
             """
@@ -310,6 +326,9 @@ li $t{}, {};
             input_var = arguments[i]
             off = var.address_offset
 
+            # add codes of arguments
+            code += "\n" + input_var.code
+
             code = self.main_code_gen.append_code(
                 code,
                 """
@@ -319,7 +338,7 @@ add $t{}, $t{}, $t{};
                     t2, off, t2, t2, t1
                 ),
             )
-            # $t2 has the address
+            # $t2 has the address for input parameter
 
             if isinstance(input_var, CodeGenerator.Variable):
                 if var.type == "int" or var.type == "string":
@@ -390,7 +409,7 @@ sw $t{}, ($t{});
                             t3, input_var.kind + str(input_var.number), t2, t2, t3, t2
                         ),
                     )
-                elif var.type == "bool":
+                elif var.type == "bool":  # todo boolean
                     code = self.main_code_gen.append_code(
                         code,
                         """
@@ -401,10 +420,41 @@ sb $t{}, ($t{});
                             t3, input_var.kind + str(input_var.number), t2, t2, t3, t2
                         ),
                     )
+                elif var.type == "double":
+                    pass  # todo
                 else:
                     pass  # other types
             elif isinstance(input_var, CodeGenerator.Immediate):
-                pass  # todo: other types
+                if var.type == "int":
+                    code += """
+li $t{}, {};
+add $t{}, $t{}, $s0;
+sw $t{}, ($t{});
+                    """.format(
+                        t3,
+                        input_var.value,
+                        t2,
+                        t2,
+                        t3,
+                        t2,
+                    )
+                elif var.type == "bool":  # todo check
+                    code += """
+li $t{}, {};
+add $t{}, $t{}, $s0;
+sb $t{}, ($t{});
+                    """.format(
+                        t3,
+                        input_var.value,
+                        t2,
+                        t2,
+                        t3,
+                        t2,
+                    )
+                elif var.type == "string":
+                    pass  # todo
+                elif var.type == "double":
+                    pass  # todo
 
         self.main_code_gen.t_registers[t1] = False
         self.main_code_gen.t_registers[t2] = False

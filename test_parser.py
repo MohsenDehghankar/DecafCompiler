@@ -56,11 +56,13 @@ def main(argv):
     codeGen.create_data_segment()
 
     decaf_code = """
-void func(int a, int b){
-    print(a + b);
-}
 int main(){
-    print(1, 2, 3);
+    int x;
+    int x2;
+    int x3;
+    x = 9;
+    x2 = 10;
+    func(x, x2, 80);
 }
     """
 

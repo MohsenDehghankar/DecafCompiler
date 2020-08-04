@@ -105,7 +105,7 @@ call : IDENT"("actual?")"               -> function_call
 constants : "this" 
         | constant              -> pass_constant
 
-actual : actual","expr 
+actual : actual","expr          -> prevent_tree_generation_for_actual 
         | expr                  -> exp_to_actual
 
 constant : HEX_NUMBER 
