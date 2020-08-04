@@ -156,7 +156,6 @@ la $s1, global_pointer;
             if sym_tbl_tmp is None:
                 break
 
-        print("last var in frame: {}".format(last))
         self.last_var_in_fp = last
         if last is None:
             var = Variable()
@@ -2015,7 +2014,7 @@ beq ${}{},$zero,{};
                 ),
             )
         if isinstance(args[len(args) - 1], Tree):
-            print(args[len(args) - 1].children[0].code)
+            # print(args[len(args) - 1].children[0].code)
             current_code = self.append_code(
                 current_code, args[len(args) - 1].children[0].code
             )
