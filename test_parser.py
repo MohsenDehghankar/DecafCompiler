@@ -57,12 +57,7 @@ def main(argv):
 
     decaf_code = """
 int main(){
-    int x;
-    int x2;
-    int x3;
-    x = 9;
-    x2 = 10;
-    func(x, x2, 80);
+    print(2, 3, 4);
 }
     """
 

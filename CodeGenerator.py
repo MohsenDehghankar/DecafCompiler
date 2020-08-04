@@ -2171,11 +2171,11 @@ j {};
         return args[0]
 
     def prevent_tree_generation_for_actual(self, args):
-        print("prevent_tree_generation_for_actual")
+        # print("prevent_tree_generation_for_actual")
         # print(args)
         if isinstance(args[0], list):
             args = args[0] + [args[1]]
-        print(args)
+        # print(args)
         return args
 
     def exp_calculated(self, args):
@@ -2194,250 +2194,252 @@ j {};
         return args[0]
 
     def _print(self, args):
-        print("print")
-        print(args)
-        current_code = args[0].code
-
-        if isinstance(args[0], Variable):
-            if args[0].type == "int":
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $v0, 1;
-li $a0, {};
-add $a0, $a0, $s{};
-lw $a0, ($a0);
-syscall
-                """.format(
-                        args[0].address_offset, 1 if args[0].is_global else 0
-                    ),
-                )
-            elif args[0].type == "string":
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $v0, 4;
-li $a0, {};
-add $a0, $a0, $s{};
-lw $a0, ($a0);
-syscall
-                """.format(
-                        args[0].address_offset, 1 if args[0].is_global else 0
-                    ),
-                )
-            elif args[0].type == "double":
-                if args[0].address_offset == None:
-                    current_code = self.append_code(
-                        current_code,
-                        """
-li $v0, 3;
-li.d $f12, {};
-syscall
-                """.format(
-                            args[0].value
-                        ),
-                    )
-                else:
-                    t1 = self.get_a_free_t_register()
-                    current_code = self.append_code(
-                        current_code,
-                        """
-li $v0, 3;
-li $t{}, {};
-add $t{}, $t{}, $s{};
-l.d $f12, ($t{});
-syscall
-                """.format(
-                            t1,
-                            args[0].address_offset,
-                            t1,
-                            t1,
-                            1 if args[0].is_global else 0,
-                            t1,
-                        ),
-                    )
-            elif args[0].type == "bool":
-                t1 = self.get_a_free_t_register()
-                lbl = self.get_new_label().name
-                lbl2 = self.get_new_label().name
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $t{}, {};
-add $t{}, $t{}, $s{};
-lb $t{}, ($t{});
-li $v0, 4;
-beq $t{}, $zero, {};
-la $a0, true_const;
-j {};
-{}:
-la $a0, false_const;
-{}:
-syscall
-                """.format(
-                        t1,
-                        args[0].address_offset,
-                        t1,
-                        t1,
-                        1 if args[0].is_global else 0,
-                        t1,
-                        t1,
-                        t1,
-                        lbl,
-                        lbl2,
-                        lbl,
-                        lbl2,
-                    ),
-                )
-            else:
-                pass  # other types
-        elif isinstance(args[0], Register):
-            if args[0].type == "bool":
-                lbl1 = self.get_new_label().name
-                lbl2 = self.get_new_label().name
-                reg = args[0].kind + str(args[0].number)
-                if args[0].is_reference == True:
-                    current_code = self.append_code(
-                        current_code,
-                        """
-lw ${}, (${})
-beq ${}, $zero, {};
-la $a0, true_const;
-j {};
-{}:
-la $a0, false_const;
-{}:
-li $v0, 4;
-syscall
-                    """.format(
-                            reg, reg, reg, lbl1, lbl2, lbl1, lbl2
-                        ),
-                    )
-                else:
-                    current_code = self.append_code(
-                        current_code,
-                        """
-beq ${}, $zero, {};
-la $a0, true_const;
-j {};
-{}:
-la $a0, false_const;
-{}:
-li $v0, 4;
-syscall
-                """.format(
-                            args[0].kind + str(args[0].number), lbl1, lbl2, lbl1, lbl2
-                        ),
-                    )
-
-            elif args[0].type == "double":
-                if args[0].is_reference == True:
-                    current_code = self.append_code(
-                        current_code,
-                        """
-li $v0, 3;
-l.d $f12, ($t{});
-syscall
-                """.format(
-                            args[0].number
-                        ),
-                    )
-                else:
-                    current_code = self.append_code(
-                        current_code,
-                        """
-li $v0, 3;
-mov.d $f12, $f{};
-syscall
-                """.format(
-                            args[0].number
-                        ),
-                    )
-
-            elif args[0].type == "int":
-                if args[0].is_reference == True:
-                    current_code = self.append_code(
-                        current_code,
-                        """
-li $v0, 1;
-lw $a0, ($t{});
-syscall
-                    """.format(
-                            args[0].number
-                        ),
-                    )
-                else:
-
+        # print("print")
+        # print(args)
+        current_code = ""
+        
+        for inp in args[0]:
+            current_code += "\n" + inp.code
+            if isinstance(inp, Variable):
+                if inp.type == "int":
                     current_code = self.append_code(
                         current_code,
                         """
     li $v0, 1;
-    move $a0, $t{};
+    li $a0, {};
+    add $a0, $a0, $s{};
+    lw $a0, ($a0);
     syscall
                     """.format(
-                            args[0].number
+                            inp.address_offset, 1 if inp.is_global else 0
                         ),
                     )
-
-            else:
-                pass
-                # other types in Register
-        elif isinstance(args[0], Immediate):
-            if args[0].type == "bool":
-                pass  # todo
-            if args[0].type == "string":
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $v0, 9;
-li $a0, {};
-syscall
-                            """.format(
-                        len(args[0].value) + 1
-                    ),
-                )
-                for i in range(len(args[0].value) + 1):
-                    if i == len(args[0].value):
+                elif inp.type == "string":
+                    current_code = self.append_code(
+                        current_code,
+                        """
+    li $v0, 4;
+    li $a0, {};
+    add $a0, $a0, $s{};
+    lw $a0, ($a0);
+    syscall
+                    """.format(
+                            inp.address_offset, 1 if inp.is_global else 0
+                        ),
+                    )
+                elif inp.type == "double":
+                    if inp.address_offset == None:
                         current_code = self.append_code(
                             current_code,
                             """
-lb $a0,end_of_string;
-sb $a0,{}($v0);
-                            """.format(
-                                i
+    li $v0, 3;
+    li.d $f12, {};
+    syscall
+                    """.format(
+                                inp.value
+                            ),
+                        )
+                    else:
+                        t1 = self.get_a_free_t_register()
+                        current_code = self.append_code(
+                            current_code,
+                            """
+    li $v0, 3;
+    li $t{}, {};
+    add $t{}, $t{}, $s{};
+    l.d $f12, ($t{});
+    syscall
+                    """.format(
+                                t1,
+                                inp.address_offset,
+                                t1,
+                                t1,
+                                1 if inp.is_global else 0,
+                                t1,
+                            ),
+                        )
+                elif inp.type == "bool":
+                    t1 = self.get_a_free_t_register()
+                    lbl = self.get_new_label().name
+                    lbl2 = self.get_new_label().name
+                    current_code = self.append_code(
+                        current_code,
+                        """
+    li $t{}, {};
+    add $t{}, $t{}, $s{};
+    lb $t{}, ($t{});
+    li $v0, 4;
+    beq $t{}, $zero, {};
+    la $a0, true_const;
+    j {};
+    {}:
+    la $a0, false_const;
+    {}:
+    syscall
+                    """.format(
+                            t1,
+                            inp.address_offset,
+                            t1,
+                            t1,
+                            1 if inp.is_global else 0,
+                            t1,
+                            t1,
+                            t1,
+                            lbl,
+                            lbl2,
+                            lbl,
+                            lbl2,
+                        ),
+                    )
+                else:
+                    pass  # other types
+            elif isinstance(inp, Register):
+                if inp.type == "bool":
+                    lbl1 = self.get_new_label().name
+                    lbl2 = self.get_new_label().name
+                    reg = inp.kind + str(inp.number)
+                    if inp.is_reference == True:
+                        current_code = self.append_code(
+                            current_code,
+                            """
+    lw ${}, (${})
+    beq ${}, $zero, {};
+    la $a0, true_const;
+    j {};
+    {}:
+    la $a0, false_const;
+    {}:
+    li $v0, 4;
+    syscall
+                        """.format(
+                                reg, reg, reg, lbl1, lbl2, lbl1, lbl2
                             ),
                         )
                     else:
                         current_code = self.append_code(
                             current_code,
                             """
-li $a0,'{}';
-sb $a0,{}($v0);
-                            """.format(
-                                args[0].value[i], i
+    beq ${}, $zero, {};
+    la $a0, true_const;
+    j {};
+    {}:
+    la $a0, false_const;
+    {}:
+    li $v0, 4;
+    syscall
+                    """.format(
+                                inp.kind + str(inp.number), lbl1, lbl2, lbl1, lbl2
                             ),
                         )
-                current_code = self.append_code(
-                    current_code,
-                    """
-move $a0, $v0;
-li $v0, 4;
-syscall
-                    """,
-                )
+
+                elif inp.type == "double":
+                    if inp.is_reference == True:
+                        current_code = self.append_code(
+                            current_code,
+                            """
+    li $v0, 3;
+    l.d $f12, ($t{});
+    syscall
+                    """.format(
+                                inp.number
+                            ),
+                        )
+                    else:
+                        current_code = self.append_code(
+                            current_code,
+                            """
+    li $v0, 3;
+    mov.d $f12, $f{};
+    syscall
+                    """.format(
+                                inp.number
+                            ),
+                        )
+
+                elif inp.type == "int":
+                    if inp.is_reference == True:
+                        current_code = self.append_code(
+                            current_code,
+                            """
+    li $v0, 1;
+    lw $a0, ($t{});
+    syscall
+                        """.format(
+                                inp.number
+                            ),
+                        )
+                    else:
+
+                        current_code = self.append_code(
+                            current_code,
+                            """
+        li $v0, 1;
+        move $a0, $t{};
+        syscall
+                        """.format(
+                                inp.number
+                            ),
+                        )
+
+                else:
+                    pass
+                    # other types in Register
+            elif isinstance(inp, Immediate):
+                if inp.type == "bool":
+                    pass  # todo
+                if inp.type == "string":
+                    current_code = self.append_code(
+                        current_code,
+                        """
+    li $v0, 9;
+    li $a0, {};
+    syscall
+                                """.format(
+                            len(inp.value) + 1
+                        ),
+                    )
+                    for i in range(len(inp.value) + 1):
+                        if i == len(inp.value):
+                            current_code = self.append_code(
+                                current_code,
+                                """
+    lb $a0,end_of_string;
+    sb $a0,{}($v0);
+                                """.format(
+                                    i
+                                ),
+                            )
+                        else:
+                            current_code = self.append_code(
+                                current_code,
+                                """
+    li $a0,'{}';
+    sb $a0,{}($v0);
+                                """.format(
+                                    inp.value[i], i
+                                ),
+                            )
+                    current_code = self.append_code(
+                        current_code,
+                        """
+    move $a0, $v0;
+    li $v0, 4;
+    syscall
+                        """,
+                    )
+                else:
+                    current_code = self.append_code(
+                        current_code,
+                        """
+    li $v0, 1;
+    li $a0, {};
+    syscall
+                    """.format(
+                            inp.value
+                        ),
+                    )
             else:
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $v0, 1;
-li $a0, {};
-syscall
-                """.format(
-                        args[0].value
-                    ),
-                )
-        else:
-            pass  # other types
+                pass  # other types
         result = Result()
 
         # newline after print
