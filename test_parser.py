@@ -60,18 +60,15 @@ def main(argv):
 
 
 int main(){
-
-
-    double y;
-    y = 3.1415;
-    double x;
-    x = 2.5;
-    
-    print(x * y);
-
-
+    int i;
+    i = 0;
+    while(i < 10){
+        
+        print(i % 5 == 0);
+        
+        i = i + 1;
+    }
 }
-
 
 
     """

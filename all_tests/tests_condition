@@ -1,0 +1,49 @@
+
+
+
+int main(){
+
+    int x;
+    int y;
+    x = 9;
+    y = 8;
+    bool z;
+    z = (x > y) || false;
+    print(z);
+
+}
+
+
+
+    
+---------------
+true
+---------------
+
+
+int main(){
+
+    int x;
+    x = 4;
+    int y;
+    y = 7;
+    print(x>y);
+    print(x>4);
+    print(x>=4);
+    print((x-1) > y);
+    print(x!=y);
+    print(x==y);
+
+}
+
+
+
+    
+---------------
+false
+false
+true
+false
+true
+false
+---------------

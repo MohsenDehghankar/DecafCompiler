@@ -1511,6 +1511,9 @@ addi $t{}, $zero, 1;
         t1, t2 = self.write_conditional_expr(left_opr, right_opr)
         label = self.get_new_label()
         current_code = ""
+
+        current_code += left_opr.code + "\n" + right_opr.code
+
         current_code = self.append_code(
             current_code,
             """
@@ -2003,6 +2006,7 @@ j {};
     def _while(self, args):
         print("while")
         print(args)
+        print(args[1].children[0].code)
         current_code = ""
         loop_lable = self.get_new_label()
         end_lable = self.get_new_label()
@@ -2077,7 +2081,9 @@ j {};
 
     def pass_stmt(self, args):
         # print(args, 'pass_stmt')
-        return args
+        re = Result()
+        re.code = ""
+        return re
 
     def pass_logic(self, args):
         return args[0]

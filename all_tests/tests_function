@@ -1,0 +1,28 @@
+
+
+int g;
+int main(){
+    int x;
+    int y;
+    x = 10;
+    y = 20;
+    x = mule(x, y);
+    print(x);
+
+    x = adde(x, x);
+    print(x);
+
+    print(mule(x, x), adde(x,y));   
+}
+int mule(int a, int b){
+    return a * b;
+}
+int adde(int a, int b){
+    return a + b;
+}
+    
+---------------
+200
+400
+160000420
+---------------
