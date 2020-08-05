@@ -64,9 +64,7 @@ int main(){
 
     
 
-    double y;
-    y = 3.1415;
-    print(y);
+    print(1, 2, 3, 4);
 
 
 }
@@ -78,17 +76,6 @@ int main(){
     f2 = open("tests", 'a')
     # f2.write(decaf_code + "\n---------------\n\n---------------")
 
-
-    decaf_code = """
-    int main(){
-        int[][] x;
-        int[] y;
-        x = NewArray(10, int[]);
-        y = NewArray(4, int);
-        y[1] = x.length();
-        print(y[1]);
-        }
-"""
     # first pass
     print("--------------first pass------------")
     parser1.parse(decaf_code)
