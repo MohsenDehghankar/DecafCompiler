@@ -2348,7 +2348,7 @@ j {};
                         )
 
                 elif inp.type == "double":
-                    if args[0].is_reference == True:
+                    if inp.is_reference == True:
 	                    current_code = self.append_code(
 	                        current_code,
 	                        """
@@ -2357,7 +2357,7 @@ j {};
 	cvt.s.d $f12, $f12
 	syscall
 	                """.format(
-	                            args[0].number
+	                            inp.number
 	                        ),
 	                    )
                     else:
