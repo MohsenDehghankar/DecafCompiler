@@ -64,13 +64,10 @@ int main(){
 
     double y;
     y = 3.1415;
-    print(y);
-
-    y = 3.14159265;
-    print(y);
-
-    y = 575450595.1415;
-    print(y);
+    double x;
+    x = 2.5;
+    
+    print(x * y);
 
 
 }
