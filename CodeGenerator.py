@@ -477,19 +477,28 @@ s.d $f{}, ($t{});
 
         # left
         if isinstance(left_value, Register):
-
-            current_code = self.append_code(  # ?????????????
-                current_code,
-                """
-    move ${}, $t{};
-                """.format(
-                    left_value.kind + str(left_value.number), t1
-                ),
-                # =======
-                #            current_code = self.append_code(
-                #                current_code, self.store_ref_reg(left_value, t1)
-                # >>>>>>> master
-            )
+            if left_value.is_reference == True:
+                current_code = self.append_code(  # ?????????????
+                    current_code,
+                    """
+sw $t{}, ($t{});
+                    """.format(
+                        t1, left_value.number
+                    ),
+                )
+	        else:
+                current_code = self.append_code(  # ?????????????
+                    current_code,
+                    """
+move ${}, $t{};
+                    """.format(
+                        left_value.kind + str(left_value.number), t1
+                    ),
+                    # =======
+                    #            current_code = self.append_code(
+                    #                current_code, self.store_ref_reg(left_value, t1)
+                    # >>>>>>> master
+                )
             # TODO: handle other types
 
             # free left_value register
@@ -2203,7 +2212,7 @@ j {};
         
         for inp in args[0]:
             current_code += "\n" + inp.code
-            if isinstance(inp, Variable):
+            if isinstance(inp, Variable):   
                 if inp.type == "int":
                     current_code = self.append_code(
                         current_code,
@@ -2232,35 +2241,38 @@ j {};
                     )
                 elif inp.type == "double":
                     if inp.address_offset == None:
-                        current_code = self.append_code(
-                            current_code,
-                            """
-    li $v0, 3;
-    li.d $f12, {};
-    syscall
-                    """.format(
-                                inp.value
-                            ),
-                        )
+	                    current_code = self.append_code(
+	                        current_code,
+	                        """
+	li $v0, 2;
+	li.d $f12, {};
+	cvt.s.d $f12, $f12
+	syscall
+	                """.format(
+	                            inp.value
+	
+	                        ),
+	                    )
                     else:
-                        t1 = self.get_a_free_t_register()
-                        current_code = self.append_code(
-                            current_code,
-                            """
-    li $v0, 3;
-    li $t{}, {};
-    add $t{}, $t{}, $s{};
-    l.d $f12, ($t{});
-    syscall
-                    """.format(
-                                t1,
-                                inp.address_offset,
-                                t1,
-                                t1,
-                                1 if inp.is_global else 0,
-                                t1,
-                            ),
-                        )
+	                    t1 = self.get_a_free_t_register()
+	                    current_code = self.append_code(
+	                        current_code,
+	                        """
+	li $v0, 2;
+	li $t{}, {};
+	add $t{}, $t{}, $s{};
+	l.d $f12, ($t{});
+	cvt.s.d $f12, $f12
+	syscall
+	                """.format(
+	                            t1,
+	                            inp.address_offset,
+	                            t1,
+	                            t1,
+	                            1 if inp.is_global else 0,
+	                            t1,
+	                        ),
+	                    )
                 elif inp.type == "bool":
                     t1 = self.get_a_free_t_register()
                     lbl = self.get_new_label().name
@@ -2336,24 +2348,26 @@ j {};
                         )
 
                 elif inp.type == "double":
-                    if inp.is_reference == True:
-                        current_code = self.append_code(
-                            current_code,
-                            """
-    li $v0, 3;
-    l.d $f12, ($t{});
-    syscall
-                    """.format(
-                                inp.number
-                            ),
-                        )
+                    if args[0].is_reference == True:
+	                    current_code = self.append_code(
+	                        current_code,
+	                        """
+	li $v0, 2;
+	l.d $f12, ($t{});
+	cvt.s.d $f12, $f12
+	syscall
+	                """.format(
+	                            args[0].number
+	                        ),
+	                    )
                     else:
                         current_code = self.append_code(
                             current_code,
                             """
-    li $v0, 3;
-    mov.d $f12, $f{};
-    syscall
+    li $v0, 2;
+	mov.d $f12, $f{};
+	cvt.s.d $f12, $f12
+	syscall
                     """.format(
                                 inp.number
                             ),
@@ -2482,6 +2496,11 @@ syscall
 
     def function_call(self, args):
         return self.oo_gen.function_call(args)
+
+    def method_call(self, args):
+        var = self.symbol_table.variables[args[0]]
+        if isinstance(var, Array):
+            return self.arr_cgen.arr_length(var)
 
     """
     Read Integer
