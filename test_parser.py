@@ -62,9 +62,15 @@ def main(argv):
 int main(){
 
 
-    
+    double y;
+    y = 3.1415;
+    print(y);
 
-    print(1, 2, 3, 4);
+    y = 3.14159265;
+    print(y);
+
+    y = 575450595.1415;
+    print(y);
 
 
 }
@@ -86,7 +92,7 @@ int main(){
     tree = parser.parse(decaf_code)
 
     # print(tree.pretty())
-
+    '''
     print("\n\n------------symbol tables-------------------")
     for table in first_pass_code_gen.symbol_tables:
         print(
@@ -97,6 +103,7 @@ int main(){
             )
         )
     print("---------------end--------------------------\n\n")
+    '''
     """
     print("---------------------------------------\nsymbol table: ")
     for var in codeGen.symbol_table.variables.keys():
