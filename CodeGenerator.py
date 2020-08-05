@@ -2004,9 +2004,9 @@ j {};
         return result
 
     def _while(self, args):
-        print("while")
-        print(args)
-        print(args[1].children[0].code)
+        # print("while")
+        # print(args)
+        # print(args[1].children[0].code)
         current_code = ""
         loop_lable = self.get_new_label()
         end_lable = self.get_new_label()
