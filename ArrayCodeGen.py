@@ -87,7 +87,7 @@ addi $t{}, $t{}, {};
                 t1,
                 t1,
                 t1,
-                (index + 1) * arr.size,
+                (index + 1) * self.calc_size_of_index(arr.type),
             )
             output_type = self.get_output_type(arr.type)  # int[][] -> int[]
             reg = CodeGenerator.Register(output_type, "t", t1)
@@ -119,16 +119,17 @@ addi $t{}, $t{}, {};
 
     def calc_size_of_index(self, _type):
         size = 0
-        if "[]" in _type:
+        if "[][]" in _type:
             size = 4
+            return size
         else:
-            if _type == "int":
+            if "int" in _type:
                 size = 4
-            if _type == "bool":
+            if "bool" in _type:
                 size = 1
-            if _type == "string":
+            if "string" in _type:
                 size = 4  # address of string
-            if _type == "double":
+            if "double" in _type:
                 size = 8
         return size
 

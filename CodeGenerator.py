@@ -325,17 +325,25 @@ lw $t{}, ($t{});
 
         return code
 
-    def code_for_loading_ref_reg(self, t_reg, reg):
-        #         if reg.type == "double":
-        #             code = """
-        # lwc1 $f{}, ($f{});
-        #             """.format(
-        #                 t_reg, reg.number
-        #             )
-        #             return code
-
+    def code_for_loading_int_ref_reg(self, t_reg, reg):
         code = """
 lw $t{}, ($t{});
+        """.format(
+            t_reg, reg.number
+        )
+        return code
+
+    def code_for_loading_double_ref_reg(self, f_reg, reg):
+        code = """
+l.d $f{}, ($t{});
+            """.format(
+            f_reg, reg.number
+        )
+        return code
+
+    def code_for_loading_bool_ref_reg(self, t_reg, reg):
+        code = """
+lb $t{}, ($t{});
         """.format(
             t_reg, reg.number
         )
@@ -625,8 +633,8 @@ sw $t{}, ($t{});
     """
 
     def token_to_var(self, args):
-        print("high prior: ")
-        print(args)
+        # print("high prior: ")
+        # print(args)
 
         types = ["int", "bool", "double", "string"]
 
@@ -728,6 +736,56 @@ mflo $t{};
             pass  # other expressions
         return args
 
+    def code_for_loading_math_opr(self, t_reg, opr):
+        # opr type should be int or bool
+        code = ""
+        if isinstance(opr, Variable):
+            code = self.append_code(
+                code,
+                """
+li $t{}, {};
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
+                    """.format(
+                    t_reg,
+                    opr.address_offset,
+                    t_reg,
+                    t_reg,
+                    1 if opr.is_global else 0,
+                    t_reg,
+                    t_reg,
+                ),
+            )
+        elif isinstance(opr, Immediate):
+            code = self.append_code(
+                code,
+                """
+li $t{}, {};
+                """.format(
+                    t_reg, opr.value
+                ),
+            )
+        elif isinstance(opr, Register):
+            if opr.is_reference == True:
+                if opr.type == "int":
+                    code = self.append_code(
+                        code, self.code_for_loading_int_ref_reg(t_reg, opr)
+                    )
+                elif opr.type == "bool":
+                    code = self.append_code(
+                        code, self.code_for_loading_bool_ref_reg(t_reg, opr)
+                    )
+            else:
+                code = self.append_code(
+                    code,
+                    """
+move $t{}, ${};
+                """.format(
+                        t_reg, opr.kind + str(opr.number)
+                    ),
+                )
+        return code
+
     def multiply(self, args):
         # print("multiply")
         # print(args)
@@ -744,86 +802,14 @@ mflo $t{};
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
-        if isinstance(opr1, Variable):
-            if opr1.type == "int":
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $t{}, {};
-add $t{}, $t{}, $s{};
-lw $t{}, ($t{});
-                    """.format(
-                        t1,
-                        opr1.address_offset,
-                        t1,
-                        t1,
-                        1 if opr1.is_global else 0,
-                        t1,
-                        t1,
-                    ),
-                )
-            else:
-                pass  # type checking
-        elif isinstance(opr1, Immediate):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-                """.format(
-                    t1, opr1.value
-                ),
-            )
-        elif isinstance(opr1, Register):
-            current_code = self.append_code(
-                current_code,
-                """
-move $t{}, ${};
-                """.format(
-                    t1, opr1.kind + str(opr1.number)
-                ),
-            )
-        else:
-            pass  # other things
-        if isinstance(opr2, Variable):
-            if opr2.type == "int":
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $t{}, {};
-add $t{}, $t{}, $s{};
-lw $t{}, ($t{});
-                    """.format(
-                        t2,
-                        opr2.address_offset,
-                        t2,
-                        t2,
-                        1 if opr2.is_global else 0,
-                        t2,
-                        t2,
-                    ),
-                )
-            else:
-                pass  # type checking
-        elif isinstance(opr2, Immediate):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-                """.format(
-                    t2, opr2.value
-                ),
-            )
-        elif isinstance(opr2, Register):
-            current_code = self.append_code(
-                current_code,
-                """
-move $t{}, ${};
-                """.format(
-                    t2, opr2.kind + str(opr2.number)
-                ),
-            )
-        else:
-            pass  # other things
+
+        current_code = self.append_code(
+            current_code, self.code_for_loading_math_opr(t1, opr1)
+        )
+        current_code = self.append_code(
+            current_code, self.code_for_loading_math_opr(t2, opr2)
+        )
+
         current_code = self.append_code(
             current_code,
             """
@@ -854,86 +840,12 @@ mflo $t{};
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
 
-        if isinstance(opr1, Variable):
-            if opr1.type == "int":
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $t{}, {};
-add $t{}, $t{}, $s{};
-lw $t{}, ($t{});
-                    """.format(
-                        t1,
-                        opr1.address_offset,
-                        t1,
-                        t1,
-                        1 if opr1.is_global else 0,
-                        t1,
-                        t1,
-                    ),
-                )
-            else:
-                pass  # type checking
-        elif isinstance(opr1, Immediate):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-            """.format(
-                    t1, opr1.value
-                ),
-            )
-        elif isinstance(opr1, Register):
-            current_code = self.append_code(
-                current_code,
-                """
-move $t{}, ${};
-            """.format(
-                    t1, opr1.kind + str(opr1.number)
-                ),
-            )
-        else:
-            pass  # other things
-        if isinstance(opr2, Variable):
-            if opr2.type == "int":
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $t{}, {};
-add $t{}, $t{}, $s{};
-lw $t{}, ($t{});
-                """.format(
-                        t2,
-                        opr2.address_offset,
-                        t2,
-                        t2,
-                        1 if opr2.is_global else 0,
-                        t2,
-                        t2,
-                    ),
-                )
-            else:
-                pass  # type checking
-        elif isinstance(opr2, Immediate):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-            """.format(
-                    t2, opr2.value
-                ),
-            )
-        elif isinstance(opr2, Register):
-            current_code = self.append_code(
-                current_code,
-                """
-move $t{}, ${};
-            """.format(
-                    t2, opr2.kind + str(opr2.number)
-                ),
-            )
-        else:
-            pass  # other things
+        current_code = self.append_code(
+            current_code, self.code_for_loading_math_opr(t1, opr1)
+        )
+        current_code = self.append_code(
+            current_code, self.code_for_loading_math_opr(t2, opr2)
+        )
 
         current_code = self.append_code(
             current_code,
@@ -961,86 +873,13 @@ mflo $t{};
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
-        if isinstance(opr1, Variable):
-            if opr1.type == "int":
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $t{}, {};
-add $t{}, $t{}, $s{};
-lw $t{}, ($t{});
-                    """.format(
-                        t1,
-                        opr1.address_offset,
-                        t1,
-                        t1,
-                        1 if opr1.is_global else 0,
-                        t1,
-                        t1,
-                    ),
-                )
-            else:
-                pass  # type checking
-        elif isinstance(opr1, Immediate):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-                """.format(
-                    t1, opr1.value
-                ),
-            )
-        elif isinstance(opr1, Register):
-            current_code = self.append_code(
-                current_code,
-                """
-move $t{}, ${};
-                """.format(
-                    t1, opr1.kind + str(opr1.number)
-                ),
-            )
-        else:
-            pass  # other things
-        if isinstance(opr2, Variable):
-            if opr2.type == "int":
-                current_code = self.append_code(
-                    current_code,
-                    """
-li $t{}, {};
-add $t{}, $t{}, $s{};
-lw $t{}, ($t{});
-                    """.format(
-                        t2,
-                        opr2.address_offset,
-                        t2,
-                        t2,
-                        1 if opr2.is_global else 0,
-                        t2,
-                        t2,
-                    ),
-                )
-            else:
-                pass  # type checking
-        elif isinstance(opr2, Immediate):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-                """.format(
-                    t2, opr2.value
-                ),
-            )
-        elif isinstance(opr2, Register):
-            current_code = self.append_code(
-                current_code,
-                """
-move $t{}, ${};
-                """.format(
-                    t2, opr2.kind + str(opr2.number)
-                ),
-            )
-        else:
-            pass  # other things
+
+        current_code = self.append_code(
+            current_code, self.code_for_loading_math_opr(t1, opr1)
+        )
+        current_code = self.append_code(
+            current_code, self.code_for_loading_math_opr(t2, opr2)
+        )
 
         current_code = self.append_code(
             current_code,
@@ -1173,72 +1012,14 @@ li ${}, 1;
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
-        if isinstance(opr1, Register):
-            current_code = self.append_code(
-                current_code,
-                """
-move $t{}, ${};
-            """.format(
-                    t1, opr1.kind + str(opr1.number)
-                ),
-            )
-            if opr1.kind == "t":
-                self.t_registers[opr1.number] = False
-        elif isinstance(opr1, Variable):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-add $t{}, $t{}, $s{};
-lw $t{}, ($t{});
-            """.format(
-                    t1, opr1.address_offset, t1, t1, 1 if opr1.is_global else 0, t1, t1
-                ),
-            )
-        elif isinstance(opr1, Immediate):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-            """.format(
-                    t1, opr1.value
-                ),
-            )
-        else:
-            pass  # other types
-        if isinstance(opr2, Register):
-            current_code = self.append_code(
-                current_code,
-                """
-move $t{}, ${};
-            """.format(
-                    t2, opr2.kind + str(opr2.number)
-                ),
-            )
-            if opr2.kind == "t":
-                self.t_registers[opr2.number] = False
-        elif isinstance(opr2, Variable):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-add $t{}, $t{}, $s{};
-lw $t{}, ($t{});
-            """.format(
-                    t2, opr2.address_offset, t2, t2, 1 if opr2.is_global else 0, t2, t2
-                ),
-            )
-        elif isinstance(opr2, Immediate):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-            """.format(
-                    t2, opr2.value
-                ),
-            )
-        else:
-            pass  # other types
+
+        current_code = self.append_code(
+            current_code, self.code_for_loading_math_opr(t1, opr1)
+        )
+        current_code = self.append_code(
+            current_code, self.code_for_loading_math_opr(t2, opr2)
+        )
+
         current_code = self.append_code(
             current_code,
             """
@@ -1282,72 +1063,14 @@ add $t{}, $t{}, $t{}
         t2 = self.get_a_free_t_register()
         current_code = ""
         current_code = opr1.code + "\n" + opr2.code
-        if isinstance(opr1, Register):
-            current_code = self.append_code(
-                current_code,
-                """
-move $t{}, ${};
-            """.format(
-                    t1, opr1.kind + str(opr1.number)
-                ),
-            )
-            if opr1.kind == "t":
-                self.t_registers[opr1.number] = False
-        elif isinstance(opr1, Variable):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-add $t{}, $t{}, $s{};
-lw $t{}, ($t{});
-            """.format(
-                    t1, opr1.address_offset, t1, t1, 1 if opr1.is_global else 0, t1, t1
-                ),
-            )
-        elif isinstance(opr1, Immediate):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-            """.format(
-                    t1, opr1.value
-                ),
-            )
-        else:
-            pass  # other types
-        if isinstance(opr2, Register):
-            current_code = self.append_code(
-                current_code,
-                """
-move $t{}, ${};
-            """.format(
-                    t2, opr2.kind + str(opr2.number)
-                ),
-            )
-            if opr2.kind == "t":
-                self.t_registers[opr2.number] = False
-        elif isinstance(opr2, Variable):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-add $t{}, $t{}, $s{};
-lw $t{}, ($t{});
-            """.format(
-                    t2, opr2.address_offset, t2, t2, 1 if opr2.is_global else 0, t2, t2
-                ),
-            )
-        elif isinstance(opr2, Immediate):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-            """.format(
-                    t2, opr2.value
-                ),
-            )
-        else:
-            pass  # other types
+
+        current_code = self.append_code(
+            current_code, self.code_for_loading_math_opr(t1, opr1)
+        )
+        current_code = self.append_code(
+            current_code, self.code_for_loading_math_opr(t2, opr2)
+        )
+
         current_code = self.append_code(
             current_code,
             """
@@ -1528,7 +1251,7 @@ addi $t{}, $zero, 1;
         f1 = self.get_a_free_f_register()
         self.f_registers[f1] = True
         t1 = self.get_a_free_t_register()
-        code = ""
+        code = opr.code
         if isinstance(opr, Variable):
             if opr.address_offset == None:
                 code = self.append_code(
@@ -1556,9 +1279,13 @@ l.d $f{}, ($t{})
                         t1,
                     ),
                 )
-        # double register
-        else:
-            f1 = opr.number
+        elif isinstance(opr, Register):
+            if opr.is_reference == True:
+                code = self.append_code(
+                    code, self.code_for_loading_double_ref_reg(f1, opr)
+                )
+            else:
+                f1 = opr.number
         reg = Register("double", "f", f1)
         reg.write_code(code)
         return reg
@@ -2379,9 +2106,20 @@ syscall
                             ),
                         )
 
-                else:
-                    pass
-                    # other types in Register
+                elif inp.type == "string":
+                    if inp.is_reference == True:
+                        current_code = self.append_code(
+                            current_code,
+                            """
+li $v0, 4;
+lw $a0, ($t{});
+lw $a0, ($a0);
+syscall
+                    """.format(
+                                inp.number
+                            ),
+                        )
+
             elif isinstance(inp, Immediate):
                 if inp.type == "bool":
                     pass  # todo
