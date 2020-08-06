@@ -59,11 +59,11 @@ def main(argv):
 
 
 int main(){
-    int[] x;
-    x = NewArray(12, int);
-    x[1] = 6;
-    x[2] = 3;
-    print(6 % 3);
+    double[] x;
+    x = NewArray(12, double);
+    x[1] = 2.33456;
+    x[2] = (14.4567 * x[1]) + x[2] + x[1];
+    print(x[2]);
 }
 
 

@@ -340,7 +340,7 @@ lw $t{}, ($t{});
 
     def code_for_loading_double_ref_reg(self, f_reg, reg):
         code = """
-lwc1 $f{}, ($f{});
+l.d $f{}, ($t{});
             """.format(
             f_reg, reg.number
         )
@@ -1251,7 +1251,7 @@ addi $t{}, $zero, 1;
         f1 = self.get_a_free_f_register()
         self.f_registers[f1] = True
         t1 = self.get_a_free_t_register()
-        code = ""
+        code = opr.code
         if isinstance(opr, Variable):
             if opr.address_offset == None:
                 code = self.append_code(
@@ -1279,9 +1279,13 @@ l.d $f{}, ($t{})
                         t1,
                     ),
                 )
-        # double register
-        else:
-            f1 = opr.number
+        elif isinstance(opr, Register):
+            if opr.is_reference == True:
+                code = self.append_code(
+                    code, self.code_for_loading_double_ref_reg(f1, opr)
+                )
+            else:
+                f1 = opr.number
         reg = Register("double", "f", f1)
         reg.write_code(code)
         return reg
