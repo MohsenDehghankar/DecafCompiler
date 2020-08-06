@@ -428,8 +428,8 @@ s.d $f{}, ($t{});
         return code
 
     def assignment_calculated(self, args):
-        # print("assignment calculated")
-        # print(args)
+        print("assignment calculated")
+        print(args)
         left_value = args[0]
         right_value = args[1]
 
@@ -616,10 +616,6 @@ sw $t{}, ($t{});
         print("bool", args)
         return args[0]
 
-    def pass_bool(self, args):
-        print("bool", args)
-        return args[0]
-
     def identifier_in_expression(self, args):
         # print("ident: {0}".format(args[0].value))
         return args[0]
@@ -629,8 +625,8 @@ sw $t{}, ($t{});
     """
 
     def token_to_var(self, args):
-        # print("high prior: ")
-        # print(args)
+        print("high prior: ")
+        print(args)
 
         types = ["int", "bool", "double", "string"]
 
@@ -1145,21 +1141,19 @@ li ${}, 1;
         return args[0]
 
     def double_operation(self, opr1, opr2, instruction):
-        f1 = self.get_a_free_f_register()
-        self.f_registers[f1] = True
-        f2 = self.get_a_free_f_register()
-        current_code = ""
+        f1 = self.load_double_to_reg(opr1)
+        f2 = self.load_double_to_reg(opr2)
+        current_code = self.append_code(f1.code, f2.code)
+
         current_code = self.append_code(
             current_code,
             """
-li.d $f{}, {};
-li.d $f{}, {};
 {}.d $f{}, $f{}, $f{}
             """.format(
-                f1, opr1.value, f2, opr2.value, instruction, f1, f1, f2
+                instruction, f1.number, f1.number, f2.number
             ),
         )
-        reg = Register("double", "f", f1)
+        reg = Register("double", "f", f1.number)
         reg.write_code(current_code)
         return reg
 
@@ -1551,7 +1545,7 @@ li.d $f{}, {};
                     """
 li $t{}, {};
 add $t{}, $t{}, $s{};
-s.d $f{}, ($t{})
+l.d $f{}, ($t{})
                     """.format(
                         t1,
                         opr.address_offset,
@@ -2114,24 +2108,6 @@ j {};
         else:
             return float(val)
 
-    def generate_name_for_double(self):
-        self.tmp_double_count += 1
-        return "double{}".format(self.tmp_double_count)
-
-    def get_the_string(self):
-        def calculate_value_of_double(self, val):
-            val = val.lower()
-            if "e" in val:
-                mantis, exponent = val.lower().split("e")
-                if exponent[0] == "+":
-                    exponent = int(exponent)
-                else:
-                    exponent = -int(exponent)
-                val = float(mantis) * 10 ** exponent
-                return val
-            else:
-                return float(val)
-
     def constant_operand(self, args):
         # print("constant operands")
         # print(args)
@@ -2215,19 +2191,19 @@ j {};
 
         if not isinstance(args[0], list):
             args[0] = [args[0]]
-        
+
         for inp in args[0]:
             current_code += "\n" + inp.code
-            if isinstance(inp, Variable):   
+            if isinstance(inp, Variable):
                 if inp.type == "int":
                     current_code = self.append_code(
                         current_code,
                         """
-    li $v0, 1;
-    li $a0, {};
-    add $a0, $a0, $s{};
-    lw $a0, ($a0);
-    syscall
+li $v0, 1;
+li $a0, {};
+add $a0, $a0, $s{};
+lw $a0, ($a0);
+syscall
                     """.format(
                             inp.address_offset, 1 if inp.is_global else 0
                         ),
@@ -2236,49 +2212,48 @@ j {};
                     current_code = self.append_code(
                         current_code,
                         """
-    li $v0, 4;
-    li $a0, {};
-    add $a0, $a0, $s{};
-    lw $a0, ($a0);
-    syscall
+li $v0, 4;
+li $a0, {};
+add $a0, $a0, $s{};
+lw $a0, ($a0);
+syscall
                     """.format(
                             inp.address_offset, 1 if inp.is_global else 0
                         ),
                     )
                 elif inp.type == "double":
                     if inp.address_offset == None:
-	                    current_code = self.append_code(
-	                        current_code,
-	                        """
-	li $v0, 2;
-	li.d $f12, {};
-	cvt.s.d $f12, $f12
-	syscall
+                        current_code = self.append_code(
+                            current_code,
+                            """
+li $v0, 2;
+li.d $f12, {};
+cvt.s.d $f12, $f12
+syscall
 	                """.format(
-	                            inp.value
-	
-	                        ),
-	                    )
+                                inp.value
+                            ),
+                        )
                     else:
-	                    t1 = self.get_a_free_t_register()
-	                    current_code = self.append_code(
-	                        current_code,
-	                        """
-	li $v0, 2;
-	li $t{}, {};
-	add $t{}, $t{}, $s{};
-	l.d $f12, ($t{});
-	cvt.s.d $f12, $f12
-	syscall
+                        t1 = self.get_a_free_t_register()
+                        current_code = self.append_code(
+                            current_code,
+                            """
+li $v0, 2;
+li $t{}, {};
+add $t{}, $t{}, $s{};
+l.d $f12, ($t{});
+cvt.s.d $f12, $f12
+syscall
 	                """.format(
-	                            t1,
-	                            inp.address_offset,
-	                            t1,
-	                            t1,
-	                            1 if inp.is_global else 0,
-	                            t1,
-	                        ),
-	                    )
+                                t1,
+                                inp.address_offset,
+                                t1,
+                                t1,
+                                1 if inp.is_global else 0,
+                                t1,
+                            ),
+                        )
                 elif inp.type == "bool":
                     t1 = self.get_a_free_t_register()
                     lbl = self.get_new_label().name
@@ -2286,17 +2261,17 @@ j {};
                     current_code = self.append_code(
                         current_code,
                         """
-    li $t{}, {};
-    add $t{}, $t{}, $s{};
-    lb $t{}, ($t{});
-    li $v0, 4;
-    beq $t{}, $zero, {};
-    la $a0, true_const;
-    j {};
-    {}:
-    la $a0, false_const;
-    {}:
-    syscall
+li $t{}, {};
+add $t{}, $t{}, $s{};
+lb $t{}, ($t{});
+li $v0, 4;
+beq $t{}, $zero, {};
+la $a0, true_const;
+j {};
+{}:
+la $a0, false_const;
+{}:
+syscall
                     """.format(
                             t1,
                             inp.address_offset,
@@ -2323,15 +2298,15 @@ j {};
                         current_code = self.append_code(
                             current_code,
                             """
-    lw ${}, (${})
-    beq ${}, $zero, {};
-    la $a0, true_const;
-    j {};
-    {}:
-    la $a0, false_const;
-    {}:
-    li $v0, 4;
-    syscall
+lw ${}, (${})
+beq ${}, $zero, {};
+la $a0, true_const;
+j {};
+{}:
+la $a0, false_const;
+{}:
+li $v0, 4;
+syscall
                         """.format(
                                 reg, reg, reg, lbl1, lbl2, lbl1, lbl2
                             ),
@@ -2340,14 +2315,14 @@ j {};
                         current_code = self.append_code(
                             current_code,
                             """
-    beq ${}, $zero, {};
-    la $a0, true_const;
-    j {};
-    {}:
-    la $a0, false_const;
-    {}:
-    li $v0, 4;
-    syscall
+beq ${}, $zero, {};
+la $a0, true_const;
+j {};
+{}:
+la $a0, false_const;
+{}:
+li $v0, 4;
+syscall
                     """.format(
                                 inp.kind + str(inp.number), lbl1, lbl2, lbl1, lbl2
                             ),
@@ -2355,25 +2330,25 @@ j {};
 
                 elif inp.type == "double":
                     if inp.is_reference == True:
-	                    current_code = self.append_code(
-	                        current_code,
-	                        """
-	li $v0, 2;
-	l.d $f12, ($t{});
-	cvt.s.d $f12, $f12
-	syscall
+                        current_code = self.append_code(
+                            current_code,
+                            """
+li $v0, 2;
+l.d $f12, ($t{});
+cvt.s.d $f12, $f12
+syscall
 	                """.format(
-	                            inp.number
-	                        ),
-	                    )
+                                inp.number
+                            ),
+                        )
                     else:
                         current_code = self.append_code(
                             current_code,
                             """
-    li $v0, 2;
-	mov.d $f12, $f{};
-	cvt.s.d $f12, $f12
-	syscall
+li $v0, 2;
+mov.d $f12, $f{};
+cvt.s.d $f12, $f12
+syscall
                     """.format(
                                 inp.number
                             ),
@@ -2384,9 +2359,9 @@ j {};
                         current_code = self.append_code(
                             current_code,
                             """
-    li $v0, 1;
-    lw $a0, ($t{});
-    syscall
+li $v0, 1;
+lw $a0, ($t{});
+syscall
                         """.format(
                                 inp.number
                             ),
@@ -2396,9 +2371,9 @@ j {};
                         current_code = self.append_code(
                             current_code,
                             """
-        li $v0, 1;
-        move $a0, $t{};
-        syscall
+li $v0, 1;
+move $a0, $t{};
+syscall
                         """.format(
                                 inp.number
                             ),
