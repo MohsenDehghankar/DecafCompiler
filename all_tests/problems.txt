@@ -1,0 +1,62 @@
+int main(){
+
+
+    double y;
+    y = 3.1415;
+    double x;
+    x = 2.5;
+    
+    x = x * y;
+
+
+}
+
+----------
+
+int main(){
+
+    int x;
+    int y;
+    x = 9;
+    y = 8;
+    if (x > y){
+        print(1);
+    }
+    
+}
+-----------
+
+int main(){
+
+    int x;
+    x = 4;
+    int y;
+    y = 7;
+    print(!(x > y));
+
+}
+
+------------
+
+int main(){
+    int i;
+    int x;
+    for(i = 10; i > 1; i = i - 1){
+        break;
+        print(i);
+    }
+}
+
+---------------
+
+int main(){
+    int i;
+    i = 0;
+    while(i < 10){
+        
+        print(i % 5 == 0);
+        
+        i = i + 1;
+    }
+}
+----------------
