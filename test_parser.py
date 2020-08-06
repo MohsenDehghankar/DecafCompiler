@@ -59,13 +59,12 @@ def main(argv):
 
 
 int main(){
-
-    int x;
-    x = 4;
-    int y;
-    y = 7;
-    print(!(x > y));
-
+    string s;
+    int i;
+    for(i=0; i<10; i=i+1){
+        s = ReadLine();
+        print(s);
+    }
 }
 
 
