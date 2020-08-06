@@ -1103,7 +1103,7 @@ li $t{}, 1;
         elif isinstance(args[0], Immediate):
             args[0].value = 0 if args[0].value == 1 else 1
         elif isinstance(args[0], Register):
-            current_code = args[0].code
+            current_code = ""
             t1 = self.get_a_free_t_register()
             lbl1 = self.get_new_label().name
             lbl2 = self.get_new_label().name
@@ -1643,7 +1643,7 @@ move $t{},$v0;
 
         loop = self.get_new_label()
         loop_end = self.get_new_label()
-        not_equal = self.get_new_label()
+        _equal = self.get_new_label()
         end = self.get_new_label()
         equal = self.get_new_label()
 
@@ -1904,8 +1904,8 @@ b {};
         )
         if len(args) == 3:
             else_stmt = args[2]
-        for child in else_stmt.children:
-            current_code = self.append_code(current_code, child.code)
+            for child in else_stmt.children:
+                current_code = self.append_code(current_code, child.code)
         current_code = self.append_code(
             current_code,
             """

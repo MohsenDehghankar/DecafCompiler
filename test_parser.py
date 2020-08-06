@@ -59,12 +59,13 @@ def main(argv):
 
 
 int main(){
-    double x;
-    double y;
-    y = 3.1415;
-    x = 2.5;
-    x = x * y;
-    print(x);
+
+    int x;
+    x = 4;
+    int y;
+    y = 7;
+    print(!(x > y));
+
 }
 
 
