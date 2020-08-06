@@ -633,8 +633,8 @@ sw $t{}, ($t{});
     """
 
     def token_to_var(self, args):
-        print("high prior: ")
-        print(args)
+        # print("high prior: ")
+        # print(args)
 
         types = ["int", "bool", "double", "string"]
 
@@ -2106,9 +2106,20 @@ syscall
                             ),
                         )
 
-                else:
-                    pass
-                    # other types in Register
+                elif inp.type == "string":
+                    if inp.is_reference == True:
+                        current_code = self.append_code(
+                            current_code,
+                            """
+li $v0, 4;
+lw $a0, ($t{});
+lw $a0, ($a0);
+syscall
+                    """.format(
+                                inp.number
+                            ),
+                        )
+
             elif isinstance(inp, Immediate):
                 if inp.type == "bool":
                     pass  # todo
