@@ -59,13 +59,11 @@ def main(argv):
 
 
 int main(){
-
-    int x;
-    x = 4;
-    int y;
-    y = 7;
-    print(!(x > y));
-
+    int[] x;
+    x = NewArray(12, int);
+    x[1] = 6;
+    x[2] = 3;
+    print(6 % 3);
 }
 
 

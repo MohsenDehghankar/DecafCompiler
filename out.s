@@ -1,5 +1,4 @@
 
-
 .data
 frame_pointer:  .space  10000
 global_pointer: .space  10000
@@ -17,8 +16,20 @@ la $s1, global_pointer;
 
 
 
+li $a0, 52;
+li $v0, 9;
+syscall
+li $t0 , 12;
+sw $t0, 0($v0);
+li $t0, 12
+add $t0, $t0, $s0;
+sw $v0, ($t0)
+        
 
-li $t0, 4;
+
+li $t0, 12;
+add $t0, $t0, $s0;
+lw $t0, ($t0);
             
 
 li $t1, 8;
@@ -28,61 +39,51 @@ sw $t0, ($t1);
 
 
 
-
-li $t0, 7;
+li $t0, 8;
+add $t0, $t0, $s0
+lw $t0, ($t0);
+addi $t0, $t0, 8;
             
 
-li $t1, 12;
-add $t1, $t1, $s0;
-sw $t0, ($t1);
-                
+li $t1, 6;
+            
 
-
+sw $t1, ($t0);
+                    
 
 
 
 li $t0, 8;
-add $t0, $t0, $s0;
+add $t0, $t0, $s0
 lw $t0, ($t0);
+addi $t0, $t0, 12;
             
 
-li $t1, 12;
-add $t1, $t1, $s0;
-lw $t1, ($t1);
+li $t1, 3;
             
 
+sw $t1, ($t0);
+                    
 
 
-bgt $t0, $t1, label1;
-        
-        
 
 
-add $t0, $zero, $zero;
-b label2;
-label1:
-addi $t0, $zero, 1;
-label2:
-        
 
 
-beq $t0, $zero, label3;
-move $t0, $zero;
-j label4;
-label3:
-li $t0, 1;
-label4:
+li $t0, 6;
                 
 
-beq $t0, $zero, label5;
-la $a0, true_const;
-j label6;
-label5:
-la $a0, false_const;
-label6:
-li $v0, 4;
+li $t1, 3;
+                
+
+div $t0, $t1;
+mfhi $t0;
+            
+
+li $v0, 1;
+move $a0, $t0;
 syscall
-                    
+                        
 
 li $v0, 4;
 la $a0, newline;
@@ -91,4 +92,3 @@ syscall
 
 li $v0, 10;
 syscall;
-  
