@@ -58,11 +58,11 @@ def main(argv):
     decaf_code = """
 int g;
 int main(){
-    int x;
+    string x;
     string[] y;
     y = NewArray(10, string);
     y[3] = "abc";
-    print(y[3]);
+    print(adde(35 + 2, y[3]));
 }
 
 int adde(int a, string b){

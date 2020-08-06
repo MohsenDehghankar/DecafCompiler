@@ -571,13 +571,15 @@ sb $t{}, ($t{});
                         t3, input_var.value, t2, t2, t3, t2,
                     )
                 elif input_var.type == "string":
-                    code += self.main_code_gen.code_for_loading_string_Imm(1, input_var)
+                    code += self.main_code_gen.code_for_loading_string_Imm(
+                        t3, input_var
+                    )
                     code += """
 move $t{}, $v0;
 add $t{}, $t{}, $s0;
 sw $t{}, ($t{});
                     """.format(
-                        t3, t2, t2, t3, t2
+                        t2, t2, t3, t2
                     )
 
         self.main_code_gen.t_registers[t1] = False

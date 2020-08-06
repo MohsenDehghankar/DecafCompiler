@@ -310,6 +310,14 @@ sb $a0,{}($v0);
                         str.value[i], i
                     ),
                 )
+        code = self.append_code(
+            code,
+            """
+move $t{}, $v0;
+        """.format(
+                reg
+            ),
+        )
 
         return code
 
@@ -462,10 +470,17 @@ s.d $f{}, ($t{});
 
         # right
         if isinstance(right_value, Register):
-            if right_value.is_reference == True:
-                right_code = self.code_for_loading_ref_reg(t1, right_value)
-            elif right_value.type == "int" or right_value.type == "bool":
-                right_code = self.code_for_loading_int_reg(t1, right_value)
+            if right_value.type == "int" or right_value.type == "string":
+                if right_value.is_reference == True:
+                    right_code = self.code_for_loading_int_ref_reg(t1, right_value)
+                else:
+                    right_code = self.code_for_loading_int_reg(t1, right_value)
+
+            elif right_value.type == "bool":
+                if right_value.is_reference == True:
+                    right_code = self.code_for_loading_bool_ref_reg(t1, right_value)
+                else:
+                    right_code = self.code_for_loading_int_reg(t1, right_value)
 
             # now right register can be free
             if right_value.kind == "t":
@@ -486,7 +501,7 @@ s.d $f{}, ($t{});
         # left
         if isinstance(left_value, Register):
             if left_value.is_reference == True:
-                current_code = self.append_code(  # ?????????????
+                current_code = self.append_code(
                     current_code,
                     """
 sw $t{}, ($t{});
@@ -2113,7 +2128,6 @@ syscall
                             """
 li $v0, 4;
 lw $a0, ($t{});
-lw $a0, ($a0);
 syscall
                     """.format(
                                 inp.number
