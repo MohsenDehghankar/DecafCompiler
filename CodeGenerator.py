@@ -346,6 +346,14 @@ lw $t{}, ($t{});
         )
         return code
 
+    def code_for_loading_string_ref_reg(self, t_reg, reg):
+        code = """
+lw $t{}, ($t{});
+        """.format(
+            t_reg, reg.number
+        )
+        return code
+
     def code_for_loading_double_ref_reg(self, f_reg, reg):
         code = """
 l.d $f{}, ($t{});
@@ -1349,14 +1357,11 @@ lw $t{}, ($t{});
             self.t_registers[reg] = True
             right_reg = Register("string", "t", reg)
             right_reg.code = self.code_for_loading_string_Imm(reg, right_opr)
-            right_reg.code = self.append_code(
-                right_reg.code,
-                """
-move $t{},$v0;
-            """.format(
-                    reg
-                ),
-            )
+        elif isinstance(right_opr, Register):
+            reg = self.get_a_free_t_register()
+            self.t_registers[reg] = True
+            right_reg = Register("string", "t", reg)
+            right_reg.code = self.code_for_loading_string_ref_reg(reg, right_opr)
 
         if isinstance(left_opr, Variable):
             left_reg = self.load_string_to_reg(left_opr)
@@ -1365,16 +1370,14 @@ move $t{},$v0;
             self.t_registers[reg] = True
             left_reg = Register("string", "t", reg)
             left_reg.code = self.code_for_loading_string_Imm(reg, left_opr)
-            left_reg.code = self.append_code(
-                left_reg.code,
-                """
-move $t{},$v0;
-            """.format(
-                    reg
-                ),
-            )
-
-        code = self.append_code(left_reg.code, right_reg.code)
+        elif isinstance(left_opr, Register):
+            reg = self.get_a_free_t_register()
+            self.t_registers[reg] = True
+            left_reg = Register("string", "t", reg)
+            left_reg.code = self.code_for_loading_string_ref_reg(reg, left_opr)
+        code = self.append_code(left_opr.code, right_opr.code)
+        code = self.append_code(code, left_reg.code)
+        code = self.append_code(code, right_reg.code)
 
         result = self.get_a_free_t_register()
         self.t_registers[result] = True
@@ -1385,7 +1388,7 @@ move $t{},$v0;
 
         loop = self.get_new_label()
         loop_end = self.get_new_label()
-        _equal = self.get_new_label()
+        not_equal = self.get_new_label()
         end = self.get_new_label()
         equal = self.get_new_label()
 
@@ -1464,7 +1467,7 @@ beq $t{}, $t{}, {}
         self.t_registers[right_reg.number] = False
         self.t_registers[t0] = False
         self.t_registers[t1] = False
-        if isinstance(right_opr, Immediate):
+        if isinstance(left_opr, Immediate):
             self.t_registers[right_reg.number] = False
         if isinstance(left_opr, Immediate):
             self.t_registers[left_reg.number] = False

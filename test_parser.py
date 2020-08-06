@@ -61,8 +61,11 @@ int main(){
     string x;
     string[] y;
     y = NewArray(10, string);
-    y[3] = "abc";
-    print(adde(35 + 2, y[3]));
+    y[3] = "Abc";
+    x = "Abc";
+    if ("Abc" == y[3]){
+        print(2);
+    }
 }
 
 int adde(int a, string b){
