@@ -855,7 +855,6 @@ mflo $t{};
         if isinstance(opr2, Register) and opr2.kind == "t":
             self.t_registers[opr2.number] = False
 
-
         reg = Register(opr1.type, "t", t1)
         reg.write_code(current_code)
         return reg
@@ -935,7 +934,7 @@ mfhi $t{};
             ),
         )
 
-         # todo debug
+        # todo debug
         if isinstance(opr1, Register) and opr1.kind == "t":
             self.t_registers[opr1.number] = False
         if isinstance(opr2, Register) and opr2.kind == "t":
@@ -1080,12 +1079,11 @@ add $t{}, $t{}, $t{}
             ),
         )
 
-         # todo debug
+        # todo debug
         if isinstance(opr1, Register) and opr1.kind == "t":
             self.t_registers[opr1.number] = False
         if isinstance(opr2, Register) and opr2.kind == "t":
             self.t_registers[opr2.number] = False
-
 
         reg = Register("int", "t", t1)
         reg.write_code(current_code)
@@ -1139,7 +1137,7 @@ sub $t{}, $t{}, $t{}
             ),
         )
 
-         # todo debug
+        # todo debug
         if isinstance(opr1, Register) and opr1.kind == "t":
             self.t_registers[opr1.number] = False
         if isinstance(opr2, Register) and opr2.kind == "t":
@@ -2023,7 +2021,7 @@ syscall
                     pass  # other types
             elif isinstance(inp, Register):
 
-                 # todo debug
+                # todo debug
                 if isinstance(inp, Register) and inp.kind == "t":
                     self.t_registers[inp.number] = False
 
@@ -2127,6 +2125,15 @@ syscall
                     """.format(
                                 inp.number
                             ),
+                        )
+                    else:  # func return
+                        current_code = self.append_code(
+                            current_code,
+                            """
+move $a0, $v0;
+li $v0, 4;
+syscall
+                    """,
                         )
 
             elif isinstance(inp, Immediate):
@@ -2328,6 +2335,9 @@ class Variable(Result):
                 self.size = 4  # address of string
             if self.type == "double":
                 self.size = 8
+        if "[]" in self.type:
+            self.size = 4
+            self.is_reference = True
 
         # var type is an object
 

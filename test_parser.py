@@ -58,13 +58,15 @@ def main(argv):
     decaf_code = """
 
 int main(){
-    bool x;
-    x = true;
-    bool y;
-    y = false;
+    int[] x;
+    x = NewArray(7, int);
+    x[3] = 12;
+    print(arr(x));
 
-    print(x != y);
+}
 
+string arr(int[] b){
+    return "abc";
 }
 
     """
