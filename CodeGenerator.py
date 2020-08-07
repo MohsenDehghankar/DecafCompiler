@@ -2161,6 +2161,15 @@ syscall
                                 inp.number
                             ),
                         )
+                    else:  # func return
+                        current_code = self.append_code(
+                            current_code,
+                            """
+move $a0, $v0;
+li $v0, 4;
+syscall
+                    """,
+                        )
 
             elif isinstance(inp, Immediate):
                 if inp.type == "bool":
@@ -2361,6 +2370,9 @@ class Variable(Result):
                 self.size = 4  # address of string
             if self.type == "double":
                 self.size = 8
+        if "[]" in self.type:
+            self.size = 4
+            self.is_reference = True
 
         # var type is an object
 
