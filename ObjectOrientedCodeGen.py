@@ -666,6 +666,15 @@ move $t{}, $v0;
         self.main_code_gen.symbol_table = sym_tbl
 
 
+    '''
+    Classes in Decaf
+    '''
+
+    
+
+
+
+
 class Function:
     def __init__(self, name):
         self.name = name
@@ -682,9 +691,3 @@ class SymbolTable:
         self.parent = None
         self.name = id
         self.function_name = None
-
-
-# =======
-#    def void_func_declare(self, args):
-#        pass
-# >>>>>>> master
