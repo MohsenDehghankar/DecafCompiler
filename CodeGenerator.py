@@ -83,7 +83,7 @@ la $s1, global_pointer;
 
         variable_name = args[0].children[1].value
 
-        if self.is_in_class:
+        if self.is_in_class and not self.oo_gen.func_start:
             if "[]" in self.type_tmp:
                 self.create_class_field(variable_name, True, self.type_tmp)
             else:
