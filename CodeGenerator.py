@@ -2333,6 +2333,17 @@ move $t{}, $v0;
         self.current_function_name = args[0]
         return args[0]
 
+    """
+    Class
+    """
+
+    def class_declare(self, args):
+        return self.oo_gen.class_declare(args)
+
+    def start_class_dec(self, args):
+        self.is_in_class = True
+        return args[0]
+
 
 """
 Other Classes

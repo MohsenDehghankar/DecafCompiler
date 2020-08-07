@@ -670,7 +670,11 @@ move $t{}, $v0;
     Classes in Decaf
     '''
 
-    
+    def class_declare(self, args):
+        print("class: ")
+        print(args)
+
+        return args
 
 
 
@@ -691,3 +695,15 @@ class SymbolTable:
         self.parent = None
         self.name = id
         self.function_name = None
+
+
+# Saves fields and other data about declared classes
+class ClassMetaData:
+
+    def __init__(self):
+        super().__init__()
+        self.fields = []        # list of 'Variable' s with no address
+        self.methods = []       # list of 'Functions' (name = class.function)
+
+
+

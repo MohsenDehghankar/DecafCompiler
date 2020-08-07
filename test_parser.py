@@ -58,6 +58,9 @@ def main(argv):
     decaf_code = """
 
 class A {
+    int a;
+    int b;
+    string c;
     
 }
 

@@ -81,7 +81,7 @@ sw $s0, ($t2);
 move $t2, $s0;
 add $t2, $t2, 24
 move $s0, $t2;
-jal abs_mult;
+jal abs.mult;
         
 
 move $t2, $v0;
@@ -101,7 +101,7 @@ li $v0, 10;
 syscall;
             
 
-abs_mult:
+abs.mult:
 
 sw $ra, 4($s0);
         
