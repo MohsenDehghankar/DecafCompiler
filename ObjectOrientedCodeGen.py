@@ -118,8 +118,8 @@ sw $ra, 4($s0);
         return result
 
     def formal_reduce(self, args):
-        # print("formal reduce....")
-        # print(args)
+        print("formal reduce....")
+        print(args)
 
         # flag for start of function declaration
         self.func_start = True
@@ -132,7 +132,9 @@ sw $ra, 4($s0);
                 variable = CodeGenerator.Variable()
                 variable.name = var.children[1].value
                 variable.type = var.children[0]
+
                 variable.calc_size()
+                print(variable, "aaaaaaaaa")
                 new_offset = last_offset - variable.size
                 new_offset = -new_offset
                 variable.address_offset = (
@@ -151,8 +153,8 @@ sw $ra, 4($s0);
     """
 
     def return_from_func(self, args):
-        # print("return")
-        # print(args)
+        print("return")
+        print(args)
         expr = args[0].children
         code = ""
         if len(expr) == 0:
@@ -201,28 +203,62 @@ jr $ra;
                 if not self.main_code_gen.func_type_tmp == result.type:
                     print("Invalid return type!")
                     exit(4)
-                code += """
+                elif result.type == "double":
+                    code += """
+lw $ra, 4($s0);
+mov.d $f0, $f{};
+lw $s0, ($s0);
+jr $ra;
+                """.format(
+                        result.number
+                    )
+                else:
+                    code += """
 lw $ra, 4($s0);
 move $v0, ${};
 lw $s0, ($s0);
 jr $ra;
                 """.format(
-                    result.kind + str(result.number)
-                )
+                        result.kind + str(result.number)
+                    )
             elif isinstance(result, CodeGenerator.Immediate):
                 if not self.main_code_gen.func_type_tmp == result.type:
                     print("Invalid return type!")
                     exit(4)
                 if result.type == "string":
-                    pass  # todo
-                elif result.type == "bool":
-                    pass  # todo
-                elif result.type == "double":
-                    pass  # todo
-                else:  # TODO: it has bug
+                    t1 = self.main_code_gen.get_a_free_t_register()
+                    self.main_code_gen.t_registers[t1] = True
+                    code = self.main_code_gen.code_for_loading_string_Imm(t1, result)
                     code += """
 lw $ra, 4($s0);
-move $v0, {};
+move $v0, $t{};
+lw $s0, ($s0);
+jr $ra;
+                    """.format(
+                        t1
+                    )
+                elif result.type == "bool":
+                    code += """
+lw $ra, 4($s0);
+li $v0, {};
+lw $s0, ($s0);
+jr $ra;
+                    """.format(
+                        result.value
+                    )
+                elif result.type == "double":
+                    code += """
+lw $ra, 4($s0);
+li.d $f0, {};
+lw $s0, ($s0);
+jr $ra;
+                    """.format(
+                        result.value
+                    )
+                elif result.type == "int":
+                    code += """
+lw $ra, 4($s0);
+li $v0, {};
 lw $s0, ($s0);
 jr $ra;
                     """.format(
@@ -346,7 +382,11 @@ add $t{}, $t{}, $t{};
             # $t2 has the address for input parameter
 
             if isinstance(input_var, CodeGenerator.Variable):
-                if input_var.type == "int" or var.type == "string":
+                if (
+                    input_var.type == "int"
+                    or input_var.type == "string"
+                    or input_var.is_reference == True
+                ):
                     code = self.main_code_gen.append_code(
                         code,
                         """
@@ -577,7 +617,6 @@ sb $t{}, ($t{});
                         t3, input_var
                     )
                     code += """
-move $t{}, $v0;
 add $t{}, $t{}, $s0;
 sw $t{}, ($t{});
                     """.format(

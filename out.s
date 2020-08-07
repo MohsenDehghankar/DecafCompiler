@@ -3,6 +3,7 @@
 .data
 frame_pointer:  .space  10000
 global_pointer: .space  10000
+input:          .space  16384
 true_const:     .asciiz "true"
 false_const:    .asciiz "false"
 end_of_string:  .byte   0
