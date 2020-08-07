@@ -58,6 +58,7 @@ class CodeGenerator(Transformer):
 .data
 frame_pointer:  .space  10000
 global_pointer: .space  10000
+input:          .space  16384
 true_const:     .asciiz "true"
 false_const:    .asciiz "false"
 end_of_string:  .byte   0
@@ -201,22 +202,41 @@ la $s1, global_pointer;
     """
 
     def read_line(self, args):
-        print("ReadLine")
-        print(args)
+        # print("ReadLine")
+        # print(args)
         t0 = self.get_a_free_t_register()
+        counter = self.get_a_free_t_register()
         self.t_registers[t0] = True
+        self.t_registers[counter] = True
+        t2 = self.get_a_free_t_register()
+        new_line = self.get_new_label()
+        end = self.get_new_label()
         reg = Register("string", "t", t0)
         reg.write_code(
             """
-li $v0, 9;
-li $a0, 16384;
-syscall
-move $a0, $v0;
+la $a0, input
 li $v0, 8
 li $a1, 16384
 syscall
+addi $t{}, $t{}, 0
+{}:
+lb $t{}, ($a0)
+beq $t{}, '\\n', {}
+addi $a0, $a0, 1
+b {}   
+{}:
+sb $zero, ($a0)
+la $a0, input
 move $t{},$a0
         """.format(
+                counter,
+                counter,
+                new_line.name,
+                t2,
+                t2,
+                end.name,
+                new_line.name,
+                end.name,
                 t0
             )
         )
@@ -360,7 +380,7 @@ lw $t{}, ($t{});
 
     def code_for_loading_string_ref_reg(self, t_reg, reg):
         code = """
-lw $t{}, ($t{});
+move $t{},$t{};
         """.format(
             t_reg, reg.number
         )
@@ -495,7 +515,13 @@ s.d $f{}, ($t{});
                 if right_value.is_reference == True:
                     right_code = self.code_for_loading_int_ref_reg(t1, right_value)
                 else:
-                    right_code = self.code_for_loading_int_reg(t1, right_value)
+                    print("IS ENTERING HERE")
+                    if right_value.type == "string":
+                        right_code = """
+move $v0,$t{};
+                """.format(right_value.number)
+                    else:
+                        right_code = self.code_for_loading_int_reg(t1, right_value)
 
             elif right_value.type == "bool":
                 if right_value.is_reference == True:
@@ -698,7 +724,7 @@ sw $t{}, ($t{});
                             sym_tbl.name
                         )
                         if last_pass_sym and (
-                            child.value in last_pass_sym.variables.keys()
+                                child.value in last_pass_sym.variables.keys()
                         ):
                             return last_pass_sym.variables[child.value]
 
@@ -855,7 +881,6 @@ mflo $t{};
         if isinstance(opr2, Register) and opr2.kind == "t":
             self.t_registers[opr2.number] = False
 
-
         reg = Register(opr1.type, "t", t1)
         reg.write_code(current_code)
         return reg
@@ -935,7 +960,7 @@ mfhi $t{};
             ),
         )
 
-         # todo debug
+        # todo debug
         if isinstance(opr1, Register) and opr1.kind == "t":
             self.t_registers[opr1.number] = False
         if isinstance(opr2, Register) and opr2.kind == "t":
@@ -1080,12 +1105,11 @@ add $t{}, $t{}, $t{}
             ),
         )
 
-         # todo debug
+        # todo debug
         if isinstance(opr1, Register) and opr1.kind == "t":
             self.t_registers[opr1.number] = False
         if isinstance(opr2, Register) and opr2.kind == "t":
             self.t_registers[opr2.number] = False
-
 
         reg = Register("int", "t", t1)
         reg.write_code(current_code)
@@ -1139,7 +1163,7 @@ sub $t{}, $t{}, $t{}
             ),
         )
 
-         # todo debug
+        # todo debug
         if isinstance(opr1, Register) and opr1.kind == "t":
             self.t_registers[opr1.number] = False
         if isinstance(opr2, Register) and opr2.kind == "t":
@@ -1215,8 +1239,8 @@ addi $t{}, $zero, 1;
             )
             exit(4)
 
-        if left_opr.type == "string":
-            pass  # todo: handle type checking for string
+        # if left_opr.type == "string":
+        #     pass  # todo: handle type checking for string
 
     def handle_condition(self, left_opr, right_opr, inst):
 
@@ -1242,13 +1266,13 @@ addi $t{}, $zero, 1;
 
         t1.code = current_code + "\n" + t1.code
         t1.code += (
-            "\n"
-            + """
+                "\n"
+                + """
 {} $t{}, $t{}, {};
         
         """.format(
-                _map[inst], t1.number, t2.number, label.name
-            )
+            _map[inst], t1.number, t2.number, label.name
+        )
         )
 
         # t1.write_code(current_code)
@@ -1680,9 +1704,9 @@ b {};
         )
 
         if (
-            len(args) == 4
-            or len(args) == 2
-            or (len(args) == 3 and isinstance(args[1], Register))
+                len(args) == 4
+                or len(args) == 2
+                or (len(args) == 3 and isinstance(args[1], Register))
         ):
             current_code = self.append_code(current_code, args[1].code)
             current_code = self.append_code(
@@ -1856,7 +1880,7 @@ j {};
                 imm = Immediate(1 if args[0].value == "true" else 0, "bool")
                 return imm
             elif args[0].type == "STRING_CONSTANT":
-                return Immediate(args[0].value[1 : len(args[0].value) - 1], "string")
+                return Immediate(args[0].value[1: len(args[0].value) - 1], "string")
         return args
 
     def pass_constant(self, args):
@@ -2023,8 +2047,17 @@ syscall
                     pass  # other types
             elif isinstance(inp, Register):
 
-                 # todo debug
+                # todo debug
                 if isinstance(inp, Register) and inp.kind == "t":
+                    if inp.type == "string":
+                        current_code = self.append_code(
+                            current_code,
+                            """
+move $a0,$t{};
+li $v0, 4;
+syscall
+                            """.format(inp.number)
+                        )
                     self.t_registers[inp.number] = False
 
                 if inp.type == "bool":
@@ -2189,9 +2222,9 @@ syscall
 
         # newline after print
         current_code = (
-            current_code
-            + "\n"
-            + """
+                current_code
+                + "\n"
+                + """
 li $v0, 4;
 la $a0, newline;
 syscall

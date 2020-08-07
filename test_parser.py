@@ -58,14 +58,15 @@ def main(argv):
     decaf_code = """
 
 int main(){
-    bool x;
-    x = true;
-    bool y;
-    y = false;
+    
+    string x;
+    x = "salam";
 
-    print(x != y);
+    print(x == ReadLine());
 
 }
+
+
 
     """
 
