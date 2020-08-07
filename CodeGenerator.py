@@ -316,11 +316,28 @@ move $t{}, $v0;
 
         return code
 
-    def code_for_moveing_int_var(self, t_reg, var):
+    def code_for_loading_int_var(self, t_reg, var):
         code = """
 li $t{}, {};
 add $t{}, $t{}, $s{};
 lw $t{}, ($t{});
+            """.format(
+            t_reg,
+            var.address_offset,
+            t_reg,
+            t_reg,
+            1 if var.is_global else 0,
+            t_reg,
+            t_reg,
+        )
+
+        return code
+
+    def code_for_loading_bool_var(self, t_reg, var):
+        code = """
+li $t{}, {};
+add $t{}, $t{}, $s{};
+lb $t{}, ($t{});
             """.format(
             t_reg,
             var.address_offset,
@@ -474,14 +491,17 @@ s.d $f{}, ($t{});
 
         # right
         if isinstance(right_value, Register):
-            if right_value.is_reference:
-                right_code = self.code_for_loading_ref_reg(t1, right_value)
-            elif right_value.type == "int" or right_value.type == "bool":
-                right_code = self.code_for_loading_int_reg(t1, right_value)
-            elif right_value.type == "string":
-                right_code = """
-move $v0,$t{};
-                """.format(right_value.number)
+            if right_value.type == "int" or right_value.type == "string":
+                if right_value.is_reference == True:
+                    right_code = self.code_for_loading_int_ref_reg(t1, right_value)
+                else:
+                    right_code = self.code_for_loading_int_reg(t1, right_value)
+
+            elif right_value.type == "bool":
+                if right_value.is_reference == True:
+                    right_code = self.code_for_loading_bool_ref_reg(t1, right_value)
+                else:
+                    right_code = self.code_for_loading_int_reg(t1, right_value)
 
             # now right register can be free
             if right_value.kind == "t":
@@ -494,8 +514,10 @@ move $v0,$t{};
                 right_code = self.code_for_loading_int_Imm(t1, right_value)
 
         elif isinstance(right_value, Variable):
-            # int or bool
-            right_code = self.code_for_moveing_int_var(t1, right_value)
+            if right_value.type == "int":
+                right_code = self.code_for_loading_int_var(t1, right_value)
+            elif right_value.type == "bool":
+                right_code = self.code_for_loading_bool_var(t1, right_value)
 
         current_code = self.append_code(current_code, right_code)
 
@@ -676,7 +698,7 @@ sw $t{}, ($t{});
                             sym_tbl.name
                         )
                         if last_pass_sym and (
-                                child.value in last_pass_sym.variables.keys()
+                            child.value in last_pass_sym.variables.keys()
                         ):
                             return last_pass_sym.variables[child.value]
 
@@ -752,26 +774,17 @@ mflo $t{};
             pass  # other expressions
         return args
 
-    def code_for_loading_math_opr(self, t_reg, opr):
+    def code_for_loading_opr(self, t_reg, opr):
         # opr type should be int or bool
         code = ""
         if isinstance(opr, Variable):
-            code = self.append_code(
-                code,
-                """
-li $t{}, {};
-add $t{}, $t{}, $s{};
-lw $t{}, ($t{});
-                    """.format(
-                    t_reg,
-                    opr.address_offset,
-                    t_reg,
-                    t_reg,
-                    1 if opr.is_global else 0,
-                    t_reg,
-                    t_reg,
-                ),
-            )
+            if opr.type == "bool":
+                code = self.append_code(
+                    code, self.code_for_loading_bool_var(t_reg, opr)
+                )
+            else:
+                code = self.append_code(code, self.code_for_loading_int_var(t_reg, opr))
+
         elif isinstance(opr, Immediate):
             code = self.append_code(
                 code,
@@ -820,10 +833,10 @@ move $t{}, ${};
         t2 = self.get_a_free_t_register()
 
         current_code = self.append_code(
-            current_code, self.code_for_loading_math_opr(t1, opr1)
+            current_code, self.code_for_loading_opr(t1, opr1)
         )
         current_code = self.append_code(
-            current_code, self.code_for_loading_math_opr(t2, opr2)
+            current_code, self.code_for_loading_opr(t2, opr2)
         )
 
         current_code = self.append_code(
@@ -857,10 +870,10 @@ mflo $t{};
         t2 = self.get_a_free_t_register()
 
         current_code = self.append_code(
-            current_code, self.code_for_loading_math_opr(t1, opr1)
+            current_code, self.code_for_loading_opr(t1, opr1)
         )
         current_code = self.append_code(
-            current_code, self.code_for_loading_math_opr(t2, opr2)
+            current_code, self.code_for_loading_opr(t2, opr2)
         )
 
         current_code = self.append_code(
@@ -891,10 +904,10 @@ mflo $t{};
         t2 = self.get_a_free_t_register()
 
         current_code = self.append_code(
-            current_code, self.code_for_loading_math_opr(t1, opr1)
+            current_code, self.code_for_loading_opr(t1, opr1)
         )
         current_code = self.append_code(
-            current_code, self.code_for_loading_math_opr(t2, opr2)
+            current_code, self.code_for_loading_opr(t2, opr2)
         )
 
         current_code = self.append_code(
@@ -1030,10 +1043,10 @@ li ${}, 1;
         t2 = self.get_a_free_t_register()
 
         current_code = self.append_code(
-            current_code, self.code_for_loading_math_opr(t1, opr1)
+            current_code, self.code_for_loading_opr(t1, opr1)
         )
         current_code = self.append_code(
-            current_code, self.code_for_loading_math_opr(t2, opr2)
+            current_code, self.code_for_loading_opr(t2, opr2)
         )
 
         current_code = self.append_code(
@@ -1081,10 +1094,10 @@ add $t{}, $t{}, $t{}
         current_code = opr1.code + "\n" + opr2.code
 
         current_code = self.append_code(
-            current_code, self.code_for_loading_math_opr(t1, opr1)
+            current_code, self.code_for_loading_opr(t1, opr1)
         )
         current_code = self.append_code(
-            current_code, self.code_for_loading_math_opr(t2, opr2)
+            current_code, self.code_for_loading_opr(t2, opr2)
         )
 
         current_code = self.append_code(
@@ -1105,77 +1118,19 @@ sub $t{}, $t{}, $t{}
     """
 
     def write_conditional_expr(self, opr1, opr2):
+        print(opr1, opr2, "aaaaaaaaaaa")
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
         self.t_registers[t2] = True
         current_code = ""
-        if isinstance(opr1, Register):
-            current_code = self.append_code(
-                current_code,
-                """
-move $t{}, ${};
-            """.format(
-                    t1, opr1.kind + str(opr1.number)
-                ),
-            )
-            if opr1.kind == "t":
-                self.t_registers[opr1.number] = False
-        elif isinstance(opr1, Variable):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-add $t{}, $t{}, $s{};
-lw $t{}, ($t{});
-            """.format(
-                    t1, opr1.address_offset, t1, t1, 1 if opr1.is_global else 0, t1, t1
-                ),
-            )
-        elif isinstance(opr1, Immediate):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-            """.format(
-                    t1, opr1.value
-                ),
-            )
-        else:
-            pass  # other types
-        if isinstance(opr2, Register):
-            current_code = self.append_code(
-                current_code,
-                """
-move $t{}, ${};
-            """.format(
-                    t2, opr2.kind + str(opr2.number)
-                ),
-            )
-            if opr2.kind == "t":
-                self.t_registers[opr2.number] = False
-        elif isinstance(opr2, Variable):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-add $t{}, $t{}, $s{};
-lw $t{}, ($t{});
-            """.format(
-                    t2, opr2.address_offset, t2, t2, 1 if opr2.is_global else 0, t2, t2
-                ),
-            )
-        elif isinstance(opr2, Immediate):
-            current_code = self.append_code(
-                current_code,
-                """
-li $t{}, {};
-            """.format(
-                    t2, opr2.value
-                ),
-            )
-        else:
-            pass  # other types
+
+        current_code = self.append_code(
+            current_code, self.code_for_loading_opr(t1, opr1)
+        )
+        current_code = self.append_code(
+            current_code, self.code_for_loading_opr(t2, opr2)
+        )
 
         reg = Register("int", "t", t1)
         reg.write_code(current_code)
@@ -1249,14 +1204,15 @@ addi $t{}, $zero, 1;
         label = self.get_new_label()
 
         t1.code = current_code + "\n" + t1.code
-        t1.code += "\n" + """
+        t1.code += (
+            "\n"
+            + """
 {} $t{}, $t{}, {};
         
         """.format(
                 _map[inst], t1.number, t2.number, label.name
             )
-
-        
+        )
 
         # t1.write_code(current_code)
         self.map_condition_to_boolian(t1, label)
@@ -1687,9 +1643,9 @@ b {};
         )
 
         if (
-                len(args) == 4
-                or len(args) == 2
-                or (len(args) == 3 and isinstance(args[1], Register))
+            len(args) == 4
+            or len(args) == 2
+            or (len(args) == 3 and isinstance(args[1], Register))
         ):
             current_code = self.append_code(current_code, args[1].code)
             current_code = self.append_code(
@@ -1863,7 +1819,7 @@ j {};
                 imm = Immediate(1 if args[0].value == "true" else 0, "bool")
                 return imm
             elif args[0].type == "STRING_CONSTANT":
-                return Immediate(args[0].value[1: len(args[0].value) - 1], "string")
+                return Immediate(args[0].value[1 : len(args[0].value) - 1], "string")
         return args
 
     def pass_constant(self, args):
@@ -2191,9 +2147,9 @@ syscall
 
         # newline after print
         current_code = (
-                current_code
-                + "\n"
-                + """
+            current_code
+            + "\n"
+            + """
 li $v0, 4;
 la $a0, newline;
 syscall
