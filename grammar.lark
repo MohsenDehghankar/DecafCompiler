@@ -126,7 +126,8 @@ print : ("Print"|"print") "("actual")" ";"      -> _print
 classdec : startclass ["extends" IDENT] ["implements" (IDENT | IDENT",")+] "{"field*"}"      -> class_declare
 startclass : "class" IDENT                                                                   -> start_class_dec
 field : variabledec 
-        | funcdec
+        | methoddec
+methoddec : funcdec                                                                          -> method_declare
 
 //--------interface dec--------
 interfacedec : "interface" IDENT "{" prototype* "}"

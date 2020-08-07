@@ -62,12 +62,22 @@ class A {
     int b;
     string c;
     
+    int getA(){
+        int b;
+        b = 8;
+        return b;
+    }
 }
 
 int main() {
-    
+    int xxx;
 }
 
+class B {
+    int a;
+    int[] b;
+    string u;
+}
 
 
     """
@@ -85,6 +95,13 @@ int main() {
     codeGen.set_last_code_gen(first_pass_code_gen)
         # pass classes
     codeGen.oo_gen.classes = first_pass_code_gen.oo_gen.classes
+
+    # check fields of class
+    for clas in codeGen.oo_gen.classes.keys():
+        print("--class: {}, fields: ".format(clas))
+        for f in codeGen.oo_gen.classes[clas].fields:
+            print(f)
+
     tree = parser.parse(decaf_code)
 
     # print(tree.pretty())

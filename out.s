@@ -16,6 +16,8 @@ la $s1, global_pointer;
         
 
 
+
 li $v0, 10;
 syscall;
             
+

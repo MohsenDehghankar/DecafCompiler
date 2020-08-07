@@ -80,16 +80,20 @@ la $s1, global_pointer;
 
     def variable_declare(self, args):
         # print("var_declare", args)
+
         variable_name = args[0].children[1].value
+
+        if self.is_in_class:
+            if "[]" in self.type_tmp:
+                self.create_class_field(variable_name, True, self.type_tmp)
+            else:
+                self.create_class_field(variable_name, False, self.type_tmp)
+            return Result()
+
 
         if variable_name in self.symbol_table.variables.keys():
             print("Variable with name {} already exists".format(variable_name))
             exit(4)
-
-        # debug
-        # print(
-        #     "Variable Declared type {0}, name {1}".format(self.type_tmp, variable_name)
-        # )
 
         if self.type_tmp == None:
             print("Type of Variable {} unknown".format(variable_name))
@@ -134,11 +138,27 @@ la $s1, global_pointer;
                 else offset + (variable.size - offset % variable.size)
             )
         self.last_var_in_fp = variable
-        if variable.address_offset + variable.size > 1000:
+        if variable.address_offset + variable.size > 10000:
             print("Local Variables are more than frame size!")
             exit(4)
         self.symbol_table.variables[var_name] = variable
         return variable
+
+
+    def create_class_field(self, field_name, is_ref, var_type):
+        variable = None
+        if "[]" in var_type:
+            variable = Array()
+        else:
+            variable = Variable()
+        variable.type = var_type
+        variable.name = field_name
+        variable.is_reference = is_ref
+        variable.calc_size()
+
+        self.oo_gen.classes[self.class_name].fields.append(variable)
+
+        
 
     def get_last_variable_in_frame(self):
         max_a = 0
@@ -2350,14 +2370,17 @@ move $t{}, $v0;
     def start_class_dec(self, args):
         # print("start class")
         # print(args)
-        self.is_in_class = True
+        self.is_in_class = True 
         self.class_name = args[0].value
         # add new class to list
         clss = ClassMetaData()
         clss.name = self.class_name
         if self.first_pass:
-            self.oo_gen.classes.append(clss)
+            self.oo_gen.classes[clss.name] = clss
         return args[0]
+
+    def method_declare(self, args):
+        return self.oo_gen.method_declare(args)
 
 
 """

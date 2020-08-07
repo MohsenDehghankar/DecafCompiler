@@ -24,7 +24,7 @@ class ObjectOrientedCodeGen:
         # function declaration started
         self.func_start = False
         # array of ClassMetaData type
-        self.classes = []
+        self.classes = {}
 
     """
     Function Declaration
@@ -48,8 +48,8 @@ jr $ra;
         return args
 
     def func_declare(self, args):
-        # print("all functions:")
-        # print(args)
+        print("all functions:")
+        print(args)
         # pass two above reductions
         args = args[0]
 
@@ -118,8 +118,8 @@ sw $ra, 4($s0);
         return result
 
     def formal_reduce(self, args):
-        print("formal reduce....")
-        print(args)
+        # print("formal reduce....")
+        # print(args)
 
         # flag for start of function declaration
         self.func_start = True
@@ -134,7 +134,7 @@ sw $ra, 4($s0);
                 variable.type = var.children[0]
 
                 variable.calc_size()
-                print(variable, "aaaaaaaaa")
+                # print(variable, "aaaaaaaaa")
                 new_offset = last_offset - variable.size
                 new_offset = -new_offset
                 variable.address_offset = (
@@ -717,6 +717,11 @@ move $t{}, $v0;
 
         return args
 
+    def method_declare(self, args):
+        print("method: ")
+        print(args)
+        return args
+
 
 
 
@@ -743,6 +748,7 @@ class ClassMetaData:
 
     def __init__(self):
         super().__init__()
+        # self.name = ""
         self.fields = []        # list of 'Variable' s with no address
         self.methods = []       # list of 'Functions' (name = class.function)
 
