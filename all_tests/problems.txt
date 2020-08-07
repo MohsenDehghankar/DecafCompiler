@@ -8,31 +8,8 @@ int main(){
     
     x = x * y;
 
+    print(x);
 
-}
-
-----------
-
-int main(){
-
-    int x;
-    int y;
-    x = 9;
-    y = 8;
-    if (x > y){
-        print(1);
-    }
-    
-}
------------
-
-int main(){
-
-    int x;
-    x = 4;
-    int y;
-    y = 7;
-    print(!(x > y));
 
 }
 

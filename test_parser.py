@@ -59,11 +59,18 @@ def main(argv):
 
 
 int main(){
-    double[] x;
-    x = NewArray(12, double);
-    x[1] = 2.33456;
-    x[2] = (14.4567 * x[1]) + x[2] + x[1];
-    print(x[2]);
+
+
+    double y;
+    y = 3.1415;
+    double x;
+    x = 2.5;
+    
+    x = x * y;
+
+    print(x);
+
+
 }
 
 
@@ -82,6 +89,7 @@ int main(){
     tree = parser.parse(decaf_code)
 
     # print(tree.pretty())
+    '''
     print("\n\n------------symbol tables-------------------")
     for table in first_pass_code_gen.symbol_tables:
         print(
@@ -92,6 +100,7 @@ int main(){
             )
         )
     print("---------------end--------------------------\n\n")
+    '''
     """
     print("---------------------------------------\nsymbol table: ")
     for var in codeGen.symbol_table.variables.keys():
@@ -105,6 +114,10 @@ int main(){
     print("---------------------------------------\nMIPS code:")
     """
     print(codeGen.mips_code)
+
+    # write to out.s
+    f = open("out.s", 'w')
+    f.write(codeGen.mips_code)
 
 
 if __name__ == "__main__":
