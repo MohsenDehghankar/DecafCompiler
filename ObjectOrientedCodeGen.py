@@ -642,6 +642,7 @@ move $t{}, $v0;
         return reg
 
     def start_block(self):
+        # print("start block")
 
         # function arguments block
         if self.func_start:
