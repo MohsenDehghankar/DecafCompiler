@@ -27,17 +27,31 @@ int main(){
 ----------------
 
 int main(){
+    bool x;
+    x = true;
+    bool y;
+    y = false;
 
-    double x;
-    double y;
-    double z;
-    x = 2.3;
-    y = 4.5;
-    x = 5.0;
-
-    print(x * y * z);
-
+    print(x != y);
 
 }
 
-----------------
+-----------------
+
+int main(){
+    
+    string x;
+    x = ReadLine();
+    print(x);
+
+}
+int main(){
+    
+    string x;
+    x = "salam";
+
+    print(x == ReadLine());
+
+}
+
+------------------

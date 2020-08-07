@@ -485,7 +485,7 @@ s.d $f{}, ($t{});
 
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
-        print("THE NEW REGISTER IS : ", t1)
+        # print("THE NEW REGISTER IS : ", t1)
         current_code = self.append_code(right_value.code, left_value.code)
         right_code = ""
 
@@ -848,6 +848,14 @@ mflo $t{};
                 t1, t2, t1
             ),
         )
+
+        # todo debug
+        if isinstance(opr1, Register) and opr1.kind == "t":
+            self.t_registers[opr1.number] = False
+        if isinstance(opr2, Register) and opr2.kind == "t":
+            self.t_registers[opr2.number] = False
+
+
         reg = Register(opr1.type, "t", t1)
         reg.write_code(current_code)
         return reg
@@ -885,6 +893,13 @@ mflo $t{};
                 t1, t2, t1
             ),
         )
+
+        # todo debug
+        if isinstance(opr1, Register) and opr1.kind == "t":
+            self.t_registers[opr1.number] = False
+        if isinstance(opr2, Register) and opr2.kind == "t":
+            self.t_registers[opr2.number] = False
+
         reg = Register(opr1.type, "t", t1)
         reg.write_code(current_code)
         return reg
@@ -919,6 +934,13 @@ mfhi $t{};
                 t1, t2, t1
             ),
         )
+
+         # todo debug
+        if isinstance(opr1, Register) and opr1.kind == "t":
+            self.t_registers[opr1.number] = False
+        if isinstance(opr2, Register) and opr2.kind == "t":
+            self.t_registers[opr2.number] = False
+
         reg = Register(opr1.type, "t", t1)
         reg.write_code(current_code)
         return reg
@@ -1057,6 +1079,14 @@ add $t{}, $t{}, $t{}
                 t1, t1, t2
             ),
         )
+
+         # todo debug
+        if isinstance(opr1, Register) and opr1.kind == "t":
+            self.t_registers[opr1.number] = False
+        if isinstance(opr2, Register) and opr2.kind == "t":
+            self.t_registers[opr2.number] = False
+
+
         reg = Register("int", "t", t1)
         reg.write_code(current_code)
 
@@ -1108,6 +1138,13 @@ sub $t{}, $t{}, $t{}
                 t1, t1, t2
             ),
         )
+
+         # todo debug
+        if isinstance(opr1, Register) and opr1.kind == "t":
+            self.t_registers[opr1.number] = False
+        if isinstance(opr2, Register) and opr2.kind == "t":
+            self.t_registers[opr2.number] = False
+
         reg = Register("int", "t", t1)
         reg.write_code(current_code)
 
@@ -1985,6 +2022,11 @@ syscall
                 else:
                     pass  # other types
             elif isinstance(inp, Register):
+
+                 # todo debug
+                if isinstance(inp, Register) and inp.kind == "t":
+                    self.t_registers[inp.number] = False
+
                 if inp.type == "bool":
                     lbl1 = self.get_new_label().name
                     lbl2 = self.get_new_label().name
