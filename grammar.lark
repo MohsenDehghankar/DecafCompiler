@@ -2,7 +2,7 @@ start: decl+                                    -> add_codes
 
 decl : variabledec                              -> global_var_declare
         | funcdec                               -> func_declare               
-        | classdec 
+        | classdec                              -> class_dec_finished
         | interfacedec 
         | COMMENT
 
@@ -123,8 +123,8 @@ return : "return" [expr] ";"
 print : ("Print"|"print") "("actual")" ";"      -> _print
 
 //---------class dec----------
-classdec : startclass IDENT ["extends" IDENT] ["implements" (IDENT | IDENT",")+] "{"field*"}"      -> class_declare
-startclass : "class"                                                                               -> start_class_dec
+classdec : startclass ["extends" IDENT] ["implements" (IDENT | IDENT",")+] "{"field*"}"      -> class_declare
+startclass : "class" IDENT                                                                   -> start_class_dec
 field : variabledec 
         | funcdec
 

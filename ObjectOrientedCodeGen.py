@@ -23,6 +23,8 @@ class ObjectOrientedCodeGen:
         self.return_value = None
         # function declaration started
         self.func_start = False
+        # array of ClassMetaData type
+        self.classes = []
 
     """
     Function Declaration

@@ -57,7 +57,6 @@ def main(argv):
 
     decaf_code = """
 
-<<<<<<< HEAD
 class A {
     int a;
     int b;
@@ -67,16 +66,6 @@ class A {
 
 int main() {
     
-=======
-int main(){
-    bool x;
-    x = true;
-    bool y;
-    y = false;
-
-    print(x != y);
-
->>>>>>> master
 }
 
     """
@@ -92,6 +81,8 @@ int main(){
 
     # second pass
     codeGen.set_last_code_gen(first_pass_code_gen)
+        # pass classes
+    codeGen.oo_gen.classes = first_pass_code_gen.oo_gen.classes
     tree = parser.parse(decaf_code)
 
     # print(tree.pretty())

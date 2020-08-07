@@ -3,7 +3,7 @@ from lark.lexer import Lexer, Token
 from ObjectOrientedCodeGen import ObjectOrientedCodeGen
 from ArrayCodeGen import ArrayCodeGen
 import uuid
-from ObjectOrientedCodeGen import SymbolTable
+from ObjectOrientedCodeGen import SymbolTable, ClassMetaData
 
 
 class CodeGenerator(Transformer):
@@ -44,6 +44,9 @@ class CodeGenerator(Transformer):
         self.arr_cgen = ArrayCodeGen(self)
         # previous code generator (prev pass)
         self.prev_code_gen = None
+        # class declaration started
+        self.is_in_class = False
+        self.class_name = ""
 
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
@@ -2296,8 +2299,22 @@ move $t{}, $v0;
     def class_declare(self, args):
         return self.oo_gen.class_declare(args)
 
+    def class_dec_finished(self, args):
+        # no need to generate code
+        self.is_in_class = False
+        self.class_name = ""
+        return Result()
+
     def start_class_dec(self, args):
+        # print("start class")
+        # print(args)
         self.is_in_class = True
+        self.class_name = args[0].value
+        # add new class to list
+        clss = ClassMetaData()
+        clss.name = self.class_name
+        if self.first_pass:
+            self.oo_gen.classes.append(clss)
         return args[0]
 
 
