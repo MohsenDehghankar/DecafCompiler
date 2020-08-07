@@ -57,6 +57,7 @@ def main(argv):
 
     decaf_code = """
 
+<<<<<<< HEAD
 class A {
     int a;
     int b;
@@ -66,10 +67,20 @@ class A {
 
 int main() {
     
+=======
+int main(){
+    bool x;
+    x = true;
+    bool y;
+    y = false;
+
+    print(x != y);
+
+>>>>>>> master
 }
 
     """
-    
+
     # write test
     f2 = open("tests", "a")
     # f2.write(decaf_code + "\n---------------\n\n---------------")
@@ -84,7 +95,7 @@ int main() {
     tree = parser.parse(decaf_code)
 
     # print(tree.pretty())
-    '''
+    """
     print("\n\n------------symbol tables-------------------")
     for table in first_pass_code_gen.symbol_tables:
         print(
@@ -95,7 +106,7 @@ int main() {
             )
         )
     print("---------------end--------------------------\n\n")
-    '''
+    """
     """
     print("---------------------------------------\nsymbol table: ")
     for var in codeGen.symbol_table.variables.keys():
@@ -111,7 +122,7 @@ int main() {
     print(codeGen.mips_code)
 
     # write to out.s
-    f = open("out.s", 'w')
+    f = open("out.s", "w")
     f.write(codeGen.mips_code)
 
 
