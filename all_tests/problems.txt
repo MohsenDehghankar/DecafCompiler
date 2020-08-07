@@ -38,20 +38,11 @@ int main(){
 
 -----------------
 
-int main(){
-    
-    string x;
-    x = ReadLine();
-    print(x);
-
+int main() {
+    fun(ReadLine());
 }
-int main(){
-    
-    string x;
-    x = "salam";
-
-    print(x == ReadLine());
-
+void fun(string a){
+    print(a);
 }
 
 ------------------

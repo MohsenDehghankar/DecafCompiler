@@ -243,7 +243,7 @@ move $t{},$a0
                 end.name,
                 new_line.name,
                 end.name,
-                t0
+                t0,
             )
         )
         self.t_registers[counter] = False
@@ -527,7 +527,9 @@ s.d $f{}, ($t{});
                     if right_value.type == "string":
                         right_code = """
 move $v0,$t{};
-                """.format(right_value.number)
+                """.format(
+                            right_value.number
+                        )
                     else:
                         right_code = self.code_for_loading_int_reg(t1, right_value)
 
@@ -732,7 +734,7 @@ sw $t{}, ($t{});
                             sym_tbl.name
                         )
                         if last_pass_sym and (
-                                child.value in last_pass_sym.variables.keys()
+                            child.value in last_pass_sym.variables.keys()
                         ):
                             return last_pass_sym.variables[child.value]
 
@@ -1274,13 +1276,13 @@ addi $t{}, $zero, 1;
 
         t1.code = current_code + "\n" + t1.code
         t1.code += (
-                "\n"
-                + """
+            "\n"
+            + """
 {} $t{}, $t{}, {};
         
         """.format(
-            _map[inst], t1.number, t2.number, label.name
-        )
+                _map[inst], t1.number, t2.number, label.name
+            )
         )
 
         # t1.write_code(current_code)
@@ -1712,9 +1714,9 @@ b {};
         )
 
         if (
-                len(args) == 4
-                or len(args) == 2
-                or (len(args) == 3 and isinstance(args[1], Register))
+            len(args) == 4
+            or len(args) == 2
+            or (len(args) == 3 and isinstance(args[1], Register))
         ):
             current_code = self.append_code(current_code, args[1].code)
             current_code = self.append_code(
@@ -1905,7 +1907,7 @@ j {};
                 imm = Immediate(1 if args[0].value == "true" else 0, "bool")
                 return imm
             elif args[0].type == "STRING_CONSTANT":
-                return Immediate(args[0].value[1: len(args[0].value) - 1], "string")
+                return Immediate(args[0].value[1 : len(args[0].value) - 1], "string")
         return args
 
     def pass_constant(self, args):
@@ -2081,7 +2083,9 @@ syscall
 move $a0,$t{};
 li $v0, 4;
 syscall
-                            """.format(inp.number)
+                            """.format(
+                                inp.number
+                            ),
                         )
                     self.t_registers[inp.number] = False
 
@@ -2256,9 +2260,9 @@ syscall
 
         # newline after print
         current_code = (
-                current_code
-                + "\n"
-                + """
+            current_code
+            + "\n"
+            + """
 li $v0, 4;
 la $a0, newline;
 syscall
@@ -2293,7 +2297,8 @@ syscall
         return self.oo_gen.function_call(args)
 
     def method_call(self, args):
-        var = self.symbol_table.variables[args[0]]
+        print("method_call", args[0])
+        var = self.token_to_var([args[0].value])
         if isinstance(var, Array):
             return self.arr_cgen.arr_length(var)
 
