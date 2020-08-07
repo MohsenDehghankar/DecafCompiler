@@ -201,31 +201,26 @@ la $s1, global_pointer;
     """
 
     def read_line(self, args):
-        # print("[readLine]")
-        # print(args)
-        var = self.create_variable(
-            "string", "readline" + str(CodeGenerator.tmp_var_id_read)
-        )
-        CodeGenerator.tmp_var_id_read += 1
-        t = self.get_a_free_t_register()
-        var.write_code(
+        print("ReadLine")
+        print(args)
+        t0 = self.get_a_free_t_register()
+        self.t_registers[t0] = True
+        reg = Register("string", "t", t0)
+        reg.write_code(
             """
 li $v0, 9;
 li $a0, 16384;
 syscall
-li $t{}, {};
-add $t{}, $t{} ,$s{};
-sw $v0, ($t{})
 move $a0, $v0;
 li $v0, 8
 li $a1, 16384
 syscall
+move $t{},$a0
         """.format(
-                t, var.address_offset, t, t, 1 if var.is_global else 0, t
+                t0
             )
         )
-        # act as a new variable in rest of the tree
-        return [Token("IDENT", var.name)]
+        return reg
 
     """
     Get a not used Register of Type 't'
@@ -310,6 +305,14 @@ sb $a0,{}($v0);
                         str.value[i], i
                     ),
                 )
+        code = self.append_code(
+            code,
+            """
+move $t{}, $v0;
+        """.format(
+                reg
+            ),
+        )
 
         return code
 
@@ -331,6 +334,14 @@ lw $t{}, ($t{});
         return code
 
     def code_for_loading_int_ref_reg(self, t_reg, reg):
+        code = """
+lw $t{}, ($t{});
+        """.format(
+            t_reg, reg.number
+        )
+        return code
+
+    def code_for_loading_string_ref_reg(self, t_reg, reg):
         code = """
 lw $t{}, ($t{});
         """.format(
@@ -437,7 +448,8 @@ s.d $f{}, ($t{});
 
     def assignment_calculated(self, args):
         print("assignment calculated")
-        print(args)
+        print(args[0])
+        print(args[1])
         left_value = args[0]
         right_value = args[1]
 
@@ -456,16 +468,20 @@ s.d $f{}, ($t{});
 
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
-
+        print("THE NEW REGISTER IS : ", t1)
         current_code = self.append_code(right_value.code, left_value.code)
         right_code = ""
 
         # right
         if isinstance(right_value, Register):
-            if right_value.is_reference == True:
+            if right_value.is_reference:
                 right_code = self.code_for_loading_ref_reg(t1, right_value)
             elif right_value.type == "int" or right_value.type == "bool":
                 right_code = self.code_for_loading_int_reg(t1, right_value)
+            elif right_value.type == "string":
+                right_code = """
+move $v0,$t{};
+                """.format(right_value.number)
 
             # now right register can be free
             if right_value.kind == "t":
@@ -486,7 +502,7 @@ s.d $f{}, ($t{});
         # left
         if isinstance(left_value, Register):
             if left_value.is_reference == True:
-                current_code = self.append_code(  # ?????????????
+                current_code = self.append_code(
                     current_code,
                     """
 sw $t{}, ($t{});
@@ -633,8 +649,8 @@ sw $t{}, ($t{});
     """
 
     def token_to_var(self, args):
-        print("high prior: ")
-        print(args)
+        # print("high prior: ")
+        # print(args)
 
         types = ["int", "bool", "double", "string"]
 
@@ -660,7 +676,7 @@ sw $t{}, ($t{});
                             sym_tbl.name
                         )
                         if last_pass_sym and (
-                            child.value in last_pass_sym.variables.keys()
+                                child.value in last_pass_sym.variables.keys()
                         ):
                             return last_pass_sym.variables[child.value]
 
@@ -1334,14 +1350,11 @@ lw $t{}, ($t{});
             self.t_registers[reg] = True
             right_reg = Register("string", "t", reg)
             right_reg.code = self.code_for_loading_string_Imm(reg, right_opr)
-            right_reg.code = self.append_code(
-                right_reg.code,
-                """
-move $t{},$v0;
-            """.format(
-                    reg
-                ),
-            )
+        elif isinstance(right_opr, Register):
+            reg = self.get_a_free_t_register()
+            self.t_registers[reg] = True
+            right_reg = Register("string", "t", reg)
+            right_reg.code = self.code_for_loading_string_ref_reg(reg, right_opr)
 
         if isinstance(left_opr, Variable):
             left_reg = self.load_string_to_reg(left_opr)
@@ -1350,16 +1363,14 @@ move $t{},$v0;
             self.t_registers[reg] = True
             left_reg = Register("string", "t", reg)
             left_reg.code = self.code_for_loading_string_Imm(reg, left_opr)
-            left_reg.code = self.append_code(
-                left_reg.code,
-                """
-move $t{},$v0;
-            """.format(
-                    reg
-                ),
-            )
-
-        code = self.append_code(left_reg.code, right_reg.code)
+        elif isinstance(left_opr, Register):
+            reg = self.get_a_free_t_register()
+            self.t_registers[reg] = True
+            left_reg = Register("string", "t", reg)
+            left_reg.code = self.code_for_loading_string_ref_reg(reg, left_opr)
+        code = self.append_code(left_opr.code, right_opr.code)
+        code = self.append_code(code, left_reg.code)
+        code = self.append_code(code, right_reg.code)
 
         result = self.get_a_free_t_register()
         self.t_registers[result] = True
@@ -1370,7 +1381,7 @@ move $t{},$v0;
 
         loop = self.get_new_label()
         loop_end = self.get_new_label()
-        _equal = self.get_new_label()
+        not_equal = self.get_new_label()
         end = self.get_new_label()
         equal = self.get_new_label()
 
@@ -1449,7 +1460,7 @@ beq $t{}, $t{}, {}
         self.t_registers[right_reg.number] = False
         self.t_registers[t0] = False
         self.t_registers[t1] = False
-        if isinstance(right_opr, Immediate):
+        if isinstance(left_opr, Immediate):
             self.t_registers[right_reg.number] = False
         if isinstance(left_opr, Immediate):
             self.t_registers[left_reg.number] = False
@@ -1675,9 +1686,9 @@ b {};
         )
 
         if (
-            len(args) == 4
-            or len(args) == 2
-            or (len(args) == 3 and isinstance(args[1], Register))
+                len(args) == 4
+                or len(args) == 2
+                or (len(args) == 3 and isinstance(args[1], Register))
         ):
             current_code = self.append_code(current_code, args[1].code)
             current_code = self.append_code(
@@ -1851,7 +1862,7 @@ j {};
                 imm = Immediate(1 if args[0].value == "true" else 0, "bool")
                 return imm
             elif args[0].type == "STRING_CONSTANT":
-                return Immediate(args[0].value[1 : len(args[0].value) - 1], "string")
+                return Immediate(args[0].value[1: len(args[0].value) - 1], "string")
         return args
 
     def pass_constant(self, args):
@@ -2106,9 +2117,19 @@ syscall
                             ),
                         )
 
-                else:
-                    pass
-                    # other types in Register
+                elif inp.type == "string":
+                    if inp.is_reference == True:
+                        current_code = self.append_code(
+                            current_code,
+                            """
+li $v0, 4;
+lw $a0, ($t{});
+syscall
+                    """.format(
+                                inp.number
+                            ),
+                        )
+
             elif isinstance(inp, Immediate):
                 if inp.type == "bool":
                     pass  # todo
@@ -2169,9 +2190,9 @@ syscall
 
         # newline after print
         current_code = (
-            current_code
-            + "\n"
-            + """
+                current_code
+                + "\n"
+                + """
 li $v0, 4;
 la $a0, newline;
 syscall

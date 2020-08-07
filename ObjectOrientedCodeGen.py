@@ -217,7 +217,7 @@ jr $ra;
                     pass  # todo
                 elif result.type == "double":
                     pass  # todo
-                else:
+                else:  # TODO: it has bug
                     code += """
 lw $ra, 4($s0);
 move $v0, {};
@@ -344,7 +344,7 @@ add $t{}, $t{}, $t{};
             # $t2 has the address for input parameter
 
             if isinstance(input_var, CodeGenerator.Variable):
-                if var.type == "int" or var.type == "string":
+                if input_var.type == "int" or var.type == "string":
                     code = self.main_code_gen.append_code(
                         code,
                         """
@@ -362,7 +362,7 @@ sw $t{}, ($t{});
                             t2,
                         ),
                     )
-                elif var.type == "bool":
+                elif input_var.type == "bool":
                     code = self.main_code_gen.append_code(
                         code,
                         """
@@ -380,84 +380,207 @@ sb $t{}, ($t{});
                             t2,
                         ),
                     )
-                elif var.type == "double":
-                    code = self.main_code_gen.append_code(
-                        code,
-                        """
+                elif input_var.type == "double":
+                    if input_var.address_offset == None:
+                        code = self.main_code_gen.append_code(
+                            code,
+                            """
+li.d $f{}, {};
+add $t{}, $t{}, $s{};
+s.d $f{}, ($t{});
+                    """.format(
+                                f1,
+                                input_var.value,
+                                t2,
+                                t2,
+                                1 if input_var.is_global else 0,
+                                f1,
+                                t2,
+                            ),
+                        )
+                    else:
+                        code = self.main_code_gen.append_code(
+                            code,
+                            """
 l.d $f{}, {}($s{});
 add $t{}, $t{}, $s{};
 s.d $f{}, ($t{});
                     """.format(
-                            f1,
-                            input_var.address_offset,
-                            1 if input_var.is_global else 0,
-                            t2,
-                            t2,
-                            1 if input_var.is_global else 0,
-                            f1,
-                            t2,
-                        ),
-                    )
+                                f1,
+                                input_var.address_offset,
+                                1 if input_var.is_global else 0,
+                                t2,
+                                t2,
+                                1 if input_var.is_global else 0,
+                                f1,
+                                t2,
+                            ),
+                        )
                 else:
                     pass  # other types
             elif isinstance(input_var, CodeGenerator.Register):
-                if var.type == "int" or var.type == "string":
-                    code = self.main_code_gen.append_code(
-                        code,
-                        """
+                if input_var.type == "int":
+                    if input_var.is_reference == True:
+                        code = self.main_code_gen.append_code(
+                            code,
+                            """
+lw $t{}, (${});
+add $t{}, $t{}, $s0;
+sw $t{}, ($t{});
+                    """.format(
+                                t3,
+                                input_var.kind + str(input_var.number),
+                                t2,
+                                t2,
+                                t3,
+                                t2,
+                            ),
+                        )
+                    else:
+                        code = self.main_code_gen.append_code(
+                            code,
+                            """
 move $t{}, ${};
 add $t{}, $t{}, $s0;
 sw $t{}, ($t{});
                     """.format(
-                            t3, input_var.kind + str(input_var.number), t2, t2, t3, t2
-                        ),
-                    )
-                elif var.type == "bool":  # todo boolean
-                    code = self.main_code_gen.append_code(
-                        code,
-                        """
+                                t3,
+                                input_var.kind + str(input_var.number),
+                                t2,
+                                t2,
+                                t3,
+                                t2,
+                            ),
+                        )
+                if input_var.type == "string":
+                    if input_var.is_reference == True:
+                        code = self.main_code_gen.append_code(
+                            code,
+                            """
+lw $t{}, (${});
+add $t{}, $t{}, $s0;
+sw $t{}, ($t{});
+                    """.format(
+                                t3,
+                                input_var.kind + str(input_var.number),
+                                t2,
+                                t2,
+                                t3,
+                                t2,
+                            ),
+                        )
+                    else:
+                        code = self.main_code_gen.append_code(
+                            code,
+                            """
+move $t{}, ${};
+add $t{}, $t{}, $s0;
+sw $t{}, ($t{});
+                    """.format(
+                                t3,
+                                input_var.kind + str(input_var.number),
+                                t2,
+                                t2,
+                                t3,
+                                t2,
+                            ),
+                        )
+                elif input_var.type == "bool":
+                    if input_var.is_reference == True:
+                        code = self.main_code_gen.append_code(
+                            code,
+                            """
+lb $t{}, (${});
+add $t{}, $t{}, $s0;
+sb $t{}, ($t{});
+                    """.format(
+                                t3,
+                                input_var.kind + str(input_var.number),
+                                t2,
+                                t2,
+                                t3,
+                                t2,
+                            ),
+                        )
+                    else:
+                        code = self.main_code_gen.append_code(
+                            code,
+                            """
 move $t{}, ${};
 add $t{}, $t{}, $s0;
 sb $t{}, ($t{});
                     """.format(
-                            t3, input_var.kind + str(input_var.number), t2, t2, t3, t2
-                        ),
-                    )
-                elif var.type == "double":
-                    pass  # todo
+                                t3,
+                                input_var.kind + str(input_var.number),
+                                t2,
+                                t2,
+                                t3,
+                                t2,
+                            ),
+                        )
+                elif input_var.type == "double":
+                    if input_var.is_reference == True:
+                        code = self.main_code_gen.append_code(
+                            code,
+                            """
+l.d $f{}, (${});
+add $t{}, $t{}, $s0;
+s.d $t{}, ($t{});
+                    """.format(
+                                f1,
+                                input_var.kind + str(input_var.number),
+                                t2,
+                                t2,
+                                f1,
+                                t2,
+                            ),
+                        )
+                    else:
+                        code = self.main_code_gen.append_code(
+                            code,
+                            """
+mov.d $f{}, ${};
+add $t{}, $t{}, $s0;
+s.d $t{}, ($t{});
+                    """.format(
+                                f1,
+                                input_var.kind + str(input_var.number),
+                                t2,
+                                t2,
+                                f1,
+                                t2,
+                            ),
+                        )
                 else:
                     pass  # other types
             elif isinstance(input_var, CodeGenerator.Immediate):
-                if var.type == "int":
+                if input_var.type == "int":
                     code += """
 li $t{}, {};
 add $t{}, $t{}, $s0;
 sw $t{}, ($t{});
                     """.format(
-                        t3,
-                        input_var.value,
-                        t2,
-                        t2,
-                        t3,
-                        t2,
+                        t3, input_var.value, t2, t2, t3, t2,
                     )
-                elif var.type == "bool":  # todo check
+                elif input_var.type == "bool":  # todo check
                     code += """
 li $t{}, {};
 add $t{}, $t{}, $s0;
 sb $t{}, ($t{});
                     """.format(
-                        t3,
-                        input_var.value,
-                        t2,
-                        t2,
-                        t3,
-                        t2,
+                        t3, input_var.value, t2, t2, t3, t2,
                     )
-                elif var.type == "string":
-                    pass  # todo
-                elif var.type == "double":
-                    pass  # todo
+                elif input_var.type == "string":
+                    code += self.main_code_gen.code_for_loading_string_Imm(
+                        t3, input_var
+                    )
+                    code += """
+move $t{}, $v0;
+add $t{}, $t{}, $s0;
+sw $t{}, ($t{});
+                    """.format(
+                        t2, t2, t3, t2
+                    )
 
         self.main_code_gen.t_registers[t1] = False
         self.main_code_gen.t_registers[t2] = False
