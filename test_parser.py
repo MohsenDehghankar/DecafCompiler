@@ -57,7 +57,6 @@ def main(argv):
 
     decaf_code = """
 
-<<<<<<< HEAD
 int main(){
     bool x;
     x = true;
@@ -66,27 +65,6 @@ int main(){
 
     print(x != y);
 
-=======
-
-
-int main() {
-    int a;
-    int b;
-
-    a = ReadInteger();
-    b = ReadInteger();
-
-    Print(abs_mult(a, b));
-}
-
-int abs_mult(int a, int b) {
-    int c;
-    if (a > b)
-        c = a - b;
-    else
-        c = b - a;
-    return c * a * b;
->>>>>>> d03b3951d004e497a1b281d986b4096b67c36cb3
 }
 
     """
