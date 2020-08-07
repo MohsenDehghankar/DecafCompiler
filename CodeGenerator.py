@@ -447,9 +447,9 @@ s.d $f{}, ($t{});
         return code
 
     def assignment_calculated(self, args):
-        print("assignment calculated")
-        print(args[0])
-        print(args[1])
+        # print("assignment calculated")
+        # print(args[0])
+        # print(args[1])
         left_value = args[0]
         right_value = args[1]
 
@@ -1227,6 +1227,10 @@ addi $t{}, $zero, 1;
             pass  # todo: handle type checking for string
 
     def handle_condition(self, left_opr, right_opr, inst):
+
+        current_code = ""
+        current_code += left_opr.code + "\n" + right_opr.code
+
         if left_opr.type == "double":
             return self.handle_condition_for_double(left_opr, right_opr, inst)
 
@@ -1243,21 +1247,18 @@ addi $t{}, $zero, 1;
         }
         t1, t2 = self.write_conditional_expr(left_opr, right_opr)
         label = self.get_new_label()
-        current_code = ""
 
-        current_code += left_opr.code + "\n" + right_opr.code
-
-        current_code = self.append_code(
-            current_code,
-            """
+        t1.code = current_code + "\n" + t1.code
+        t1.code += "\n" + """
 {} $t{}, $t{}, {};
         
         """.format(
                 _map[inst], t1.number, t2.number, label.name
-            ),
-        )
+            )
 
-        t1.write_code(current_code)
+        
+
+        # t1.write_code(current_code)
         self.map_condition_to_boolian(t1, label)
         self.t_registers[t2.number] = False
         t1.type = "bool"

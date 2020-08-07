@@ -56,33 +56,19 @@ def main(argv):
     codeGen.create_data_segment()
 
     decaf_code = """
+
 int main(){
-
-
-    double y;
-    y = 3.1415;
-    double x;
-    x = 2.5;
-    
-    x = x * y;
-
-    print(x);
-
-
+    int i;
+    i =5;
+    if(i % 5 == 0){
+        print("Yes");
+    }else{
+        print("No");
+    }
 }
+
     """
-    #     decaf_code = """
-    # int main(){
-    #     string x;
-    #     string[] y;
-    #     y = NewArray(10, string);
-    #     y[3] = "Abc";
-    #     x = "Abc";
-    #     if ("Abc" == y[3]){
-    #         print(2);
-    #     }
-    # }
-    #     """
+    
     # write test
     f2 = open("tests", "a")
     # f2.write(decaf_code + "\n---------------\n\n---------------")
