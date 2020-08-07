@@ -1,3 +1,5 @@
+
+
 .data
 frame_pointer:  .space  10000
 global_pointer: .space  10000
@@ -122,3 +124,4 @@ syscall
 
 li $v0, 10;
 syscall;
+            
