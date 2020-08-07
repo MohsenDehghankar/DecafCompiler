@@ -44,6 +44,7 @@ class CodeGenerator(Transformer):
         self.arr_cgen = ArrayCodeGen(self)
         # previous code generator (prev pass)
         self.prev_code_gen = None
+        self.break_label = None
 
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
@@ -1756,6 +1757,11 @@ j {};
                 condition_label.name, end_label.name
             ),
         )
+        if self.break_label is not None:
+            current_code = self.append_code(current_code,"""
+{}:
+            """.format(self.break_label.name))
+            self.break_label = None
         result = Result()
         result.write_code(current_code)
         return result
@@ -1797,6 +1803,12 @@ j {};
                 loop_lable.name, end_lable.name
             ),
         )
+        if self.break_label is not None:
+            current_code = self.append_code(current_code,
+                                            """
+{}:
+                                            """.format(self.break_label.name))
+            self.break_label = None
         result = Result()
         result.write_code(current_code)
         return result
@@ -1839,7 +1851,13 @@ j {};
     def pass_stmt(self, args):
         # print(args, 'pass_stmt')
         re = Result()
-        re.code = ""
+        code = ""
+        label = self.get_new_label()
+        code = self.append_code(code, """
+j {};
+        """.format(label.name))
+        re.code = code
+        self.break_label = label
         return re
 
     def pass_logic(self, args):
