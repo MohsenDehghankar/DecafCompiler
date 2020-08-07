@@ -206,9 +206,11 @@ la $s1, global_pointer;
         # print(args)
         t0 = self.get_a_free_t_register()
         counter = self.get_a_free_t_register()
+        t2 = self.get_a_free_t_register()
         self.t_registers[t0] = True
         self.t_registers[counter] = True
-        t2 = self.get_a_free_t_register()
+        self.t_registers[t2] = True
+        enter = self.get_a_free_t_register()
         new_line = self.get_new_label()
         end = self.get_new_label()
         reg = Register("string", "t", t0)
@@ -221,7 +223,8 @@ syscall
 addi $t{}, $t{}, 0
 {}:
 lb $t{}, ($a0)
-beq $t{}, '\\n', {}
+lb $t{}, newline
+beq $t{}, $t{}, {}
 addi $a0, $a0, 1
 b {}   
 {}:
@@ -233,13 +236,17 @@ move $t{},$a0
                 counter,
                 new_line.name,
                 t2,
+                enter,
                 t2,
+                enter,
                 end.name,
                 new_line.name,
                 end.name,
                 t0
             )
         )
+        self.t_registers[counter] = False
+        self.t_registers[t2] = False
         return reg
 
     """
