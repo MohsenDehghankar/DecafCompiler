@@ -64,8 +64,9 @@ li $a1, 16384
 syscall
 addi $t0, $t0, 0
 label1:
-lb $t1, ($a0)
-beq $t1, '\n', label2
+lb $t0, ($a0)
+lb $t1, newline
+beq $t0, $t1, label2
 addi $a0, $a0, 1
 b label1   
 label2:
@@ -76,36 +77,36 @@ move $t0,$a0
 
 
 
-li $t2, 8;
-add $t2, $t2, $s0;
-lw $t2, ($t2);
+li $t1, 8;
+add $t1, $t1, $s0;
+lw $t1, ($t1);
             
 
-move $t1,$t0;
+move $t0,$t0;
         
 
-li $t3, 0
+li $t2, 0
 label3:
+lb $t3, 0($t0)
 lb $t4, 0($t1)
-lb $t5, 0($t2)
+add $t0, $t0, 1
 add $t1, $t1, 1
-add $t2, $t2, 1
+beqz $t3, label4
 beqz $t4, label4
-beqz $t5, label4
-bne $t4, $t5, label5
-beq $t4, $t5, label3
+bne $t3, $t4, label5
+beq $t3, $t4, label3
 label5:
-li $t3, 0
+li $t2, 0
 j label6
 label7:
-li $t3, 1
+li $t2, 1
 j label6
 label4:
-beq $t4, $t5, label7
+beq $t3, $t4, label7
 label6:
                 
 
-beq $t3, $zero, label8;
+beq $t2, $zero, label8;
 la $a0, true_const;
 j label9;
 label8:
