@@ -57,55 +57,38 @@ def main(argv):
 
     decaf_code = """
 
-int main() {
-    int x;
-    x = 10;
-    int y;
-    y = x * 90 + 50;
-    func(y);
-}
 
-void func(int g){
-    print(g);
+int main() {
+    int a;
+    int b;
+    int c;
+    int d;
+
+    int z;
+
+    z = a + (b * 5);
+    a = z * d;
+    z = 2 * a + ((a + b) / (c + d));
+    b = z / a;
+    c = b * a + z;
+    d = a - b - c - d - z;
+
+    Print(a);
+    Print(b);
+    Print(c);
+    Print(d);
+
+    Print(z);
 }
 
 
     """
-    #     decaf_code = """
 
-    # class A{
-
-    #     int b;
-
-    #     void func(int y){
-    #         b = y;
-    #     }
-
-    # }
-    # int main(){
-
-    #     A a;
-    #     a = new A;
-    #     a.b = 2;
-    #     a.func(5);
-    #     print(a.b);
-
-    # }
-
-    # class B{
-    #     int g;
-    #     int y;
-    # }
-    #     """
-
-    # write test
-    f2 = open("tests", "a")
-    # f2.write(decaf_code + "\n---------------\n\n---------------")
 
     # first pass
-    print("--------------first pass------------")
+    # print("--------------first pass------------")
     parser1.parse(decaf_code)
-    print("----------end of first pass---------")
+    # print("----------end of first pass---------")
 
     # second pass
     codeGen.set_last_code_gen(first_pass_code_gen)

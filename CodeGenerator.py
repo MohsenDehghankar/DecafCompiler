@@ -1889,7 +1889,24 @@ b {};
             ),
         )
 
-        if (
+        if(len(args) == 4
+            or len(args) == 2
+            or (len(args) == 3 and isinstance(args[1], Immediate))):
+                current_code = self.append_code(current_code, args[1].code)
+                t = self.get_a_free_t_register()
+                current_code = self.append_code(
+                        current_code,
+                            """
+li $t{}, {};
+beq $t{},$zero,{};
+                                            """.format(
+                                t, 
+                                args[1].value, 
+                                t,
+                                end_label.name
+                            ),
+                        )
+        elif (
             len(args) == 4
             or len(args) == 2
             or (len(args) == 3 and isinstance(args[1], Register))
