@@ -160,8 +160,8 @@ sw $ra, 4($s0);
     """
 
     def return_from_func(self, args):
-        print("return")
-        print(args)
+        # print("return")
+        # print(args)
         expr = args[0].children
         code = ""
         if len(expr) == 0:
@@ -688,6 +688,9 @@ move $t{}, $v0;
         self.main_code_gen.t_registers[t3] = True
         reg = CodeGenerator.Register(func.return_type, "t", t3)
         reg.code = code
+
+        if("[]" in func.return_type):
+            reg.is_reference = True
 
         return reg
 

@@ -17,67 +17,59 @@ la $s1, global_pointer;
 
 
 
-li $t1, 16;
-        
 
 
-la $a0, input
-li $v0, 8
-li $a1, 16384
-syscall
-addi $t1, $t1, 0
-label1:
-lb $t2, ($a0)
-lb $t3, newline
-beq $t2, $t3, label2
-addi $a0, $a0, 1
-b label1   
-label2:
-sb $zero, ($a0)
-la $a0, input
-move $t0,$a0
-        
-
-li $t2, -4;
-add $t2, $t2, $t1;
+li $t0, 5;
             
 
-move $t3, $t0;
-add $t2, $t2, $s0;
-sw $t3, ($t2);
+li $t1, 8;
+add $t1, $t1, $s0;
+sw $t0, ($t1);
+                
+
+
+
+
+
+
+li $t0, 16;
+        
+
+
+li $t1, -4;
+add $t1, $t1, $t0;
+            
+
+lw $t2, 8($s0);
+add $t1, $t1, $s0;
+sw $t2, ($t1);
                     
 
-li $t3, 16;
-add $t3, $t3, $s0;
-sw $s0, ($t3);
+li $t2, 16;
+add $t2, $t2, $s0;
+sw $s0, ($t2);
         
 
-move $t3, $s0;
-add $t3, $t3, 16
-move $s0, $t3;
-jal fun;
+move $t2, $s0;
+add $t2, $t2, 16
+move $s0, $t2;
+jal fnc;
         
 
-move $t3, $v0;
+move $t2, $v0;
         
 
-li $v0, 10;
-syscall;
+
+
+li.d $f2, 2.5;
+                    
+
+add.d $f2, $f2, $f2
             
 
-fun:
-
-sw $ra, 4($s0);
-        
-
-
-
-
-
-li $v0, 4;
-li $a0, -4;
-add $a0, $a0, $s0;
-lw $a0, ($a0);
+li $v0, 2;
+mov.d $f12, $f2;
+cvt.s.d $f12, $f12
 syscall
                     
 
@@ -85,7 +77,19 @@ li $v0, 4;
 la $a0, newline;
 syscall
         
+
+li $v0, 10;
+syscall;
+            
+
+fnc:
+
+sw $ra, 4($s0);
+        
+
+
 lw $ra, 4($s0);
+l.d $f0, None($s0);
 lw $s0, ($s0)
 jr $ra;
-        
+                        

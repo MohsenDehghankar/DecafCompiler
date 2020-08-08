@@ -543,8 +543,8 @@ s.d $f{}, ($t{});
         return code
 
     def assignment_calculated(self, args):
-        # print("assignment calculated")
-        # print(args)
+        print("assignment calculated")
+        print(args)
 
         left_value = args[0]
         right_value = args[1]
@@ -555,6 +555,7 @@ s.d $f{}, ($t{});
         # print("right value code: {}: " + right_value.code)
 
         self.type_checking_for_assignment(left_value, right_value)
+
 
         if left_value.type == "double":
             code = self.append_code(right_value.code, left_value.code)
@@ -863,6 +864,12 @@ sw $t{}, ($t{});
         # print("minus:")
         # print(args)
 
+        if self.first_pass:
+            # not important what the code is
+            reg = Register("int", "t", 0)
+            reg.code = ""
+            return reg
+
         self.type_checking_for_minus(args[0])
 
         var = args[0]
@@ -952,6 +959,13 @@ move $t{}, ${};
         # print(args)
         opr1 = args[0]
         opr2 = args[1]
+
+        if self.first_pass:
+            # not important what the code is
+            reg = Register("int", "t", 0)
+            reg.code = ""
+            return reg
+
         current_code = ""
         current_code = opr1.code + "\n" + opr2.code
 
@@ -995,6 +1009,13 @@ mflo $t{};
         # print("divide")
         # print(args)
         current_code = ""
+
+        if self.first_pass:
+            # not important what the code is
+            reg = Register("int", "t", 0)
+            reg.code = ""
+            return reg
+
         opr1 = args[0]
         opr2 = args[1]
         current_code = opr1.code + "\n" + opr2.code
@@ -1038,6 +1059,14 @@ mflo $t{};
     def mod(self, args):
         # print("mod")
         # print(args)
+
+        if self.first_pass:
+            # not important what the code is
+            reg = Register("int", "t", 0)
+            reg.code = ""
+            return reg
+
+
         current_code = ""
         opr1 = args[0]
         opr2 = args[1]
@@ -1079,6 +1108,12 @@ mfhi $t{};
     def not_statement(self, args):
         # print("not statement")
         # print(args)
+
+        if self.first_pass:
+            # not important what the code is
+            reg = Register("int", "t", 0)
+            reg.code = ""
+            return reg
 
         self.type_checking_for_logical_expr(args[0], args[0], "!")
 
@@ -1185,6 +1220,12 @@ li ${}, 1;
         opr2 = args[1]
         current_code = opr1.code + "\n" + opr2.code
 
+        if self.first_pass:
+            # not important what the code is
+            reg = Register("int", "t", 0)
+            reg.code = ""
+            return reg
+
         # type checking
         self.check_type_for_math_expr(opr1, opr2, "add")
 
@@ -1240,6 +1281,12 @@ add $t{}, $t{}, $t{}
         # print("sub")
         # print(args)
 
+        if self.first_pass:
+            # not important what the code is
+            reg = Register("int", "t", 0)
+            reg.code = ""
+            return reg
+
         opr1 = args[0]
         opr2 = args[1]
         self.check_type_for_math_expr(opr1, opr2, "sub")
@@ -1285,7 +1332,7 @@ sub $t{}, $t{}, $t{}
     """
 
     def write_conditional_expr(self, opr1, opr2):
-        print(opr1, opr2, "aaaaaaaaaaa")
+        # print(opr1, opr2, "aaaaaaaaaaa")
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
         t2 = self.get_a_free_t_register()
@@ -1693,6 +1740,12 @@ addi $t{}, $zero, 1;
         t2 = args[1]
         current_code = ""
 
+        if self.first_pass:
+            # not important what the code is
+            reg = Register("bool", "t", 0)
+            reg.code = ""
+            return reg
+
         self.type_checking_for_logical_expr(t1, t2, "&&")
 
         if isinstance(t1, Register) and isinstance(t2, Register):
@@ -1717,6 +1770,12 @@ and $t{}, $t{}, $t{};
         t1 = args[0]
         t2 = args[1]
         current_code = ""
+
+        if self.first_pass:
+            # not important what the code is
+            reg = Register("bool", "t", 0)
+            reg.code = ""
+            return reg
 
         self.type_checking_for_logical_expr(t1, t2, "||")
 

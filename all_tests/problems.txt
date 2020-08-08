@@ -15,4 +15,45 @@ int main(){
 
 -----------------
 
+int main() {
+    string x;
+    string x2;
+    string x3;
+   
+    x = ReadLine();
+    x2 = ReadLine();
+    x3 = ReadLine();
+
+    print(x, x2,x3);
+}
+
+-----------------
+
+int main() {
+    print(factor(5, true));
+}
+
+int factor(int i, bool s){
+    if (s){
+        return i * factor(i - 1, false);
+    }else{
+        return 6;
+    }
+}
+
+-----------------
+
+int main() {
+    int[] arr;
+    arr = NewArray(10, int);
+    
+    arr[8] = 9;
+
+    int x;
+    x = 8;
+    print(arr[x]);
+}
+
+-----------------
+
 
