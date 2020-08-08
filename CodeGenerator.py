@@ -49,7 +49,6 @@ class CodeGenerator(Transformer):
         self.class_name = ""
         self.break_label = None
 
-
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
 
@@ -92,7 +91,6 @@ la $s1, global_pointer;
                 self.create_class_field(variable_name, False, self.type_tmp)
             return Result()
 
-
         if variable_name in self.symbol_table.variables.keys():
             print("Variable with name {} already exists".format(variable_name))
             exit(4)
@@ -104,7 +102,7 @@ la $s1, global_pointer;
         if "[]" in self.type_tmp:
             self.create_variable(self.type_tmp, variable_name, True)
         elif not self.type_tmp in ["bool", "int", "string", "double"]:
-            self.create_variable(self.type_tmp, variable_name, True, is_obj = True)
+            self.create_variable(self.type_tmp, variable_name, True, is_obj=True)
         else:
             self.create_variable(self.type_tmp, variable_name, False)
         self.type_tmp = None
@@ -114,7 +112,7 @@ la $s1, global_pointer;
     Create a variable in Memory and add to Symbol Table
     """
 
-    def create_variable(self, var_type, var_name, is_ref=False, is_obj = False):
+    def create_variable(self, var_type, var_name, is_ref=False, is_obj=False):
         # dynamic allocation
         variable = None
 
@@ -148,7 +146,6 @@ la $s1, global_pointer;
         self.symbol_table.variables[var_name] = variable
         return variable
 
-
     def create_class_field(self, field_name, is_ref, var_type):
         variable = None
         if "[]" in var_type:
@@ -178,8 +175,6 @@ la $s1, global_pointer;
         self.symbol_table.variables[field_name] = variable
         if self.first_pass:
             self.oo_gen.classes[self.class_name].fields.append(variable)
-
-        
 
     def get_last_variable_in_frame(self):
         max_a = 0
@@ -246,8 +241,6 @@ la $s1, global_pointer;
         # print(args)
         self.type_tmp = args[0].value
         return args[0].value
-
-    
 
     """
     Read from console
@@ -384,14 +377,14 @@ sb $a0,{}($v0);
                         str.value[i], i
                     ),
                 )
-        code = self.append_code(
-            code,
-            """
-move $t{}, $v0;
-        """.format(
-                reg
-            ),
-        )
+        #         code = self.append_code(
+        #             code,
+        #             """
+        # move $t{}, $v0;
+        #         """.format(
+        #                 reg
+        #             ),
+        #         )
 
         return code
 
@@ -552,6 +545,10 @@ s.d $f{}, ($t{});
         if self.first_pass:
             return Result()
 
+        print(
+            "right_value is Variableaaaaaaaaaaaaaaaaaaaaaaaa", left_value, right_value
+        )
+
         # print("right value code: {}: " + right_value.code)
 
         self.type_checking_for_assignment(left_value, right_value)
@@ -597,7 +594,6 @@ move $v0,$t{};
                 # obj it is
                 right_code = self.code_for_loading_int_reg(t1, right_value)
 
-
             # now right register can be free
             if right_value.kind == "t":
                 self.t_registers[right_value.number] = False
@@ -614,6 +610,8 @@ move $v0,$t{};
             elif right_value.type == "bool":
                 right_code = self.code_for_loading_bool_var(t1, right_value)
 
+            # elif
+
         current_code = self.append_code(current_code, right_code)
 
         # left
@@ -622,7 +620,9 @@ move $v0,$t{};
                 t = self.get_a_free_t_register()
                 t3 = left_value.number
 
-                fld = self.oo_gen.classes[left_value.cls_nm].get_field(left_value.fld_nm)
+                fld = self.oo_gen.classes[left_value.cls_nm].get_field(
+                    left_value.fld_nm
+                )
 
                 current_code += """
 li $t{}, {};
@@ -648,9 +648,8 @@ sw $t{}, ($t{});
                     t,
                     t3,
                     t1,
-                    t3
+                    t3,
                 )
-
 
             elif left_value.is_reference == True:
                 current_code = self.append_code(
@@ -2475,7 +2474,7 @@ syscall
         var = self.token_to_var([args[0]])
         if isinstance(var, Array) and args[1].value == "length":
             return self.arr_cgen.arr_length(var)
-        
+
         if len(args) == 2:
             # field call
             return self.oo_gen.field_call(args)
@@ -2559,7 +2558,7 @@ move $t{}, $v0;
     def start_class_dec(self, args):
         # print("start class")
         # print(args)
-        self.is_in_class = True 
+        self.is_in_class = True
         self.class_name = args[0].value
         # add new class to list
         clss = ClassMetaData()
@@ -2662,7 +2661,6 @@ li $t{}, 1;
         return reg
 
 
-
 """
 Other Classes
 """
@@ -2729,7 +2727,7 @@ class Register(Result):
         self.number = number
         # self.is_bool = False
         self.is_reference = False  # later
-        
+
         self.is_obj = False
         self.cls_nm = None
         self.fld_nm = None

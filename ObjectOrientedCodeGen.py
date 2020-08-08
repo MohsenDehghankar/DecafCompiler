@@ -128,7 +128,7 @@ sw $ra, 4($s0);
 
         if self.main_code_gen.is_in_class:
             to = Token("IDENT", "this")
-            t = Tree("variable",[self.main_code_gen.class_name, to])
+            t = Tree("variable", [self.main_code_gen.class_name, to])
             args = [t] + args
             # args.append(t)
 
@@ -233,17 +233,14 @@ jr $ra;
                     print("Invalid return type!")
                     exit(4)
                 if result.type == "string":
-                    t1 = self.main_code_gen.get_a_free_t_register()
-                    self.main_code_gen.t_registers[t1] = True
-                    code = self.main_code_gen.code_for_loading_string_Imm(t1, result)
+                    # t1 = self.main_code_gen.get_a_free_t_register()
+                    # self.main_code_gen.t_registers[t1] = True
+                    code = self.main_code_gen.code_for_loading_string_Imm(1, result)
                     code += """
 lw $ra, 4($s0);
-move $v0, $t{};
 lw $s0, ($s0);
 jr $ra;
-                    """.format(
-                        t1
-                    )
+                    """.format()
                 elif result.type == "bool":
                     code += """
 lw $ra, 4($s0);
@@ -288,7 +285,7 @@ jr $ra;
         for code in args:
             if code:
                 self.main_code_gen.write_code(code.code)
-        
+
         self.main_code_gen.write_code(self.methods_code)
         return args
 
@@ -626,10 +623,11 @@ sb $t{}, ($t{});
                         t3, input_var
                     )
                     code += """
+move $t{}, $v0;
 add $t{}, $t{}, $s0;
 sw $t{}, ($t{});
                     """.format(
-                        t2, t2, t3, t2
+                        t3, t2, t2, t3, t2
                     )
 
         self.main_code_gen.t_registers[t1] = False
@@ -718,10 +716,9 @@ move $t{}, $v0;
         self.main_code_gen.symbol_tables.append(sym_tbl)
         self.main_code_gen.symbol_table = sym_tbl
 
-
-    '''
+    """
     Classes in Decaf
-    '''
+    """
 
     def class_declare(self, args):
         # print("class: ")
@@ -755,14 +752,14 @@ move $t{}, $v0;
         # write value to t2
 
         if fld.type == "bool":
-            pass    # todo
+            pass  # todo
         elif fld.type == "string":
-            pass    # todo
+            pass  # todo
         elif fld.type == "double":
             # variable value
             # register for address
             pass
-        else:   
+        else:
             # 4 byte fields
             # get field from variable address
             t2 = self.main_code_gen.get_a_free_t_register()
@@ -798,7 +795,7 @@ lw $t{}, ($t{});
                 t1,
                 t2,
                 t1,
-                t2
+                t2,
             )
 
             reg = CodeGenerator.Register(fld.type, "t", t2)
@@ -809,8 +806,6 @@ lw $t{}, ($t{});
             reg.var = variable
             return reg
 
-
-        
     def create_object(self, args):
         # print("create obj:")
         # print(args)
@@ -829,9 +824,7 @@ syscall
 # move address to t1
 move $t{}, $v0;
         """.format(
-            cls_name,
-            clss.get_full_size(),
-            t1
+            cls_name, clss.get_full_size(), t1
         )
         self.main_code_gen.t_registers[t1] = True
         reg = CodeGenerator.Register(cls_name, "t", t1)
@@ -856,10 +849,6 @@ move $t{}, $v0;
         args = [t, args[2]]
         return self.function_call(args)
 
-        
-
-
-
 
 class Function:
     def __init__(self, name):
@@ -881,12 +870,11 @@ class SymbolTable:
 
 # Saves fields and other data about declared classes
 class ClassMetaData:
-
     def __init__(self):
         super().__init__()
         # self.name = ""
-        self.fields = []        # list of 'Variable' s with no address
-        self.methods = []       # list of 'Strings' of method name. (class.method)
+        self.fields = []  # list of 'Variable' s with no address
+        self.methods = []  # list of 'Strings' of method name. (class.method)
         self.last_var = None
 
     def get_full_size(self):
@@ -899,6 +887,3 @@ class ClassMetaData:
         for f in self.fields:
             if f.name == fild_name:
                 return f
-
-
-

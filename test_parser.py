@@ -69,6 +69,32 @@ double fnc(int x){
 
 
     """
+    #     decaf_code = """
+
+    # class A{
+
+    #     int b;
+
+    #     void func(int y){
+    #         b = y;
+    #     }
+
+    # }
+    # int main(){
+
+    #     A a;
+    #     a = new A;
+    #     a.b = 2;
+    #     a.func(5);
+    #     print(a.b);
+
+    # }
+
+    # class B{
+    #     int g;
+    #     int y;
+    # }
+    #     """
 
     # write test
     f2 = open("tests", "a")
@@ -81,7 +107,7 @@ double fnc(int x){
 
     # second pass
     codeGen.set_last_code_gen(first_pass_code_gen)
-        # pass classes
+    # pass classes
     codeGen.oo_gen.classes = first_pass_code_gen.oo_gen.classes
 
     # check fields of class
@@ -93,9 +119,8 @@ double fnc(int x){
     tree = parser.parse(decaf_code)
 
     # print(tree.pretty())
-    
-    
-    '''print("\n\n------------symbol tables-------------------")
+
+    """print("\n\n------------symbol tables-------------------")
     for table in first_pass_code_gen.symbol_tables:
         print(
             "{} --> {} : {}".format(
@@ -104,8 +129,8 @@ double fnc(int x){
                 table.variables,
             )
         )
-    print("---------------end--------------------------\n\n")'''
-    
+    print("---------------end--------------------------\n\n")"""
+
     """
     print("---------------------------------------\nsymbol table: ")
     for var in codeGen.symbol_table.variables.keys():
