@@ -58,13 +58,9 @@ def main(argv):
     decaf_code = """
 
 int main(){
-string s;
-string x;
-s = ReadLine();
-x = ReadLine();
-print(s);
-print(x);
-print(x == s);
+        int x;
+        x = 0X12aE;
+        print(x);
     }
 
 
