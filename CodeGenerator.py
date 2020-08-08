@@ -300,7 +300,7 @@ move $t{},$a0
     """
 
     def get_a_free_t_register(self):
-        for i in range(10):
+        for i in range(15):
             if not self.t_registers[i]:
                 return i
         print("Not Enough Regsiter to Use!")

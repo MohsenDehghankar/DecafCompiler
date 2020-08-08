@@ -56,14 +56,15 @@ def main(argv):
     codeGen.create_data_segment()
 
     decaf_code = """
-bool a;
+
+
 int main() {
-    bool a;
-    a = true;
     int x;
-    x = btoi(a);
-    print(x + 1);
+    x = ((9 * 10 ) + (200 * 8) - (1 + 6) + (90 * 2) + (4 / 2) + (76 + 90)) * (12 + 13 + 14 + 15) * (1) * (1);
+    print(x);
 }
+ 
+
     """
     #     decaf_code = """
 

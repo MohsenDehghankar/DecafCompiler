@@ -338,6 +338,17 @@ jr $ra;
                 self.main_code_gen.write_code(code.code)
 
         self.main_code_gen.write_code(self.methods_code)
+
+        # register replacement:
+        c = self.main_code_gen.mips_code
+        c = c.replace("$t10", "$s3")
+        c = c.replace("$t11", "$s4")
+        c = c.replace("$t12", "$s5")
+        c = c.replace("$t13", "$s6")
+        c = c.replace("$t14", "$s7")
+
+        self.main_code_gen.mips_code = c
+
         return args
 
     """
