@@ -2634,11 +2634,10 @@ cvt.d.w $f{}, $f{};
 li $v0, 9;
 li $a0, 8;
 syscall
-cvt.w.d $f{}, $f{};
-s.d $f{}, ($v0);
-lw $t{}, ($v0);
+round.w.d $f{}, $f{};
+mfc1 $t{}, $f{};
         """.format(
-                t1, f1.number, f1.number, f1.number
+                f1.number, f1.number, t1, f1.number
             ),
         )
         self.f_registers[f1.number] = False

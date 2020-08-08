@@ -214,14 +214,62 @@ jr $ra;
                     print("Invalid return type!1 {}, {}".format(self.main_code_gen.func_type_tmp, result.type))
                     exit(4)
                 elif result.type == "double":
-                    code += """
+                    if result.is_reference == True:
+                        code += """
+lw $ra, 4($s0);
+l.d $f0, ($t{});
+lw $s0, ($s0);
+jr $ra;
+                """.format(
+                            result.number
+                        )
+                    else:
+                        code += """
 lw $ra, 4($s0);
 mov.d $f0, $f{};
 lw $s0, ($s0);
 jr $ra;
                 """.format(
-                        result.number
-                    )
+                            result.number
+                        )
+                elif result.type == "int":
+                    if result.is_reference == True:
+                        code += """
+lw $ra, 4($s0);
+lw $v0, (${})
+lw $s0, ($s0);
+jr $ra;
+                """.format(
+                            result.kind + str(result.number)
+                        )
+                    else:
+                        code += """
+lw $ra, 4($s0);
+move $v0, ${};
+lw $s0, ($s0);
+jr $ra;
+                """.format(
+                            result.kind + str(result.number)
+                        )
+                elif result.type == "bool":
+                    if result.is_reference == True:
+                        code += """
+lw $ra, 4($s0);
+lb $v0, (${})
+lw $s0, ($s0);
+jr $ra;
+                """.format(
+                            result.kind + str(result.number)
+                        )
+                    else:
+                        code += """
+lw $ra, 4($s0);
+move $v0, ${};
+lw $s0, ($s0);
+jr $ra;
+                """.format(
+                            result.kind + str(result.number)
+                        )
                 else:
                     code += """
 lw $ra, 4($s0);
@@ -391,6 +439,7 @@ add $t{}, $t{}, $t{};
 
             
             # $t2 has the address for input parameter
+            is_ref = False
 
             if isinstance(input_var, CodeGenerator.Variable):
                 if (
@@ -489,6 +538,7 @@ sw $t{}, ($t{});
                                 t2,
                             ),
                         )
+                        is_ref = True
                     else:
                         code = self.main_code_gen.append_code(
                             code,
@@ -522,6 +572,7 @@ sw $t{}, ($t{});
                                 t2,
                             ),
                         )
+                        is_ref = True
                     else:
                         code = self.main_code_gen.append_code(
                             code,
@@ -555,6 +606,7 @@ sb $t{}, ($t{});
                                 t2,
                             ),
                         )
+                        is_ref = True
                     else:
                         code = self.main_code_gen.append_code(
                             code,
@@ -588,6 +640,7 @@ s.d $t{}, ($t{});
                                 t2,
                             ),
                         )
+                        is_ref = True
                     else:
                         code = self.main_code_gen.append_code(
                             code,
@@ -692,7 +745,7 @@ move $t{}, $v0;
         reg = CodeGenerator.Register(func.return_type, "t", t3)
         reg.code = code
 
-        if("[]" in func.return_type):
+        if "[]" in func.return_type:
             reg.is_reference = True
 
         return reg
@@ -806,6 +859,7 @@ lw $t{}, ($t{});
             reg = CodeGenerator.Register(fld.type, "t", t2)
             reg.code = code
             reg.is_obj = True
+            reg.is_reference = True
             reg.cls_nm = variable.type
             reg.fld_nm = field_name
             reg.var = variable
