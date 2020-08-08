@@ -67,31 +67,49 @@ lw $t{}, ($t{})
 
     def access_to_array(self, args):
         print("access to array", args)
-        self.type_checking_for_arr_access(args)
+        # self.type_checking_for_arr_access(args)
         arr_name = args[0]
-        index = int(args[1].value)
+        t1 = self.main_code_gen.get_a_free_t_register()
+        self.main_code_gen.t_registers[t1] = True
+        index = self.main_code_gen.get_a_free_t_register()
+        code = self.main_code_gen.append_code(
+            args[1].code, self.main_code_gen.code_for_loading_opr(index, args[1])
+        )
 
+        # code = index.code
         if isinstance(arr_name, Token):
             # arr = self.main_code_gen.symbol_table.variables[arr_name.value]
             arr = self.main_code_gen.token_to_var([arr_name])
-            t1 = self.main_code_gen.get_a_free_t_register()
-            self.main_code_gen.t_registers[t1] = True
-            code = """
+
+            code = self.main_code_gen.append_code(
+                code,
+                """
 li $t{}, {};
 add $t{}, $t{}, $s{}
 lw $t{}, ($t{});
-addi $t{}, $t{}, {};
+# calc index
+addi $t{}, $t{}, 1
+mul $t{}, $t{}, {}
+mflo $t{};
+add $t{}, $t{}, $t{};
             """.format(
-                t1,
-                arr.address_offset,
-                t1,
-                t1,
-                1 if arr.is_global else 0,
-                t1,
-                t1,
-                t1,
-                t1,
-                (index + 1) * self.calc_size_of_index(arr.type),
+                    t1,
+                    arr.address_offset,
+                    t1,
+                    t1,
+                    1 if arr.is_global else 0,
+                    t1,
+                    t1,
+                    index,
+                    index,
+                    index,
+                    index,
+                    self.calc_size_of_index(arr.type),
+                    index,
+                    t1,
+                    t1,
+                    index,
+                ),
             )
             output_type = self.get_output_type(arr.type)  # int[][] -> int[]
             reg = CodeGenerator.Register(output_type, "t", t1)
@@ -100,8 +118,6 @@ addi $t{}, $t{}, {};
             return reg
         elif isinstance(arr_name, CodeGenerator.Register):  #   x[2][3]
             reg = arr_name
-            t1 = self.main_code_gen.get_a_free_t_register()
-            self.main_code_gen.t_registers[t1] = True
             code = self.main_code_gen.append_code(
                 reg.code,
                 """
