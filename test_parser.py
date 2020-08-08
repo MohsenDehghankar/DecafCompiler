@@ -55,61 +55,36 @@ def main(argv):
 
     codeGen.create_data_segment()
 
-    decaf_code = """
-<<<<<<< HEAD
-int main() {
-    int[] arr;
-    arr = NewArray(10, int);
-    
-    arr[8] = 9;
-
-    int x;
-    x = 5;
-    print(arr[x + 3]);
-}
-=======
-
-int main() {
-    int x;
-    x = 10;
-    int y;
-    y = x * 90 + 50;
-    func(y);
-}
-
-void func(int g){
-    print(g);
-}
-
->>>>>>> 2604259781a6b5795ad760555fd75cd53c1b7287
-
-    """
     #     decaf_code = """
-
-    # class A{
-
-    #     int b;
-
-    #     void func(int y){
-    #         b = y;
-    #     }
-
-    # }
-    # int main(){
-
-    #     A a;
-    #     a = new A;
-    #     a.b = 2;
-    #     a.func(5);
-    #     print(a.b);
-
+    # int main() {
+    #     int x;
+    #     x = -2;
+    #     print(x);
     # }
 
-    # class B{
-    #     int g;
-    #     int y;
-    # }
     #     """
+    decaf_code = """
+
+    class A{
+
+        double b;
+
+        void func(double y){
+            b = y;
+        }
+
+    }
+    int main(){
+
+        A a;
+        a = new A;
+        a.b = 3.4;
+        a.func(4.1);
+        print(a.b);
+
+    }
+
+        """
 
     # write test
     f2 = open("tests", "a")

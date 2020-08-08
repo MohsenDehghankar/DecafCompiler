@@ -211,7 +211,11 @@ jr $ra;
                     exit(4)
             elif isinstance(result, CodeGenerator.Register):
                 if not self.main_code_gen.func_type_tmp == result.type:
-                    print("Invalid return type!1 {}, {}".format(self.main_code_gen.func_type_tmp, result.type))
+                    print(
+                        "Invalid return type!1 {}, {}".format(
+                            self.main_code_gen.func_type_tmp, result.type
+                        )
+                    )
                     exit(4)
                 elif result.type == "double":
                     if result.is_reference == True:
@@ -421,8 +425,6 @@ jr $ra;
         t3 = self.main_code_gen.get_a_free_t_register()
         f1 = self.main_code_gen.get_a_free_f_register()
 
-        
-
         for i in range(len(func.arguments)):
             var = func.arguments[i]
             input_var = arguments[i]
@@ -432,14 +434,14 @@ jr $ra;
             code += "\n" + input_var.code
 
             code = self.main_code_gen.append_code(
-                        code,
-                        """
+                code,
+                """
 li $t{}, {};
                     """.format(
-                            t1, new_offset
-                        ),
-                    )
-                    
+                    t1, new_offset
+                ),
+            )
+
             code = self.main_code_gen.append_code(
                 code,
                 """
@@ -450,7 +452,6 @@ add $t{}, $t{}, $t{};
                 ),
             )
 
-            
             # $t2 has the address for input parameter
             is_ref = False
 
@@ -822,20 +823,12 @@ move $t{}, $v0;
 
         # write value to t2
 
-        if fld.type == "bool":
-            pass  # todo
-        elif fld.type == "string":
-            pass  # todo
-        elif fld.type == "double":
-            # variable value
-            # register for address
-            pass
-        else:
+        if True:
             # 4 byte fields
             # get field from variable address
-            t2 = self.main_code_gen.get_a_free_t_register()
-            self.main_code_gen.t_registers[t2] = True
             t1 = self.main_code_gen.get_a_free_t_register()
+            self.main_code_gen.t_registers[t1] = True
+            t2 = self.main_code_gen.get_a_free_t_register()
 
             code = """
 # get address of obj
@@ -847,9 +840,6 @@ lw $t{}, ($t{})
 li $t{}, {};
 add $t{}, $t{}, $t{};
 
-# now $t{} has address of field
-lw $t{}, ($t{});
-# field moved to $t{}
             """.format(
                 t1,
                 variable.address_offset,
@@ -863,15 +853,11 @@ lw $t{}, ($t{});
                 t1,
                 t1,
                 t2,
-                t1,
-                t2,
-                t1,
-                t2,
             )
 
-            reg = CodeGenerator.Register(fld.type, "t", t2)
+            reg = CodeGenerator.Register(fld.type, "t", t1)
             reg.code = code
-            reg.is_obj = True
+            # reg.is_obj = True
             reg.is_reference = True
             reg.cls_nm = variable.type
             reg.fld_nm = field_name

@@ -290,7 +290,7 @@ move $t{},$v0
                 end.name,
                 new_line.name,
                 end.name,
-                t0
+                t0,
             )
         )
         self.t_registers[counter] = False
@@ -552,7 +552,6 @@ s.d $f{}, ($t{});
 
         self.type_checking_for_assignment(left_value, right_value)
 
-
         if left_value.type == "double":
             code = self.append_code(right_value.code, left_value.code)
             assign_code = self.handle_double_assignment(left_value, right_value)
@@ -615,42 +614,42 @@ move $v0,$t{};
 
         # left
         if isinstance(left_value, Register):
-            if left_value.is_obj:
-                t = self.get_a_free_t_register()
-                t3 = left_value.number
+            #             if left_value.is_obj:
+            #                 t = self.get_a_free_t_register()
+            #                 t3 = left_value.number
 
-                fld = self.oo_gen.classes[left_value.cls_nm].get_field(
-                    left_value.fld_nm
-                )
+            #                 fld = self.oo_gen.classes[left_value.cls_nm].get_field(
+            #                     left_value.fld_nm
+            #                 )
 
-                current_code += """
-li $t{}, {};
-add $t{}, $t{}, $s0;
-lw $t{}, ($t{});
-# now address of obj is in $t{}
-li $t{}, {};
-add $t{}, $t{}, $t{};
-# now $t{} has fld offset
-sw $t{}, ($t{});
-                """.format(
-                    t,
-                    left_value.var.address_offset,
-                    t,
-                    t,
-                    t,
-                    t,
-                    t,
-                    t3,
-                    fld.class_offset,
-                    t3,
-                    t3,
-                    t,
-                    t3,
-                    t1,
-                    t3,
-                )
+            #                 current_code += """
+            # li $t{}, {};
+            # add $t{}, $t{}, $s0;
+            # lw $t{}, ($t{});
+            # # now address of obj is in $t{}
+            # li $t{}, {};
+            # add $t{}, $t{}, $t{};
+            # # now $t{} has fld offset
+            # sw $t{}, ($t{});
+            #                 """.format(
+            #                     t,
+            #                     left_value.var.address_offset,
+            #                     t,
+            #                     t,
+            #                     t,
+            #                     t,
+            #                     t,
+            #                     t3,
+            #                     fld.class_offset,
+            #                     t3,
+            #                     t3,
+            #                     t,
+            #                     t3,
+            #                     t1,
+            #                     t3,
+            #                 )
 
-            elif left_value.is_reference == True:
+            if left_value.is_reference == True:
                 current_code = self.append_code(
                     current_code,
                     """
@@ -1064,7 +1063,6 @@ mflo $t{};
             reg.code = ""
             return reg
 
-
         current_code = ""
         opr1 = args[0]
         opr2 = args[1]
@@ -1436,6 +1434,7 @@ addi $t{}, $zero, 1;
         f1 = self.get_a_free_f_register()
         self.f_registers[f1] = True
         t1 = self.get_a_free_t_register()
+        print(opr, "aaaaaaaaaaa")
         code = opr.code
         if isinstance(opr, Variable):
             if opr.address_offset == None:
@@ -1818,7 +1817,7 @@ beq $t{}, $zero, {};
                 t,
                 t,
                 t,
-                end_if_stmt_label.name
+                end_if_stmt_label.name,
             )
         else:
             current_code = self.append_code(
