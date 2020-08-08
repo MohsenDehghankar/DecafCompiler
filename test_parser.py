@@ -58,15 +58,12 @@ def main(argv):
     decaf_code = """
 bool a;
 int main() {
-    
+    bool a;
     a = true;
-    if (a){
-        print("true");
-    }
+    int x;
+    x = btoi(a);
+    print(x + 1);
 }
-
-
-
     """
     #     decaf_code = """
 
