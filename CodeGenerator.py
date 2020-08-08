@@ -2104,6 +2104,10 @@ j {};
         if isinstance(args[0], Token):
             if args[0].type == "INT":
                 return Immediate(args[0].value, "int")
+            elif args[0].type == "HEX_NUMBER":
+                print("HEX NUMBER")
+                print(int(args[0].value[2:], 16))
+                return Immediate(int(args[0].value[2:], 16), "int")
             elif args[0].type == "DOUBLE":
                 var = Variable()
                 var.type = "double"
