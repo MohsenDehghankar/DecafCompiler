@@ -56,15 +56,21 @@ def main(argv):
     codeGen.create_data_segment()
 
     decaf_code = """
-int main() {
-    int[] arr;
-    arr = NewArray(10, int);
-    
-    arr[8] = 9;
 
-    int x;
-    x = 5;
-    print(arr[x + 3]);
+int main() {
+    double x;
+    x = 0.3;
+    print(dtoi(x));
+    x = 0.5;
+print(dtoi(x));
+    x = -0.1;
+print(dtoi(x));
+    x = -0.5;
+print(dtoi(x));
+    x = -0.7;
+    print(dtoi(x));
+    x = -2.2;
+    print(dtoi(x));
 }
 
     """

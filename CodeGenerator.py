@@ -323,6 +323,7 @@ move $t{},$v0
         return current_code + "\n" + new_code
 
     def type_checking_for_assignment(self, l_opr, r_opr):
+        # print("left: {}, right: {}".format(l_opr, r_opr))
         if l_opr.type != r_opr.type:
             print(
                 "invalid type {} and {} for assignment".format(l_opr.type, r_opr.type)
@@ -903,12 +904,23 @@ mflo $t{};
                 reg = Register("int", "t", t1)
                 reg.write_code(current_code)
                 return reg
+            else:
+                # double
+                var.value = -1 * var.value
+                return var
             # other types
         elif isinstance(var, Immediate):
-            var.value = -1 * int(var.value)
-            return var
+            try:
+                var.value = -1 * int(var.value)
+                return var
+            except ValueError:
+                # for double
+                var.value = -1 * float(var.value)
+                return var
         else:
-            pass  # other expressions
+            pass
+
+        
         return args
 
     def code_for_loading_opr(self, t_reg, opr):
@@ -2114,6 +2126,7 @@ j {};
                 # var = self.create_variable("double", self.generate_name_for_double())
                 var.value = self.calculate_value_of_double(args[0].value)
                 return var
+                # return Immediate(args[0].value, "double")
             elif args[0].type == "BOOL":
                 imm = Immediate(1 if args[0].value == "true" else 0, "bool")
                 return imm
@@ -2123,7 +2136,7 @@ j {};
 
     def pass_constant(self, args):
         # print("pass constants", args)
-        # print(args[0].children[0])
+        # print(args)
         return args[0].children[0]
 
     def call_action(self, args):
