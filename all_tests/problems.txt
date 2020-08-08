@@ -28,3 +28,12 @@ int main() {
 
 -----------------
 
+int main() {
+    double x;
+    x = -1.0;
+    /*print(dtoi(x));
+    x = -0.5;
+    print(dtoi(x));
+    x = -0.7;
+    print(dtoi(x));*/
+}

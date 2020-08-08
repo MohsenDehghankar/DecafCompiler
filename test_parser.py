@@ -86,14 +86,10 @@ def main(argv):
 
         """
 
-    # write test
-    f2 = open("tests", "a")
-    # f2.write(decaf_code + "\n---------------\n\n---------------")
-
     # first pass
-    print("--------------first pass------------")
+    # print("--------------first pass------------")
     parser1.parse(decaf_code)
-    print("----------end of first pass---------")
+    # print("----------end of first pass---------")
 
     # second pass
     codeGen.set_last_code_gen(first_pass_code_gen)
