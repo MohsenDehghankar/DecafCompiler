@@ -58,13 +58,14 @@ def main(argv):
     decaf_code = """
 
 int main(){
-    int x;
-    x = 5;
-    print(fnc(x) + 2.5);
-}
-double fnc(int x){
-    return 2.5;
-}
+string s;
+string x;
+s = ReadLine();
+x = ReadLine();
+print(s);
+print(x);
+print(x == s);
+    }
 
 
 

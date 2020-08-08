@@ -62,7 +62,6 @@ class CodeGenerator(Transformer):
 .data
 frame_pointer:  .space  10000
 global_pointer: .space  10000
-input:          .space  16384
 true_const:     .asciiz "true"
 false_const:    .asciiz "false"
 end_of_string:  .byte   0
@@ -261,10 +260,14 @@ la $s1, global_pointer;
         reg = Register("string", "t", t0)
         reg.write_code(
             """
-la $a0, input
+li $v0, 9
+li $a0, 16384
+syscall
+move $a0, $v0
 li $v0, 8
 li $a1, 16384
 syscall
+move $v0, $a0
 addi $t{}, $t{}, 0
 {}:
 lb $t{}, ($a0)
@@ -274,8 +277,7 @@ addi $a0, $a0, 1
 b {}   
 {}:
 sb $zero, ($a0)
-la $a0, input
-move $t{},$a0
+move $t{},$v0
         """.format(
                 counter,
                 counter,
@@ -287,7 +289,7 @@ move $t{},$a0
                 end.name,
                 new_line.name,
                 end.name,
-                t0,
+                t0
             )
         )
         self.t_registers[counter] = False
