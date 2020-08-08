@@ -2,7 +2,7 @@ start: decl+                                    -> add_codes
 
 decl : variabledec                              -> global_var_declare
         | funcdec                               -> func_declare               
-        | classdec 
+        | classdec                              -> class_dec_finished
         | interfacedec 
         | COMMENT
 
@@ -16,7 +16,7 @@ type : "int"            -> int_variable_declaraion
         | "double"      -> double_variable_declaration
         | "bool"        -> bool_variable_declaration
         | "string"      -> string_variable_declaration
-        | IDENT 
+        | IDENT         -> class_type_def
         | type "[]"     -> array_variable_declaration 
 
 //--------function dec--------
@@ -92,7 +92,7 @@ paranthes : "("expr")"          -> paranthes_action     // start of expression
 
 high_proior : high_proior "." IDENT ("("actual?")")?    -> method_call
         | high_proior"["expr"]"         -> access_to_array
-        | "new" IDENT
+        | "new" IDENT           -> create_object
         | call                  -> call_action
         | constants             -> constant_operand     
 
@@ -106,8 +106,7 @@ call : IDENT"("actual?")"               -> function_call
         | "btoi("expr")"       -> btoi
         | IDENT                 -> identifier_in_expression    
 
-constants : "this" 
-        | constant              -> pass_constant
+constants : constant              -> pass_constant
 
 actual : actual","expr          -> prevent_tree_generation_for_actual 
         | expr                  -> exp_to_actual
@@ -127,8 +126,11 @@ return : "return" [expr] ";"
 print : ("Print"|"print") "("actual")" ";"      -> _print
 
 //---------class dec----------
-classdec : "class" IDENT ["extends" IDENT] ["implements" (IDENT | IDENT",")+] "{"field*"}"
-field : variabledec | funcdec
+classdec : startclass ["extends" IDENT] ["implements" (IDENT | IDENT",")+] "{"field*"}"      -> class_declare
+startclass : "class" IDENT                                                                   -> start_class_dec
+field : variabledec 
+        | methoddec
+methoddec : funcdec                                                                          -> method_declare
 
 //--------interface dec--------
 interfacedec : "interface" IDENT "{" prototype* "}"

@@ -3,7 +3,7 @@ from lark.lexer import Lexer, Token
 from ObjectOrientedCodeGen import ObjectOrientedCodeGen
 from ArrayCodeGen import ArrayCodeGen
 import uuid
-from ObjectOrientedCodeGen import SymbolTable
+from ObjectOrientedCodeGen import SymbolTable, ClassMetaData
 
 
 class CodeGenerator(Transformer):
@@ -44,7 +44,11 @@ class CodeGenerator(Transformer):
         self.arr_cgen = ArrayCodeGen(self)
         # previous code generator (prev pass)
         self.prev_code_gen = None
+        # class declaration started
+        self.is_in_class = False
+        self.class_name = ""
         self.break_label = None
+
 
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
@@ -78,16 +82,20 @@ la $s1, global_pointer;
 
     def variable_declare(self, args):
         # print("var_declare", args)
+
         variable_name = args[0].children[1].value
+
+        if self.is_in_class and not self.oo_gen.func_start:
+            if "[]" in self.type_tmp:
+                self.create_class_field(variable_name, True, self.type_tmp)
+            else:
+                self.create_class_field(variable_name, False, self.type_tmp)
+            return Result()
+
 
         if variable_name in self.symbol_table.variables.keys():
             print("Variable with name {} already exists".format(variable_name))
             exit(4)
-
-        # debug
-        # print(
-        #     "Variable Declared type {0}, name {1}".format(self.type_tmp, variable_name)
-        # )
 
         if self.type_tmp == None:
             print("Type of Variable {} unknown".format(variable_name))
@@ -95,6 +103,8 @@ la $s1, global_pointer;
 
         if "[]" in self.type_tmp:
             self.create_variable(self.type_tmp, variable_name, True)
+        elif not self.type_tmp in ["bool", "int", "string", "double"]:
+            self.create_variable(self.type_tmp, variable_name, True, is_obj = True)
         else:
             self.create_variable(self.type_tmp, variable_name, False)
         self.type_tmp = None
@@ -104,7 +114,7 @@ la $s1, global_pointer;
     Create a variable in Memory and add to Symbol Table
     """
 
-    def create_variable(self, var_type, var_name, is_ref=False):
+    def create_variable(self, var_type, var_name, is_ref=False, is_obj = False):
         # dynamic allocation
         variable = None
 
@@ -132,11 +142,44 @@ la $s1, global_pointer;
                 else offset + (variable.size - offset % variable.size)
             )
         self.last_var_in_fp = variable
-        if variable.address_offset + variable.size > 1000:
+        if variable.address_offset + variable.size > 10000:
             print("Local Variables are more than frame size!")
             exit(4)
         self.symbol_table.variables[var_name] = variable
         return variable
+
+
+    def create_class_field(self, field_name, is_ref, var_type):
+        variable = None
+        if "[]" in var_type:
+            variable = Array()
+        else:
+            variable = Variable()
+        variable.type = var_type
+        variable.name = field_name
+        variable.is_reference = is_ref
+        variable.calc_size()
+
+        # print("var size: {}, {}".format(variable.size, variable.is_reference))
+
+        clss = self.oo_gen.classes[self.class_name]
+        if clss.last_var == None:
+            variable.class_offset = 0
+        else:
+            offset = clss.last_var.size + clss.last_var.class_offset
+            variable.class_offset = (
+                offset
+                if offset % variable.size == 0
+                else offset + (variable.size - offset % variable.size)
+            )
+        clss.last_var = variable
+        # variable.address_offset = variable.class_offset
+
+        self.symbol_table.variables[field_name] = variable
+        if self.first_pass:
+            self.oo_gen.classes[self.class_name].fields.append(variable)
+
+        
 
     def get_last_variable_in_frame(self):
         max_a = 0
@@ -194,9 +237,17 @@ la $s1, global_pointer;
         self.type_tmp = None
 
     def array_variable_declaration(self, args):
-        print("array_declaration", args)
+        # print("array_declaration", args)
         self.type_tmp = "{}[]".format(args[0])
         return self.type_tmp
+
+    def class_type_def(self, args):
+        # print("class type def")
+        # print(args)
+        self.type_tmp = args[0].value
+        return args[0].value
+
+    
 
     """
     Read from console
@@ -493,10 +544,13 @@ s.d $f{}, ($t{});
 
     def assignment_calculated(self, args):
         # print("assignment calculated")
-        # print(args[0])
-        # print(args[1])
+        # print(args)
+
         left_value = args[0]
         right_value = args[1]
+
+        if self.first_pass:
+            return Result()
 
         # print("right value code: {}: " + right_value.code)
 
@@ -538,6 +592,10 @@ move $v0,$t{};
                     right_code = self.code_for_loading_bool_ref_reg(t1, right_value)
                 else:
                     right_code = self.code_for_loading_int_reg(t1, right_value)
+            elif right_value.is_reference:
+                # obj it is
+                right_code = self.code_for_loading_int_reg(t1, right_value)
+
 
             # now right register can be free
             if right_value.kind == "t":
@@ -559,7 +617,41 @@ move $v0,$t{};
 
         # left
         if isinstance(left_value, Register):
-            if left_value.is_reference == True:
+            if left_value.is_obj:
+                t = self.get_a_free_t_register()
+                t3 = left_value.number
+
+                fld = self.oo_gen.classes[left_value.cls_nm].get_field(left_value.fld_nm)
+
+                current_code += """
+li $t{}, {};
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
+# now address of obj is in $t{}
+li $t{}, {};
+add $t{}, $t{}, $t{};
+# now $t{} has fld offset
+sw $t{}, ($t{});
+                """.format(
+                    t,
+                    left_value.var.address_offset,
+                    t,
+                    t,
+                    t,
+                    t,
+                    t,
+                    t3,
+                    fld.class_offset,
+                    t3,
+                    t3,
+                    t,
+                    t3,
+                    t1,
+                    t3
+                )
+
+
+            elif left_value.is_reference == True:
                 current_code = self.append_code(
                     current_code,
                     """
@@ -576,10 +668,6 @@ move ${}, $t{};
                     """.format(
                         left_value.kind + str(left_value.number), t1
                     ),
-                    # =======
-                    #            current_code = self.append_code(
-                    #                current_code, self.store_ref_reg(left_value, t1)
-                    # >>>>>>> master
                 )
             # TODO: handle other types
 
@@ -726,6 +814,9 @@ sw $t{}, ($t{});
                     # print("sym: {}: {}".format(sym_tbl.function_name, sym_tbl.variables))
                     # print(child.value)
                     if child.value in sym_tbl.variables.keys():
+                        v = sym_tbl.variables[child.value]
+                        if v.address_offset == None and self.is_in_class:
+                            return self.method_call([Token("IDENT", "this"), child])
                         return sym_tbl.variables[child.value]
 
                     if not self.first_pass:
@@ -736,6 +827,9 @@ sw $t{}, ($t{});
                         if last_pass_sym and (
                             child.value in last_pass_sym.variables.keys()
                         ):
+                            v = last_pass_sym.variables[child.value]
+                            if v.address_offset == None and self.is_in_class:
+                                return self.method_call([Token("IDENT", "this"), child])
                             return last_pass_sym.variables[child.value]
 
                     sym_tbl = sym_tbl.parent
@@ -749,6 +843,8 @@ sw $t{}, ($t{});
                 exit(4)
 
             elif isinstance(child, Variable) and child.type == "double":
+                return child
+            elif isinstance(child, Register):
                 return child
             else:
                 pass  # other expressions
@@ -2311,10 +2407,18 @@ syscall
         return self.oo_gen.function_call(args)
 
     def method_call(self, args):
-        print("method_call", args[0])
-        var = self.token_to_var([args[0].value])
-        if isinstance(var, Array):
+        # print("method call")
+        # print(args)
+
+        var = self.token_to_var([args[0]])
+        if isinstance(var, Array) and args[1].value == "length":
             return self.arr_cgen.arr_length(var)
+        
+        if len(args) == 2:
+            # field call
+            return self.oo_gen.field_call(args)
+        else:
+            return self.oo_gen.mtd_call(args)
 
     """
     Read Integer
@@ -2343,6 +2447,8 @@ move $t{}, $v0;
         return self.arr_cgen.new_array(args)
 
     def access_to_array(self, args):
+        print("access")
+        print(args)
         return self.arr_cgen.access_to_array(args)
 
     """
@@ -2376,6 +2482,36 @@ move $t{}, $v0;
         return args[0]
 
     """
+    Class
+    """
+
+    def class_declare(self, args):
+        return self.oo_gen.class_declare(args)
+
+    def class_dec_finished(self, args):
+        # no need to generate code
+        self.is_in_class = False
+        self.class_name = ""
+        return Result()
+
+    def start_class_dec(self, args):
+        # print("start class")
+        # print(args)
+        self.is_in_class = True 
+        self.class_name = args[0].value
+        # add new class to list
+        clss = ClassMetaData()
+        clss.name = self.class_name
+        if self.first_pass:
+            self.oo_gen.classes[clss.name] = clss
+        return args[0]
+
+    def method_declare(self, args):
+        return self.oo_gen.method_declare(args)
+
+    def create_object(self, args):
+        return self.oo_gen.create_object(args)
+
     Convert
     """
 
@@ -2463,6 +2599,7 @@ li $t{}, 1;
         return reg
 
 
+
 """
 Other Classes
 """
@@ -2488,6 +2625,7 @@ class Variable(Result):
         self.size = None  # in bytes
         self.is_reference = False
         self.is_global = False
+        self.class_offset = None
 
     def calc_size(self):
         if self.is_reference == True:
@@ -2495,12 +2633,14 @@ class Variable(Result):
         else:
             if self.type == "int":
                 self.size = 4
-            if self.type == "bool":
+            elif self.type == "bool":
                 self.size = 1
-            if self.type == "string":
+            elif self.type == "string":
                 self.size = 4  # address of string
-            if self.type == "double":
+            elif self.type == "double":
                 self.size = 8
+            else:
+                self.size = 4
         if "[]" in self.type:
             self.size = 4
             self.is_reference = True
@@ -2526,6 +2666,12 @@ class Register(Result):
         self.number = number
         # self.is_bool = False
         self.is_reference = False  # later
+        
+        self.is_obj = False
+        self.cls_nm = None
+        self.fld_nm = None
+        self.var = None
+        self.addr_register = None
 
     def __str__(self):
         return "register type:{}, kind: {}, number: {}, is_ref: {}".format(

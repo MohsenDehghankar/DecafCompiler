@@ -24,18 +24,6 @@ int main(){
     }
 }
 
-----------------
-
-int main(){
-    bool x;
-    x = true;
-    bool y;
-    y = false;
-
-    print(x != y);
-
-}
-
 -----------------
 
 int main() {
@@ -46,3 +34,4 @@ void fun(string a){
 }
 
 ------------------
+
