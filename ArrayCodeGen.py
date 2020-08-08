@@ -29,6 +29,7 @@ sw $t{}, 0($v0);
 li $t{}, {}
 add $t{}, $t{}, $s{};
 sw $v0, ($t{})
+lw $t{}, ($t{})
         """.format(
             arr_size,
             t1,
@@ -39,6 +40,8 @@ sw $v0, ($t{})
             t1,
             t1,
             1 if var.is_global else 0,
+            t1,
+            t1,
             t1,
         )
         var.write_code(code)
@@ -69,11 +72,8 @@ sw $v0, ($t{})
         index = int(args[1].value)
 
         if isinstance(arr_name, Token):
-            print("arr: {}".format(arr_name.value))
             # arr = self.main_code_gen.symbol_table.variables[arr_name.value]
             arr = self.main_code_gen.token_to_var([arr_name])
-            # print("salam {}".format(arr))
-
             t1 = self.main_code_gen.get_a_free_t_register()
             self.main_code_gen.t_registers[t1] = True
             code = """

@@ -68,12 +68,13 @@ class A{
     
 }
 int main(){
+
     A a;
     a = new A;
     a.b = 2;
     a.func(5);
     print(a.b);
-    
+
 }
 
 class B{

@@ -26,35 +26,12 @@ int main(){
 
 -----------------
 
-int main(){
-    
-    string x;
-    x = ReadLine();
-    print(x);
-
+int main() {
+    fun(ReadLine());
 }
-int main(){
-    
-    string x;
-    x = "salam";
-
-    print(x == ReadLine());
-
+void fun(string a){
+    print(a);
 }
 
 ------------------
 
-function with arr in put
-
-int main(){
-    int[] x;
-    x = NewArray(7, int);
-    x[3] = 12;
-    arr(x);
-
-}
-
-int arr(int[] b){
-    print(b[3]);
-    return 3;
-}

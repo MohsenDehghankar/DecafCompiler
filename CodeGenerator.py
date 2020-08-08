@@ -47,6 +47,8 @@ class CodeGenerator(Transformer):
         # class declaration started
         self.is_in_class = False
         self.class_name = ""
+        self.break_label = None
+
 
     def write_code(self, code_line):
         self.mips_code = self.mips_code + "\n" + code_line
@@ -292,7 +294,7 @@ move $t{},$a0
                 end.name,
                 new_line.name,
                 end.name,
-                t0
+                t0,
             )
         )
         self.t_registers[counter] = False
@@ -579,7 +581,9 @@ s.d $f{}, ($t{});
                     if right_value.type == "string":
                         right_code = """
 move $v0,$t{};
-                """.format(right_value.number)
+                """.format(
+                            right_value.number
+                        )
                     else:
                         right_code = self.code_for_loading_int_reg(t1, right_value)
 
@@ -821,7 +825,7 @@ sw $t{}, ($t{});
                             sym_tbl.name
                         )
                         if last_pass_sym and (
-                                child.value in last_pass_sym.variables.keys()
+                            child.value in last_pass_sym.variables.keys()
                         ):
                             v = last_pass_sym.variables[child.value]
                             if v.address_offset == None and self.is_in_class:
@@ -1368,13 +1372,13 @@ addi $t{}, $zero, 1;
 
         t1.code = current_code + "\n" + t1.code
         t1.code += (
-                "\n"
-                + """
+            "\n"
+            + """
 {} $t{}, $t{}, {};
         
         """.format(
-            _map[inst], t1.number, t2.number, label.name
-        )
+                _map[inst], t1.number, t2.number, label.name
+            )
         )
 
         # t1.write_code(current_code)
@@ -1806,9 +1810,9 @@ b {};
         )
 
         if (
-                len(args) == 4
-                or len(args) == 2
-                or (len(args) == 3 and isinstance(args[1], Register))
+            len(args) == 4
+            or len(args) == 2
+            or (len(args) == 3 and isinstance(args[1], Register))
         ):
             current_code = self.append_code(current_code, args[1].code)
             current_code = self.append_code(
@@ -1851,6 +1855,16 @@ j {};
                 condition_label.name, end_label.name
             ),
         )
+        if self.break_label is not None:
+            current_code = self.append_code(
+                current_code,
+                """
+{}:
+            """.format(
+                    self.break_label.name
+                ),
+            )
+            self.break_label = None
         result = Result()
         result.write_code(current_code)
         return result
@@ -1892,6 +1906,16 @@ j {};
                 loop_lable.name, end_lable.name
             ),
         )
+        if self.break_label is not None:
+            current_code = self.append_code(
+                current_code,
+                """
+{}:
+                                            """.format(
+                    self.break_label.name
+                ),
+            )
+            self.break_label = None
         result = Result()
         result.write_code(current_code)
         return result
@@ -1934,7 +1958,18 @@ j {};
     def pass_stmt(self, args):
         # print(args, 'pass_stmt')
         re = Result()
-        re.code = ""
+        code = ""
+        label = self.get_new_label()
+        code = self.append_code(
+            code,
+            """
+j {};
+        """.format(
+                label.name
+            ),
+        )
+        re.code = code
+        self.break_label = label
         return re
 
     def pass_logic(self, args):
@@ -1982,7 +2017,7 @@ j {};
                 imm = Immediate(1 if args[0].value == "true" else 0, "bool")
                 return imm
             elif args[0].type == "STRING_CONSTANT":
-                return Immediate(args[0].value[1: len(args[0].value) - 1], "string")
+                return Immediate(args[0].value[1 : len(args[0].value) - 1], "string")
         return args
 
     def pass_constant(self, args):
@@ -2158,7 +2193,9 @@ syscall
 move $a0,$t{};
 li $v0, 4;
 syscall
-                            """.format(inp.number)
+                            """.format(
+                                inp.number
+                            ),
                         )
                     self.t_registers[inp.number] = False
 
@@ -2333,9 +2370,9 @@ syscall
 
         # newline after print
         current_code = (
-                current_code
-                + "\n"
-                + """
+            current_code
+            + "\n"
+            + """
 li $v0, 4;
 la $a0, newline;
 syscall
@@ -2474,6 +2511,93 @@ move $t{}, $v0;
 
     def create_object(self, args):
         return self.oo_gen.create_object(args)
+
+    Convert
+    """
+
+    def itod(self, args):
+        print("itod", args[0])
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+        opr = args[0]
+        code = opr.code
+        code = self.append_code(code, self.code_for_loading_opr(t1, opr))
+        f1 = self.get_a_free_f_register()
+        self.f_registers[f1] = True
+        code = self.append_code(
+            code,
+            """
+li $v0, 9;
+li $a0, 8;
+syscall
+sw $t{}, ($v0);
+l.d $f{}, ($v0);
+cvt.d.w $f{}, $f{};
+        """.format(
+                t1, f1, f1, f1
+            ),
+        )
+        self.t_registers[t1] = False
+        reg = Register("double", "f", f1)
+        reg.write_code(code)
+        return reg
+
+    def dtoi(self, args):
+        print("dtoi", args[0])
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+        opr = args[0]
+        f1 = self.load_double_to_reg(opr)
+        code = self.append_code(opr.code, f1.code)
+        code = self.append_code(
+            code,
+            """
+li $v0, 9;
+li $a0, 8;
+syscall
+cvt.w.d $f{}, $f{};
+s.d $f{}, ($v0);
+lw $t{}, ($v0);
+        """.format(
+                t1, f1.number, f1.number, f1.number
+            ),
+        )
+        self.f_registers[f1.number] = False
+        reg = Register("int", "t", t1)
+        reg.write_code(code)
+        return reg
+
+    def itob(self, args):
+        print("itob", args[0])
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+        label = self.get_new_label()
+        opr = args[0]
+        code = self.append_code(opr.code, self.code_for_loading_opr(t1, opr))
+        code = self.append_code(
+            code,
+            """
+beq $t{}, $zero, {};
+li $t{}, 1;
+{}:
+        """.format(
+                t1, label.name, t1, label.name
+            ),
+        )
+        reg = Register("bool", "t", t1)
+        reg.write_code(code)
+        return reg
+
+    def btoi(self, args):
+        print("btoi", args[0])
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+        opr = args[0]
+        code = self.append_code(opr.code, self.code_for_loading_opr(t1, opr))
+        reg = Register("int", "t", t1)
+        reg.write_code(code)
+        return reg
+
 
 
 """

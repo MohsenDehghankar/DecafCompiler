@@ -142,7 +142,6 @@ sw $ra, 4($s0);
                 variable.type = var.children[0]
 
                 variable.calc_size()
-                # print(variable, "aaaaaaaaa")
                 new_offset = last_offset - variable.size
                 new_offset = -new_offset
                 variable.address_offset = (
