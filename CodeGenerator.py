@@ -1738,7 +1738,7 @@ or $t{}, $t{}, $t{};
         return args[0]
 
     def _if(self, args):
-        # print("_if", args)
+        print("_if", args)
         expr_result_reg = args[0]
         end_if_stmt_label = self.get_new_label()
         end_if_else_label = self.get_new_label()
@@ -1753,8 +1753,11 @@ beq $t{}, $zero, {};
             ),
         )
         if_stmt = args[1]
-        for child in if_stmt.children:
-            current_code = self.append_code(current_code, child.code)
+        if isinstance(if_stmt, Result):
+            current_code += if_stmt.code
+        else:
+            for child in if_stmt.children:
+                current_code = self.append_code(current_code, child.code)
         current_code = self.append_code(
             current_code,
             """

@@ -57,30 +57,17 @@ def main(argv):
 
     decaf_code = """
 
-class A{
-    
-    
-    int b;
-    
-    void func(int y){
-        b = y;
-    }
-    
-}
 int main(){
-
-    A a;
-    a = new A;
-    a.b = 2;
-    a.func(5);
-    print(a.b);
-
+    int i;
+    string sep;
+    sep = ", ";
+    for (i =0; i< 10 ; i=i+1){
+        print(i);
+        if (i == 5)
+            break;
+    }
 }
 
-class B{
-    int g;
-    int y;
-}
     """
 
     # write test
