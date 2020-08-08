@@ -1760,9 +1760,14 @@ j {};
             ),
         )
         if self.break_label is not None:
-            current_code = self.append_code(current_code,"""
+            current_code = self.append_code(
+                current_code,
+                """
 {}:
-            """.format(self.break_label.name))
+            """.format(
+                    self.break_label.name
+                ),
+            )
             self.break_label = None
         result = Result()
         result.write_code(current_code)
@@ -1806,10 +1811,14 @@ j {};
             ),
         )
         if self.break_label is not None:
-            current_code = self.append_code(current_code,
-                                            """
+            current_code = self.append_code(
+                current_code,
+                """
 {}:
-                                            """.format(self.break_label.name))
+                                            """.format(
+                    self.break_label.name
+                ),
+            )
             self.break_label = None
         result = Result()
         result.write_code(current_code)
@@ -1855,9 +1864,14 @@ j {};
         re = Result()
         code = ""
         label = self.get_new_label()
-        code = self.append_code(code, """
+        code = self.append_code(
+            code,
+            """
 j {};
-        """.format(label.name))
+        """.format(
+                label.name
+            ),
+        )
         re.code = code
         self.break_label = label
         return re
@@ -2360,6 +2374,93 @@ move $t{}, $v0;
         # print(args[0])
         self.current_function_name = args[0]
         return args[0]
+
+    """
+    Convert
+    """
+
+    def itod(self, args):
+        print("itod", args[0])
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+        opr = args[0]
+        code = opr.code
+        code = self.append_code(code, self.code_for_loading_opr(t1, opr))
+        f1 = self.get_a_free_f_register()
+        self.f_registers[f1] = True
+        code = self.append_code(
+            code,
+            """
+li $v0, 9;
+li $a0, 8;
+syscall
+sw $t{}, ($v0);
+l.d $f{}, ($v0);
+cvt.d.w $f{}, $f{};
+        """.format(
+                t1, f1, f1, f1
+            ),
+        )
+        self.t_registers[t1] = False
+        reg = Register("double", "f", f1)
+        reg.write_code(code)
+        return reg
+
+    def dtoi(self, args):
+        print("dtoi", args[0])
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+        opr = args[0]
+        f1 = self.load_double_to_reg(opr)
+        code = self.append_code(opr.code, f1.code)
+        code = self.append_code(
+            code,
+            """
+li $v0, 9;
+li $a0, 8;
+syscall
+cvt.w.d $f{}, $f{};
+s.d $f{}, ($v0);
+lw $t{}, ($v0);
+        """.format(
+                t1, f1.number, f1.number, f1.number
+            ),
+        )
+        self.f_registers[f1.number] = False
+        reg = Register("int", "t", t1)
+        reg.write_code(code)
+        return reg
+
+    def itob(self, args):
+        print("itob", args[0])
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+        label = self.get_new_label()
+        opr = args[0]
+        code = self.append_code(opr.code, self.code_for_loading_opr(t1, opr))
+        code = self.append_code(
+            code,
+            """
+beq $t{}, $zero, {};
+li $t{}, 1;
+{}:
+        """.format(
+                t1, label.name, t1, label.name
+            ),
+        )
+        reg = Register("bool", "t", t1)
+        reg.write_code(code)
+        return reg
+
+    def btoi(self, args):
+        print("btoi", args[0])
+        t1 = self.get_a_free_t_register()
+        self.t_registers[t1] = True
+        opr = args[0]
+        code = self.append_code(opr.code, self.code_for_loading_opr(t1, opr))
+        reg = Register("int", "t", t1)
+        reg.write_code(code)
+        return reg
 
 
 """

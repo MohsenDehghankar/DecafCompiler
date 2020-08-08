@@ -100,6 +100,10 @@ call : IDENT"("actual?")"               -> function_call
         | "NewArray("expr","type")"     -> new_array
         | "ReadLine()"          -> read_line
         | "ReadInteger()"       -> read_integer
+        | "itod("expr")"       -> itod
+        | "dtoi("expr")"       -> dtoi
+        | "itob("expr")"       -> itob
+        | "btoi("expr")"       -> btoi
         | IDENT                 -> identifier_in_expression    
 
 constants : "this" 
@@ -141,6 +145,10 @@ HEX_NUMBER.2: /0x[\da-f]*/
 READLINE.4: "ReadLine()"
 READINTEGER.2: "ReadInteger()"
 NEWARRAY.4: "NewArray("
+ITOD.4: "itod("
+DTOI.4: "dtoi("
+ITOB.4: "itob("
+BTOI.4: "btoi("
 // EMPTY: ""
 INT: /\d+/
 DOUBLE: /\d+\.\d*[E,e]\+?\d+/ | /\d+\.\d*/

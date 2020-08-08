@@ -58,14 +58,9 @@ def main(argv):
     decaf_code = """
 
 int main(){
-    int i;
-    while(i<10){
-        print(i);
-        i= i+1;
-        if(i==4){
-            break;
-        }
-    }
+    int x;
+    x = btoi(3 == 4);
+    print(x);
 }
 
 
