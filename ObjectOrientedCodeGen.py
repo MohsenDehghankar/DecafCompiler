@@ -177,6 +177,7 @@ jr $ra;
                 exit(4)
         else:
             result = expr[0]
+            print("rrrresullltttt", result)
             code = result.code
             if isinstance(result, CodeGenerator.Variable):
                 # print(result.type)
@@ -386,6 +387,7 @@ add $t{}, $t{}, $t{};
                 ),
             )
             # $t2 has the address for input parameter
+            is_ref = False
 
             if isinstance(input_var, CodeGenerator.Variable):
                 if (
@@ -484,6 +486,7 @@ sw $t{}, ($t{});
                                 t2,
                             ),
                         )
+                        is_ref = True
                     else:
                         code = self.main_code_gen.append_code(
                             code,
@@ -517,6 +520,7 @@ sw $t{}, ($t{});
                                 t2,
                             ),
                         )
+                        is_ref = True
                     else:
                         code = self.main_code_gen.append_code(
                             code,
@@ -550,6 +554,7 @@ sb $t{}, ($t{});
                                 t2,
                             ),
                         )
+                        is_ref = True
                     else:
                         code = self.main_code_gen.append_code(
                             code,
@@ -583,6 +588,7 @@ s.d $t{}, ($t{});
                                 t2,
                             ),
                         )
+                        is_ref = True
                     else:
                         code = self.main_code_gen.append_code(
                             code,
@@ -688,7 +694,12 @@ move $t{}, $v0;
         reg.code = code
 
         if "[]" in func.return_type:
+            is_ref = True
+        if is_ref == True:
             reg.is_reference = True
+            print("aaaaaaaaaaaa")
+        print(input_var, "inputtttttttt")
+        print(var, "inpu22222222")
 
         return reg
 

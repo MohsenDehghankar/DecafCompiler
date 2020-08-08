@@ -545,10 +545,6 @@ s.d $f{}, ($t{});
         if self.first_pass:
             return Result()
 
-        print(
-            "right_value is Variableaaaaaaaaaaaaaaaaaaaaaaaa", left_value, right_value
-        )
-
         # print("right value code: {}: " + right_value.code)
 
         self.type_checking_for_assignment(left_value, right_value)
@@ -2555,11 +2551,10 @@ cvt.d.w $f{}, $f{};
 li $v0, 9;
 li $a0, 8;
 syscall
-cvt.w.d $f{}, $f{};
-s.d $f{}, ($v0);
-lw $t{}, ($v0);
+round.w.d $f{}, $f{};
+mfc1 $t{}, $f{};
         """.format(
-                t1, f1.number, f1.number, f1.number
+                f1.number, f1.number, t1, f1.number
             ),
         )
         self.f_registers[f1.number] = False
