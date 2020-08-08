@@ -17,84 +17,65 @@ la $s1, global_pointer;
 
 
 
+li $t1, 16;
+        
 
 
-
-li $v0, 9;
-li $a0, 3;
+la $a0, input
+li $v0, 8
+li $a1, 16384
 syscall
-        
-
-li $a0,',';
-sb $a0,0($v0);
-                            
-
-li $a0,' ';
-sb $a0,1($v0);
-                            
-
-lb $a0,end_of_string;
-sb $a0,2($v0);
-                            
-
-move $t0, $v0;
-        
-
-li $t1, 12;
-add $t1, $t1, $s0;
-sw $v0, ($t1);
-                    
-
-
-
-
-
-li $t0, 0;
-            
-
-li $t1, 8;
-add $t1, $t1, $s0;
-sw $t0, ($t1);
-                
-
-label8:
-                    
-
-
-
-
-
-
-li $t0, 8;
-add $t0, $t0, $s0;
-lw $t0, ($t0);
-            
-
-
-li $t1, 10;
-                
-
-blt $t0, $t1, label1;
-        
-        
-
-
-add $t0, $zero, $zero;
-b label2;
+addi $t1, $t1, 0
 label1:
-addi $t0, $zero, 1;
+lb $t2, ($a0)
+lb $t3, newline
+beq $t2, $t3, label2
+addi $a0, $a0, 1
+b label1   
 label2:
+sb $zero, ($a0)
+la $a0, input
+move $t0,$a0
         
 
-beq $t0,$zero,label9;
-                                
+li $t2, -4;
+add $t2, $t2, $t1;
+            
+
+move $t3, $t0;
+add $t2, $t2, $s0;
+sw $t3, ($t2);
+                    
+
+li $t3, 16;
+add $t3, $t3, $s0;
+sw $s0, ($t3);
+        
+
+move $t3, $s0;
+add $t3, $t3, 16
+move $s0, $t3;
+jal fun;
+        
+
+move $t3, $v0;
+        
+
+li $v0, 10;
+syscall;
+            
+
+fun:
+
+sw $ra, 4($s0);
+        
 
 
 
 
 
-li $v0, 1;
-li $a0, 8;
+li $v0, 4;
+li $a0, -4;
 add $a0, $a0, $s0;
 lw $a0, ($a0);
 syscall
@@ -104,80 +85,7 @@ li $v0, 4;
 la $a0, newline;
 syscall
         
-
-
-
-
-
-
-
-
-li $t1, 8;
-add $t1, $t1, $s0;
-lw $t1, ($t1);
-            
-
-
-li $t2, 5;
-                
-
-beq $t1, $t2, label3;
+lw $ra, 4($s0);
+lw $s0, ($s0)
+jr $ra;
         
-        
-
-
-add $t1, $zero, $zero;
-b label4;
-label3:
-addi $t1, $zero, 1;
-label4:
-        
-
-beq $t1, $zero, label6;
-        
-
-j label5;
-        
-
-b label7;
-label6:
-        
-
-label7:
-        
-
-
-
-
-
-li $t1, 8;
-add $t1, $t1, $s0;
-lw $t1, ($t1);
-            
-
-
-li $t2, 1;
-                
-
-add $t1, $t1, $t2
-        
-
-
-move $t2, $t1;
-                
-
-li $t1, 8;
-add $t1, $t1, $s0;
-sw $t2, ($t1);
-                
-
-j label8;
-label9:
-                    
-
-label5:
-            
-
-li $v0, 10;
-syscall;
-            

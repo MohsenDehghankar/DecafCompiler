@@ -57,15 +57,11 @@ def main(argv):
 
     decaf_code = """
 
-int main(){
-    int i;
-    string sep;
-    sep = ", ";
-    for (i =0; i< 10 ; i=i+1){
-        print(i);
-        if (i == 5)
-            break;
-    }
+int main() {
+    fun(ReadLine());
+}
+void fun(string a){
+    print(a);
 }
 
     """

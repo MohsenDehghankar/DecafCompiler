@@ -257,10 +257,10 @@ la $s1, global_pointer;
         # print("ReadLine")
         # print(args)
         t0 = self.get_a_free_t_register()
-        counter = self.get_a_free_t_register()
-        t2 = self.get_a_free_t_register()
         self.t_registers[t0] = True
+        counter = self.get_a_free_t_register()
         self.t_registers[counter] = True
+        t2 = self.get_a_free_t_register()
         self.t_registers[t2] = True
         enter = self.get_a_free_t_register()
         new_line = self.get_new_label()
