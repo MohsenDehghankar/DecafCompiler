@@ -50,8 +50,8 @@ jr $ra;
         return args
 
     def func_declare(self, args):
-        # print("all functions:")
-        # print(args)
+        print("all functions:")
+        print(args)
         # pass two above reductions
         args = args[0]
 
@@ -727,9 +727,9 @@ move $t{}, $v0;
         return args
 
     def method_declare(self, args):
-        print("method: ")
-        print(args)
-        args[0][1].value = self.main_code_gen.class_name + "_" + args[0][1].value
+        # print("method: ")
+        # print(args)
+        args[0][1].value = self.main_code_gen.class_name + "." + args[0][1].value
         # add name of method
         if self.main_code_gen.first_pass:
             self.classes[self.main_code_gen.class_name].methods.append(args[0][1].value)
@@ -750,7 +750,7 @@ move $t{}, $v0;
         fld = clss.get_field(field_name)
 
         # write value to t2
-        
+
         if fld.type == "bool":
             pass    # todo
         elif fld.type == "string":
@@ -833,6 +833,21 @@ move $t{}, $v0;
         reg.is_reference = True
         reg.code = code
         return reg
+
+    def mtd_call(self, args):
+        print("mtd_call")
+        print(args)
+
+        var = self.main_code_gen.token_to_var([args[0]])
+        fnc_nm = var.type + "." + args[1].value
+
+        args[2].append(var)
+
+        t = Token("IDENT", fnc_nm)
+        args = [t, args[2]]
+        return self.function_call(args)
+
+        
 
 
 

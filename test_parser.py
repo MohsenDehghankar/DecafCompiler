@@ -62,20 +62,21 @@ class A{
     int c;
     int b;
     
+    int func(int y, int b){
+        print(y);
+        this.a = 80;
+        return b;
+    }
 }
 int main(){
     A a;
     a = new A;
-    a.b = 10;
-    a.b = a.b + 2;
-    a.c = 90;
-    a.a = a.c * a.b;
+    int x;
+    int y;
+    a.a = 90;
     print(a.a);
-    B alpha;
-    alpha = new B;
-    alpha.g = 100;
-    alpha.y = alpha.g + a.a;
-    print(alpha.y);
+    a.func(10, x);
+    print(a.a);
 }
 
 class B{

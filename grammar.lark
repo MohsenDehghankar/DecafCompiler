@@ -102,8 +102,7 @@ call : IDENT"("actual?")"               -> function_call
         | "ReadInteger()"       -> read_integer
         | IDENT                 -> identifier_in_expression    
 
-constants : "this" 
-        | constant              -> pass_constant
+constants : constant              -> pass_constant
 
 actual : actual","expr          -> prevent_tree_generation_for_actual 
         | expr                  -> exp_to_actual

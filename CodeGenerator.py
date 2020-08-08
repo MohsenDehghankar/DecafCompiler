@@ -2364,13 +2364,15 @@ syscall
         print("method call")
         print(args)
 
-        var = self.symbol_table.variables[args[0]]
+        var = self.token_to_var([args[0]])
         if isinstance(var, Array) and args[1].value == "length":
             return self.arr_cgen.arr_length(var)
         
         if len(args) == 2:
             # field call
             return self.oo_gen.field_call(args)
+        else:
+            return self.oo_gen.mtd_call(args)
 
     """
     Read Integer
