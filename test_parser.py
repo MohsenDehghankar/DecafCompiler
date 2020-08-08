@@ -57,29 +57,31 @@ def main(argv):
 
     decaf_code = """
 
-class A {
+class A{
     int a;
+    int c;
     int b;
-    string c;
     
-    int getA(){
-        int b;
-        b = 8;
-        return b;
-    }
+}
+int main(){
+    A a;
+    a = new A;
+    a.b = 10;
+    a.b = a.b + 2;
+    a.c = 90;
+    a.a = a.c * a.b;
+    print(a.a);
+    B alpha;
+    alpha = new B;
+    alpha.g = 100;
+    alpha.y = alpha.g + a.a;
+    print(alpha.y);
 }
 
-int main() {
-    int xxx;
+class B{
+    int g;
+    int y;
 }
-
-class B {
-    int a;
-    int[] b;
-    string u;
-}
-
-
     """
 
     # write test
@@ -100,12 +102,12 @@ class B {
     for clas in codeGen.oo_gen.classes.keys():
         print("--class: {}, fields: ".format(clas))
         for f in codeGen.oo_gen.classes[clas].fields:
-            print(f)
+            print(f , f.class_offset)
 
     tree = parser.parse(decaf_code)
 
     # print(tree.pretty())
-    """
+    
     print("\n\n------------symbol tables-------------------")
     for table in first_pass_code_gen.symbol_tables:
         print(
@@ -116,7 +118,7 @@ class B {
             )
         )
     print("---------------end--------------------------\n\n")
-    """
+    
     """
     print("---------------------------------------\nsymbol table: ")
     for var in codeGen.symbol_table.variables.keys():

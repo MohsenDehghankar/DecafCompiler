@@ -101,6 +101,8 @@ la $s1, global_pointer;
 
         if "[]" in self.type_tmp:
             self.create_variable(self.type_tmp, variable_name, True)
+        elif not self.type_tmp in ["bool", "int", "string", "double"]:
+            self.create_variable(self.type_tmp, variable_name, True, is_obj = True)
         else:
             self.create_variable(self.type_tmp, variable_name, False)
         self.type_tmp = None
@@ -110,7 +112,7 @@ la $s1, global_pointer;
     Create a variable in Memory and add to Symbol Table
     """
 
-    def create_variable(self, var_type, var_name, is_ref=False):
+    def create_variable(self, var_type, var_name, is_ref=False, is_obj = False):
         # dynamic allocation
         variable = None
 
@@ -156,7 +158,22 @@ la $s1, global_pointer;
         variable.is_reference = is_ref
         variable.calc_size()
 
-        self.oo_gen.classes[self.class_name].fields.append(variable)
+        # print("var size: {}, {}".format(variable.size, variable.is_reference))
+
+        clss = self.oo_gen.classes[self.class_name]
+        if clss.last_var == None:
+            variable.class_offset = 0
+        else:
+            offset = clss.last_var.size + clss.last_var.class_offset
+            variable.class_offset = (
+                offset
+                if offset % variable.size == 0
+                else offset + (variable.size - offset % variable.size)
+            )
+        clss.last_var = variable
+
+        if self.first_pass:
+            self.oo_gen.classes[self.class_name].fields.append(variable)
 
         
 
@@ -216,9 +233,17 @@ la $s1, global_pointer;
         self.type_tmp = None
 
     def array_variable_declaration(self, args):
-        print("array_declaration", args)
+        # print("array_declaration", args)
         self.type_tmp = "{}[]".format(args[0])
         return self.type_tmp
+
+    def class_type_def(self, args):
+        # print("class type def")
+        # print(args)
+        self.type_tmp = args[0].value
+        return args[0].value
+
+    
 
     """
     Read from console
@@ -229,9 +254,11 @@ la $s1, global_pointer;
         # print(args)
         t0 = self.get_a_free_t_register()
         counter = self.get_a_free_t_register()
+        t2 = self.get_a_free_t_register()
         self.t_registers[t0] = True
         self.t_registers[counter] = True
-        t2 = self.get_a_free_t_register()
+        self.t_registers[t2] = True
+        enter = self.get_a_free_t_register()
         new_line = self.get_new_label()
         end = self.get_new_label()
         reg = Register("string", "t", t0)
@@ -244,7 +271,8 @@ syscall
 addi $t{}, $t{}, 0
 {}:
 lb $t{}, ($a0)
-beq $t{}, '\\n', {}
+lb $t{}, newline
+beq $t{}, $t{}, {}
 addi $a0, $a0, 1
 b {}   
 {}:
@@ -256,13 +284,17 @@ move $t{},$a0
                 counter,
                 new_line.name,
                 t2,
+                enter,
                 t2,
+                enter,
                 end.name,
                 new_line.name,
                 end.name,
                 t0
             )
         )
+        self.t_registers[counter] = False
+        self.t_registers[t2] = False
         return reg
 
     """
@@ -508,10 +540,13 @@ s.d $f{}, ($t{});
 
     def assignment_calculated(self, args):
         # print("assignment calculated")
-        # print(args[0])
-        # print(args[1])
+        # print(args)
+
         left_value = args[0]
         right_value = args[1]
+
+        if self.first_pass:
+            return Result()
 
         # print("right value code: {}: " + right_value.code)
 
@@ -551,6 +586,10 @@ move $v0,$t{};
                     right_code = self.code_for_loading_bool_ref_reg(t1, right_value)
                 else:
                     right_code = self.code_for_loading_int_reg(t1, right_value)
+            elif right_value.is_reference:
+                # obj it is
+                right_code = self.code_for_loading_int_reg(t1, right_value)
+
 
             # now right register can be free
             if right_value.kind == "t":
@@ -572,7 +611,40 @@ move $v0,$t{};
 
         # left
         if isinstance(left_value, Register):
-            if left_value.is_reference == True:
+            if left_value.is_obj:
+                t = self.get_a_free_t_register()
+                t3 = left_value.number
+
+                fld = self.oo_gen.classes[left_value.cls_nm].get_field(left_value.fld_nm)
+
+                current_code += """
+li $t{}, {};
+add $t{}, $t{}, $s0;
+lw $t{}, ($t{});
+# now address of obj is in $t{}
+li $t{}, {};
+add $t{}, $t{}, $t{};
+# now $t{} has fld offset
+sw $t{}, ($t{});
+                """.format(
+                    t,
+                    left_value.var.address_offset,
+                    t,
+                    t,
+                    t,
+                    t,
+                    t,
+                    t3,
+                    fld.class_offset,
+                    t3,
+                    t3,
+                    t,
+                    t3,
+                    t1,
+                    t3
+                )
+
+            elif left_value.is_reference == True:
                 current_code = self.append_code(
                     current_code,
                     """
@@ -589,10 +661,6 @@ move ${}, $t{};
                     """.format(
                         left_value.kind + str(left_value.number), t1
                     ),
-                    # =======
-                    #            current_code = self.append_code(
-                    #                current_code, self.store_ref_reg(left_value, t1)
-                    # >>>>>>> master
                 )
             # TODO: handle other types
 
@@ -762,6 +830,8 @@ sw $t{}, ($t{});
                 exit(4)
 
             elif isinstance(child, Variable) and child.type == "double":
+                return child
+            elif isinstance(child, Register):
                 return child
             else:
                 pass  # other expressions
@@ -2291,9 +2361,16 @@ syscall
         return self.oo_gen.function_call(args)
 
     def method_call(self, args):
+        print("method call")
+        print(args)
+
         var = self.symbol_table.variables[args[0]]
-        if isinstance(var, Array):
+        if isinstance(var, Array) and args[1].value == "length":
             return self.arr_cgen.arr_length(var)
+        
+        if len(args) == 2:
+            # field call
+            return self.oo_gen.field_call(args)
 
     """
     Read Integer
@@ -2322,6 +2399,8 @@ move $t{}, $v0;
         return self.arr_cgen.new_array(args)
 
     def access_to_array(self, args):
+        print("access")
+        print(args)
         return self.arr_cgen.access_to_array(args)
 
     """
@@ -2382,6 +2461,9 @@ move $t{}, $v0;
     def method_declare(self, args):
         return self.oo_gen.method_declare(args)
 
+    def create_object(self, args):
+        return self.oo_gen.create_object(args)
+
 
 """
 Other Classes
@@ -2408,6 +2490,7 @@ class Variable(Result):
         self.size = None  # in bytes
         self.is_reference = False
         self.is_global = False
+        self.class_offset = None
 
     def calc_size(self):
         if self.is_reference == True:
@@ -2415,12 +2498,14 @@ class Variable(Result):
         else:
             if self.type == "int":
                 self.size = 4
-            if self.type == "bool":
+            elif self.type == "bool":
                 self.size = 1
-            if self.type == "string":
+            elif self.type == "string":
                 self.size = 4  # address of string
-            if self.type == "double":
+            elif self.type == "double":
                 self.size = 8
+            else:
+                self.size = 4
         if "[]" in self.type:
             self.size = 4
             self.is_reference = True
@@ -2446,6 +2531,12 @@ class Register(Result):
         self.number = number
         # self.is_bool = False
         self.is_reference = False  # later
+        
+        self.is_obj = False
+        self.cls_nm = None
+        self.fld_nm = None
+        self.var = None
+        self.addr_register = None
 
     def __str__(self):
         return "register type:{}, kind: {}, number: {}, is_ref: {}".format(

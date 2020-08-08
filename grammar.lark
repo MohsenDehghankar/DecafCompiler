@@ -16,7 +16,7 @@ type : "int"            -> int_variable_declaraion
         | "double"      -> double_variable_declaration
         | "bool"        -> bool_variable_declaration
         | "string"      -> string_variable_declaration
-        | IDENT 
+        | IDENT         -> class_type_def
         | type "[]"     -> array_variable_declaration 
 
 //--------function dec--------
@@ -92,7 +92,7 @@ paranthes : "("expr")"          -> paranthes_action     // start of expression
 
 high_proior : high_proior "." IDENT ("("actual?")")?    -> method_call
         | high_proior"["expr"]"         -> access_to_array
-        | "new" IDENT
+        | "new" IDENT           -> create_object
         | call                  -> call_action
         | constants             -> constant_operand     
 

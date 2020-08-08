@@ -69,7 +69,11 @@ sw $v0, ($t{})
         index = int(args[1].value)
 
         if isinstance(arr_name, Token):
-            arr = self.main_code_gen.symbol_table.variables[arr_name]
+            print("arr: {}".format(arr_name.value))
+            # arr = self.main_code_gen.symbol_table.variables[arr_name.value]
+            arr = self.main_code_gen.token_to_var([arr_name])
+            # print("salam {}".format(arr))
+
             t1 = self.main_code_gen.get_a_free_t_register()
             self.main_code_gen.t_registers[t1] = True
             code = """

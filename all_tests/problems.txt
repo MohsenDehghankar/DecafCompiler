@@ -43,3 +43,18 @@ int main(){
 }
 
 ------------------
+
+function with arr in put
+
+int main(){
+    int[] x;
+    x = NewArray(7, int);
+    x[3] = 12;
+    arr(x);
+
+}
+
+int arr(int[] b){
+    print(b[3]);
+    return 3;
+}
