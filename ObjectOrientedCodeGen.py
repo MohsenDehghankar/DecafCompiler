@@ -50,8 +50,8 @@ jr $ra;
         return args
 
     def func_declare(self, args):
-        print("all functions:")
-        print(args)
+        # print("all functions:")
+        # print(args)
         # pass two above reductions
         args = args[0]
 
@@ -129,7 +129,8 @@ sw $ra, 4($s0);
         if self.main_code_gen.is_in_class:
             to = Token("IDENT", "this")
             t = Tree("variable",[self.main_code_gen.class_name, to])
-            args.append(t)
+            args = [t] + args
+            # args.append(t)
 
         # set variables above the frame
         last_offset = 0
@@ -721,8 +722,8 @@ move $t{}, $v0;
     '''
 
     def class_declare(self, args):
-        print("class: ")
-        print(args)
+        # print("class: ")
+        # print(args)
 
         return args
 
@@ -835,13 +836,17 @@ move $t{}, $v0;
         return reg
 
     def mtd_call(self, args):
-        print("mtd_call")
-        print(args)
+        # print("mtd_call")
+        # print(args)
 
         var = self.main_code_gen.token_to_var([args[0]])
         fnc_nm = var.type + "." + args[1].value
 
-        args[2].append(var)
+        # args[2].append(var)
+        if isinstance(args[2], list):
+            args[2] = [var] + args[2]
+        else:
+            args[2] = [var] + [args[2]]
 
         t = Token("IDENT", fnc_nm)
         args = [t, args[2]]

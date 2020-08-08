@@ -171,7 +171,9 @@ la $s1, global_pointer;
                 else offset + (variable.size - offset % variable.size)
             )
         clss.last_var = variable
+        # variable.address_offset = variable.class_offset
 
+        self.symbol_table.variables[field_name] = variable
         if self.first_pass:
             self.oo_gen.classes[self.class_name].fields.append(variable)
 
@@ -807,6 +809,9 @@ sw $t{}, ($t{});
                     # print("sym: {}: {}".format(sym_tbl.function_name, sym_tbl.variables))
                     # print(child.value)
                     if child.value in sym_tbl.variables.keys():
+                        v = sym_tbl.variables[child.value]
+                        if v.address_offset == None:
+                            return self.method_call([Token("IDENT", "this"), child])
                         return sym_tbl.variables[child.value]
 
                     if not self.first_pass:
@@ -817,6 +822,9 @@ sw $t{}, ($t{});
                         if last_pass_sym and (
                                 child.value in last_pass_sym.variables.keys()
                         ):
+                            v = last_pass_sym.variables[child.value]
+                            if v.address_offset == None:
+                                return self.method_call([Token("IDENT", "this"), child])
                             return last_pass_sym.variables[child.value]
 
                     sym_tbl = sym_tbl.parent
@@ -2361,8 +2369,8 @@ syscall
         return self.oo_gen.function_call(args)
 
     def method_call(self, args):
-        print("method call")
-        print(args)
+        # print("method call")
+        # print(args)
 
         var = self.token_to_var([args[0]])
         if isinstance(var, Array) and args[1].value == "length":

@@ -58,25 +58,24 @@ def main(argv):
     decaf_code = """
 
 class A{
-    int a;
+    
     int c;
     int b;
     
-    int func(int y, int b){
-        print(y);
-        this.a = 80;
-        return b;
+    void func(int y){
+        a = y;
+        b = 50;
     }
+    int a;
 }
 int main(){
     A a;
     a = new A;
-    int x;
-    int y;
     a.a = 90;
     print(a.a);
-    a.func(10, x);
+    a.func(10);
     print(a.a);
+    print(a.b);
 }
 
 class B{
@@ -100,16 +99,17 @@ class B{
     codeGen.oo_gen.classes = first_pass_code_gen.oo_gen.classes
 
     # check fields of class
-    for clas in codeGen.oo_gen.classes.keys():
-        print("--class: {}, fields: ".format(clas))
-        for f in codeGen.oo_gen.classes[clas].fields:
-            print(f , f.class_offset)
+    # for clas in codeGen.oo_gen.classes.keys():
+    #     print("--class: {}, fields: ".format(clas))
+    #     for f in codeGen.oo_gen.classes[clas].fields:
+    #         print(f , f.class_offset)
 
     tree = parser.parse(decaf_code)
 
     # print(tree.pretty())
     
-    print("\n\n------------symbol tables-------------------")
+    
+    '''print("\n\n------------symbol tables-------------------")
     for table in first_pass_code_gen.symbol_tables:
         print(
             "{} --> {} : {}".format(
@@ -118,7 +118,7 @@ class B{
                 table.variables,
             )
         )
-    print("---------------end--------------------------\n\n")
+    print("---------------end--------------------------\n\n")'''
     
     """
     print("---------------------------------------\nsymbol table: ")
