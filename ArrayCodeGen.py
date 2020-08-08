@@ -122,13 +122,23 @@ add $t{}, $t{}, $t{};
                 reg.code,
                 """
 lw $t{}, ($t{});
-addi $t{}, $t{}, {};
+# calc index
+addi $t{}, $t{}, 1
+mul $t{}, $t{}, {}
+mflo $t{};
+addi $t{}, $t{}, $t{};
             """.format(
                     t1,
                     reg.number,
+                    index,
+                    index,
+                    index,
+                    index,
+                    self.calc_size_of_index(reg.type),
+                    index,
                     t1,
                     t1,
-                    (index + 1) * self.calc_size_of_index(reg.type),
+                    index,
                 ),
             )
             output_type = self.get_output_type(reg.type)  # int[][] -> int[]

@@ -62,7 +62,6 @@ class CodeGenerator(Transformer):
 .data
 frame_pointer:  .space  10000
 global_pointer: .space  10000
-input:          .space  16384
 true_const:     .asciiz "true"
 false_const:    .asciiz "false"
 end_of_string:  .byte   0
@@ -228,6 +227,7 @@ la $s1, global_pointer;
         return "void"
 
     def save_function_type(self, args):
+        # print("save function type {}".format(self.type_tmp))
         self.func_type_tmp = self.type_tmp
         self.type_tmp = None
 
@@ -261,10 +261,14 @@ la $s1, global_pointer;
         reg = Register("string", "t", t0)
         reg.write_code(
             """
-la $a0, input
+li $v0, 9
+li $a0, 16384
+syscall
+move $a0, $v0
 li $v0, 8
 li $a1, 16384
 syscall
+move $v0, $a0
 addi $t{}, $t{}, 0
 {}:
 lb $t{}, ($a0)
@@ -274,8 +278,7 @@ addi $a0, $a0, 1
 b {}   
 {}:
 sb $zero, ($a0)
-la $a0, input
-move $t{},$a0
+move $t{},$v0
         """.format(
                 counter,
                 counter,
@@ -287,7 +290,7 @@ move $t{},$a0
                 end.name,
                 new_line.name,
                 end.name,
-                t0,
+                t0
             )
         )
         self.t_registers[counter] = False
@@ -299,7 +302,7 @@ move $t{},$a0
     """
 
     def get_a_free_t_register(self):
-        for i in range(10):
+        for i in range(15):
             if not self.t_registers[i]:
                 return i
         print("Not Enough Regsiter to Use!")
@@ -536,8 +539,8 @@ s.d $f{}, ($t{});
         return code
 
     def assignment_calculated(self, args):
-        print("assignment calculated")
-        print(args)
+        # print("assignment calculated")
+        # print(args)
 
         left_value = args[0]
         right_value = args[1]
@@ -1792,20 +1795,40 @@ or $t{}, $t{}, $t{};
         return args[0]
 
     def _if(self, args):
-        print("_if", args)
+        # print("_if", args)
         expr_result_reg = args[0]
         end_if_stmt_label = self.get_new_label()
         end_if_else_label = self.get_new_label()
         current_code = ""
         current_code = self.append_code(current_code, expr_result_reg.code)
-        current_code = self.append_code(
-            current_code,
-            """
+
+        if isinstance(expr_result_reg, Variable):
+            t = self.get_a_free_t_register()
+            current_code += """
+li $t{}, {};
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
 beq $t{}, $zero, {};
-        """.format(
-                expr_result_reg.number, end_if_stmt_label.name
-            ),
-        )
+            """.format(
+                t,
+                expr_result_reg.address_offset,
+                t,
+                t,
+                1 if expr_result_reg.is_global else 0,
+                t,
+                t,
+                t,
+                end_if_stmt_label.name
+            )
+        else:
+            current_code = self.append_code(
+                current_code,
+                """
+beq $t{}, $zero, {};
+            """.format(
+                    expr_result_reg.number, end_if_stmt_label.name
+                ),
+            )
         if_stmt = args[1]
         if isinstance(if_stmt, Result):
             current_code += if_stmt.code
