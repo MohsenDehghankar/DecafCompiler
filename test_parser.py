@@ -56,25 +56,18 @@ def main(argv):
     codeGen.create_data_segment()
 
     decaf_code = """
-int main(){
-    double x;
-    x = 2.55;
-    print(dtoi(x));
-}
-    """
-    #     decaf_code = """
-    # int main(){
-    #     int[] x;
-    #     x = NewArray(13, int);
-    #     x[3] = 21;
-    #     int y;
-    #     y = fun(x);
-    #     print(y);
-    # }
-    # int fun(int[] x){
-    #     return x[3];
-    # }
-    #     """
+    int main(){
+        int[] x;
+        x = NewArray(13, int);
+        x[3] = 21;
+        int y;
+        y = fun(x);
+        print(y);
+    }
+    int fun(int[] x){
+        return x[3];
+    }
+        """
     #     decaf_code = """
 
     # class A{

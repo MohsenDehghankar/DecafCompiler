@@ -177,7 +177,6 @@ jr $ra;
                 exit(4)
         else:
             result = expr[0]
-            print("rrrresullltttt", result)
             code = result.code
             if isinstance(result, CodeGenerator.Variable):
                 # print(result.type)
@@ -212,14 +211,62 @@ jr $ra;
                     print("Invalid return type!")
                     exit(4)
                 elif result.type == "double":
-                    code += """
+                    if result.is_reference == True:
+                        code += """
+lw $ra, 4($s0);
+l.d $f0, ($t{});
+lw $s0, ($s0);
+jr $ra;
+                """.format(
+                            result.number
+                        )
+                    else:
+                        code += """
 lw $ra, 4($s0);
 mov.d $f0, $f{};
 lw $s0, ($s0);
 jr $ra;
                 """.format(
-                        result.number
-                    )
+                            result.number
+                        )
+                elif result.type == "int":
+                    if result.is_reference == True:
+                        code += """
+lw $ra, 4($s0);
+lw $v0, (${})
+lw $s0, ($s0);
+jr $ra;
+                """.format(
+                            result.kind + str(result.number)
+                        )
+                    else:
+                        code += """
+lw $ra, 4($s0);
+move $v0, ${};
+lw $s0, ($s0);
+jr $ra;
+                """.format(
+                            result.kind + str(result.number)
+                        )
+                elif result.type == "bool":
+                    if result.is_reference == True:
+                        code += """
+lw $ra, 4($s0);
+lb $v0, (${})
+lw $s0, ($s0);
+jr $ra;
+                """.format(
+                            result.kind + str(result.number)
+                        )
+                    else:
+                        code += """
+lw $ra, 4($s0);
+move $v0, ${};
+lw $s0, ($s0);
+jr $ra;
+                """.format(
+                            result.kind + str(result.number)
+                        )
                 else:
                     code += """
 lw $ra, 4($s0);
@@ -695,11 +742,6 @@ move $t{}, $v0;
 
         if "[]" in func.return_type:
             is_ref = True
-        if is_ref == True:
-            reg.is_reference = True
-            print("aaaaaaaaaaaa")
-        print(input_var, "inputtttttttt")
-        print(var, "inpu22222222")
 
         return reg
 
@@ -812,6 +854,7 @@ lw $t{}, ($t{});
             reg = CodeGenerator.Register(fld.type, "t", t2)
             reg.code = code
             reg.is_obj = True
+            reg.is_reference = True
             reg.cls_nm = variable.type
             reg.fld_nm = field_name
             reg.var = variable
