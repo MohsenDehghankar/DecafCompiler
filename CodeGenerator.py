@@ -2512,6 +2512,7 @@ move $t{}, $v0;
     def create_object(self, args):
         return self.oo_gen.create_object(args)
 
+    """
     Convert
     """
 
