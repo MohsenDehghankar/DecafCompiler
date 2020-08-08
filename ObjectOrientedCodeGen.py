@@ -421,20 +421,25 @@ jr $ra;
         t3 = self.main_code_gen.get_a_free_t_register()
         f1 = self.main_code_gen.get_a_free_f_register()
 
-        code = self.main_code_gen.append_code(
-            code,
-            """
-li $t{}, {};
-        """.format(
-                t1, new_offset
-            ),
-        )
+        
 
         for i in range(len(func.arguments)):
             var = func.arguments[i]
             input_var = arguments[i]
             off = var.address_offset
 
+            # add codes of arguments
+            code += "\n" + input_var.code
+
+            code = self.main_code_gen.append_code(
+                        code,
+                        """
+li $t{}, {};
+                    """.format(
+                            t1, new_offset
+                        ),
+                    )
+                    
             code = self.main_code_gen.append_code(
                 code,
                 """
@@ -444,9 +449,6 @@ add $t{}, $t{}, $t{};
                     t2, off, t2, t2, t1
                 ),
             )
-
-            # add codes of arguments
-            code += "\n" + input_var.code
 
             
             # $t2 has the address for input parameter

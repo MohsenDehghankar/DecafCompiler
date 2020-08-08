@@ -57,16 +57,17 @@ def main(argv):
 
     decaf_code = """
 
-int main(){
-string s;
-string x;
-s = ReadLine();
-x = ReadLine();
-print(s);
-print(x);
-print(x == s);
-    }
+int main() {
+    int x;
+    x = 10;
+    int y;
+    y = x * 90 + 50;
+    func(y);
+}
 
+void func(int g){
+    print(g);
+}
 
 
     """

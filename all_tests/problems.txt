@@ -16,20 +16,6 @@ int main(){
 -----------------
 
 int main() {
-    string x;
-    string x2;
-    string x3;
-   
-    x = ReadLine();
-    x2 = ReadLine();
-    x3 = ReadLine();
-
-    print(x, x2,x3);
-}
-
------------------
-
-int main() {
     int[] arr;
     arr = NewArray(10, int);
     
