@@ -59,23 +59,21 @@ def main(argv):
 
 class A{
     
-    int c;
+    
     int b;
     
     void func(int y){
-        a = y;
-        b = 50;
+        b = y;
     }
-    int a;
+    
 }
 int main(){
     A a;
     a = new A;
-    a.a = 90;
-    print(a.a);
-    a.func(10);
-    print(a.a);
+    a.b = 2;
+    a.func(5);
     print(a.b);
+    
 }
 
 class B{

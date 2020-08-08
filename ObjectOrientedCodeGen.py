@@ -757,7 +757,9 @@ move $t{}, $v0;
         elif fld.type == "string":
             pass    # todo
         elif fld.type == "double":
-            pass    # todo
+            # variable value
+            # register for address
+            pass
         else:   
             # 4 byte fields
             # get field from variable address
@@ -797,13 +799,13 @@ lw $t{}, ($t{});
                 t2
             )
 
-        reg = CodeGenerator.Register(fld.type, "t", t2)
-        reg.code = code
-        reg.is_obj = True
-        reg.cls_nm = variable.type
-        reg.fld_nm = field_name
-        reg.var = variable
-        return reg
+            reg = CodeGenerator.Register(fld.type, "t", t2)
+            reg.code = code
+            reg.is_obj = True
+            reg.cls_nm = variable.type
+            reg.fld_nm = field_name
+            reg.var = variable
+            return reg
 
 
         

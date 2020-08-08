@@ -19,7 +19,7 @@ la $s1, global_pointer;
 
 # create object for A
 li $v0, 9;
-li $a0, 12;
+li $a0, 4;
 syscall
 # move address to t1
 move $t0, $v0;
@@ -41,7 +41,7 @@ add $t1, $t1, $s0;
 lw $t1, ($t1)
 
 # now $t1 has the address of obj
-li $t0, 8;
+li $t0, 0;
 add $t1, $t1, $t0;
 
 # now $t1 has address of field
@@ -49,43 +49,17 @@ lw $t0, ($t1);
 # field moved to $t0
             
 
-li $t1, 90;
+li $t1, 2;
             
 li $t2, 8;
 add $t2, $t2, $s0;
 lw $t2, ($t2);
 # now address of obj is in $t2
-li $t0, 8;
+li $t0, 0;
 add $t0, $t0, $t2;
 # now $t0 has fld offset
 sw $t1, ($t0);
                 
-
-
-
-# get address of obj
-li $t1, 8;
-add $t1, $t1, $s0;
-lw $t1, ($t1)
-
-# now $t1 has the address of obj
-li $t0, 8;
-add $t1, $t1, $t0;
-
-# now $t1 has address of field
-lw $t0, ($t1);
-# field moved to $t0
-            
-
-li $v0, 1;
-move $a0, $t0;
-syscall
-                        
-
-li $v0, 4;
-la $a0, newline;
-syscall
-        
 
 
 li $t0, 24;
@@ -105,7 +79,7 @@ sw $t2, ($t1);
 li $t1, -8;
 add $t1, $t1, $t0;
             
-li $t2, 10;
+li $t2, 5;
 add $t1, $t1, $s0;
 sw $t2, ($t1);
                     
@@ -132,33 +106,7 @@ add $t1, $t1, $s0;
 lw $t1, ($t1)
 
 # now $t1 has the address of obj
-li $t0, 8;
-add $t1, $t1, $t0;
-
-# now $t1 has address of field
-lw $t0, ($t1);
-# field moved to $t0
-            
-
-li $v0, 1;
-move $a0, $t0;
-syscall
-                        
-
-li $v0, 4;
-la $a0, newline;
-syscall
-        
-
-
-
-# get address of obj
-li $t1, 8;
-add $t1, $t1, $s0;
-lw $t1, ($t1)
-
-# now $t1 has the address of obj
-li $t0, 4;
+li $t0, 0;
 add $t1, $t1, $t0;
 
 # now $t1 has address of field
@@ -196,7 +144,7 @@ add $t1, $t1, $s0;
 lw $t1, ($t1)
 
 # now $t1 has the address of obj
-li $t0, 8;
+li $t0, 0;
 add $t1, $t1, $t0;
 
 # now $t1 has address of field
@@ -212,34 +160,7 @@ li $t2, -4;
 add $t2, $t2, $s0;
 lw $t2, ($t2);
 # now address of obj is in $t2
-li $t0, 8;
-add $t0, $t0, $t2;
-# now $t0 has fld offset
-sw $t1, ($t0);
-                
-
-
-# get address of obj
-li $t1, -4;
-add $t1, $t1, $s0;
-lw $t1, ($t1)
-
-# now $t1 has the address of obj
-li $t0, 4;
-add $t1, $t1, $t0;
-
-# now $t1 has address of field
-lw $t0, ($t1);
-# field moved to $t0
-            
-
-li $t1, 50;
-            
-li $t2, -4;
-add $t2, $t2, $s0;
-lw $t2, ($t2);
-# now address of obj is in $t2
-li $t0, 4;
+li $t0, 0;
 add $t0, $t0, $t2;
 # now $t0 has fld offset
 sw $t1, ($t0);

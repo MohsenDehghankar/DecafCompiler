@@ -646,6 +646,7 @@ sw $t{}, ($t{});
                     t3
                 )
 
+
             elif left_value.is_reference == True:
                 current_code = self.append_code(
                     current_code,
@@ -810,7 +811,7 @@ sw $t{}, ($t{});
                     # print(child.value)
                     if child.value in sym_tbl.variables.keys():
                         v = sym_tbl.variables[child.value]
-                        if v.address_offset == None:
+                        if v.address_offset == None and self.is_in_class:
                             return self.method_call([Token("IDENT", "this"), child])
                         return sym_tbl.variables[child.value]
 
@@ -823,7 +824,7 @@ sw $t{}, ($t{});
                                 child.value in last_pass_sym.variables.keys()
                         ):
                             v = last_pass_sym.variables[child.value]
-                            if v.address_offset == None:
+                            if v.address_offset == None and self.is_in_class:
                                 return self.method_call([Token("IDENT", "this"), child])
                             return last_pass_sym.variables[child.value]
 
