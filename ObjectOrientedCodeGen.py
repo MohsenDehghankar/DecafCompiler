@@ -160,8 +160,8 @@ sw $ra, 4($s0);
     """
 
     def return_from_func(self, args):
-        print("return")
-        print(args)
+        # print("return")
+        # print(args)
         expr = args[0].children
         code = ""
         if len(expr) == 0:
@@ -741,7 +741,7 @@ move $t{}, $v0;
         reg.code = code
 
         if "[]" in func.return_type:
-            is_ref = True
+            reg.is_reference = True
 
         return reg
 
