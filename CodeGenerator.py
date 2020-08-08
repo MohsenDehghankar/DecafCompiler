@@ -228,6 +228,7 @@ la $s1, global_pointer;
         return "void"
 
     def save_function_type(self, args):
+        # print("save function type {}".format(self.type_tmp))
         self.func_type_tmp = self.type_tmp
         self.type_tmp = None
 
@@ -536,18 +537,14 @@ s.d $f{}, ($t{});
         return code
 
     def assignment_calculated(self, args):
-        print("assignment calculated")
-        print(args)
+        # print("assignment calculated")
+        # print(args)
 
         left_value = args[0]
         right_value = args[1]
 
         if self.first_pass:
             return Result()
-
-        print(
-            "right_value is Variableaaaaaaaaaaaaaaaaaaaaaaaa", left_value, right_value
-        )
 
         # print("right value code: {}: " + right_value.code)
 
@@ -1796,20 +1793,40 @@ or $t{}, $t{}, $t{};
         return args[0]
 
     def _if(self, args):
-        print("_if", args)
+        # print("_if", args)
         expr_result_reg = args[0]
         end_if_stmt_label = self.get_new_label()
         end_if_else_label = self.get_new_label()
         current_code = ""
         current_code = self.append_code(current_code, expr_result_reg.code)
-        current_code = self.append_code(
-            current_code,
-            """
+
+        if isinstance(expr_result_reg, Variable):
+            t = self.get_a_free_t_register()
+            current_code += """
+li $t{}, {};
+add $t{}, $t{}, $s{};
+lw $t{}, ($t{});
 beq $t{}, $zero, {};
-        """.format(
-                expr_result_reg.number, end_if_stmt_label.name
-            ),
-        )
+            """.format(
+                t,
+                expr_result_reg.address_offset,
+                t,
+                t,
+                1 if expr_result_reg.is_global else 0,
+                t,
+                t,
+                t,
+                end_if_stmt_label.name
+            )
+        else:
+            current_code = self.append_code(
+                current_code,
+                """
+beq $t{}, $zero, {};
+            """.format(
+                    expr_result_reg.number, end_if_stmt_label.name
+                ),
+            )
         if_stmt = args[1]
         if isinstance(if_stmt, Result):
             current_code += if_stmt.code

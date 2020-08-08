@@ -30,20 +30,6 @@ int main() {
 -----------------
 
 int main() {
-    print(factor(5, true));
-}
-
-int factor(int i, bool s){
-    if (s){
-        return i * factor(i - 1, false);
-    }else{
-        return 6;
-    }
-}
-
------------------
-
-int main() {
     int[] arr;
     arr = NewArray(10, int);
     
@@ -56,4 +42,11 @@ int main() {
 
 -----------------
 
+int main(){
+    double x;
+    x = 2.65;
+    print(dtoi(x));
+}
+
+-----------------
 

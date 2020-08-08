@@ -113,6 +113,9 @@ sw $ra, 4($s0);
         # statement code
         # print("body")
         # print(function_body.code)
+
+        self.main_code_gen.func_type_tmp = None
+
         code = self.main_code_gen.append_code(code, function_body.code)
 
         result = CodeGenerator.Result()
@@ -171,9 +174,9 @@ lw $ra, 4($s0);
 lw $s0, ($s0)
 jr $ra;
                 """
-                self.main_code_gen.func_type_tmp = None
+                # self.main_code_gen.func_type_tmp = None
             else:
-                print("Invalid Return Type!")
+                print("Invalid Return Type!4")
                 exit(4)
         else:
             result = expr[0]
@@ -202,13 +205,13 @@ jr $ra;
                         """.format(
                             result.address_offset
                         )
-                    self.main_code_gen.func_type_tmp = None
+                    # self.main_code_gen.func_type_tmp = None
                 else:
-                    print("Invalid Return Type!")
+                    print("Invalid Return Type!2")
                     exit(4)
             elif isinstance(result, CodeGenerator.Register):
                 if not self.main_code_gen.func_type_tmp == result.type:
-                    print("Invalid return type!")
+                    print("Invalid return type!1 {}, {}".format(self.main_code_gen.func_type_tmp, result.type))
                     exit(4)
                 elif result.type == "double":
                     code += """
@@ -230,7 +233,7 @@ jr $ra;
                     )
             elif isinstance(result, CodeGenerator.Immediate):
                 if not self.main_code_gen.func_type_tmp == result.type:
-                    print("Invalid return type!")
+                    print("Invalid return type!3")
                     exit(4)
                 if result.type == "string":
                     # t1 = self.main_code_gen.get_a_free_t_register()
@@ -373,9 +376,6 @@ li $t{}, {};
             input_var = arguments[i]
             off = var.address_offset
 
-            # add codes of arguments
-            code += "\n" + input_var.code
-
             code = self.main_code_gen.append_code(
                 code,
                 """
@@ -385,6 +385,11 @@ add $t{}, $t{}, $t{};
                     t2, off, t2, t2, t1
                 ),
             )
+
+            # add codes of arguments
+            code += "\n" + input_var.code
+
+            
             # $t2 has the address for input parameter
 
             if isinstance(input_var, CodeGenerator.Variable):

@@ -56,14 +56,13 @@ def main(argv):
     codeGen.create_data_segment()
 
     decaf_code = """
-
-int main(){
-    int x;
-    x = 5;
-    print(fnc(x) + 2.5);
-}
-double fnc(int x){
-    return 2.5;
+bool a;
+int main() {
+    
+    a = true;
+    if (a){
+        print("true");
+    }
 }
 
 
