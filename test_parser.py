@@ -56,32 +56,12 @@ def main(argv):
     codeGen.create_data_segment()
 
     decaf_code = """
-<<<<<<< HEAD
-int main() {
-    int[] arr;
-    arr = NewArray(10, int);
-    
-    arr[8] = 9;
-
-    int x;
-    x = 5;
-    print(arr[x + 3]);
-}
-=======
-
-int main() {
-    int x;
-    x = 10;
-    int y;
-    y = x * 90 + 50;
-    func(y);
-}
-
-void func(int g){
-    print(g);
-}
-
->>>>>>> 2604259781a6b5795ad760555fd75cd53c1b7287
+    int main(){
+        int s;
+        s = ReadInteger();
+        print(s);
+        print(0x1233);
+    }
 
     """
     #     decaf_code = """

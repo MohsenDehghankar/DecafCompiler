@@ -552,7 +552,6 @@ s.d $f{}, ($t{});
 
         self.type_checking_for_assignment(left_value, right_value)
 
-
         if left_value.type == "double":
             code = self.append_code(right_value.code, left_value.code)
             assign_code = self.handle_double_assignment(left_value, right_value)
@@ -824,7 +823,7 @@ sw $t{}, ($t{});
                             sym_tbl.name
                         )
                         if last_pass_sym and (
-                            child.value in last_pass_sym.variables.keys()
+                                child.value in last_pass_sym.variables.keys()
                         ):
                             v = last_pass_sym.variables[child.value]
                             if v.address_offset == None and self.is_in_class:
@@ -1063,7 +1062,6 @@ mflo $t{};
             reg = Register("int", "t", 0)
             reg.code = ""
             return reg
-
 
         current_code = ""
         opr1 = args[0]
@@ -1417,13 +1415,13 @@ addi $t{}, $zero, 1;
 
         t1.code = current_code + "\n" + t1.code
         t1.code += (
-            "\n"
-            + """
+                "\n"
+                + """
 {} $t{}, $t{}, {};
         
         """.format(
-                _map[inst], t1.number, t2.number, label.name
-            )
+            _map[inst], t1.number, t2.number, label.name
+        )
         )
 
         # t1.write_code(current_code)
@@ -1890,9 +1888,9 @@ b {};
         )
 
         if (
-            len(args) == 4
-            or len(args) == 2
-            or (len(args) == 3 and isinstance(args[1], Register))
+                len(args) == 4
+                or len(args) == 2
+                or (len(args) == 3 and isinstance(args[1], Register))
         ):
             current_code = self.append_code(current_code, args[1].code)
             current_code = self.append_code(
@@ -2101,7 +2099,7 @@ j {};
                 imm = Immediate(1 if args[0].value == "true" else 0, "bool")
                 return imm
             elif args[0].type == "STRING_CONSTANT":
-                return Immediate(args[0].value[1 : len(args[0].value) - 1], "string")
+                return Immediate(args[0].value[1: len(args[0].value) - 1], "string")
         return args
 
     def pass_constant(self, args):
@@ -2454,9 +2452,9 @@ syscall
 
         # newline after print
         current_code = (
-            current_code
-            + "\n"
-            + """
+                current_code
+                + "\n"
+                + """
 li $v0, 4;
 la $a0, newline;
 syscall
@@ -2509,18 +2507,119 @@ syscall
     """
 
     def read_integer(self, args):
-        print("read integer", args)
+        # print("ReadLine")
+        # print(args)
+        result = self.get_a_free_t_register()
+        self.t_registers[result] = True
         t1 = self.get_a_free_t_register()
         self.t_registers[t1] = True
-        code = """
-li $v0, 5;
+        t2 = self.get_a_free_t_register()
+        self.t_registers[t2] = True
+        t3 = self.get_a_free_t_register()
+        self.t_registers[t3] = True
+        label1 = self.get_new_label()
+        label2 = self.get_new_label()
+        hex_1 = self.get_new_label()
+        hex_2 = self.get_new_label()
+        loop_1 = self.get_new_label()
+        finish = self.get_new_label()
+        error = self.get_new_label()
+        multiply = self.get_new_label()
+        integer = self.get_new_label()
+        lp3 = self.get_new_label()
+        p3 = self.get_new_label()
+        p2 = self.get_new_label()
+        af = self.get_new_label()
+        reg = Register("int", "t", result)
+        reg.write_code(
+            """
+li $v0, 9
+li $a0, 16384
 syscall
-move $t{}, $v0;
+move $a0, $v0
+li $v0, 8
+li $a1, 16384
+syscall
+move $v0, $a0
+addi $t{}, $t{}, 0
+{}:
+lb $t{}, ($a0)
+lb $t{}, newline
+beq $t{}, $t{}, {}
+addi $a0, $a0, 1
+b {}
+{}:
+sb $zero, ($a0)
+lb $t{}, ($v0)
+beq $t{}, '0', {}
+li $t{}, 10
+li $t{}, 0
+{}:
+lb $t{}, ($v0)
+beq $t{}, $0, {} 
+blt $t{}, 48, {}
+bgt $t{}, 57, {} 
+addi $t{}, $t{}, -48
+mul $t{}, $t{}, $t{}  
+add $t{}, $t{}, $t{} 
+addi $v0, $v0, 1  
+j {} 
+{}:
+addi $v0, $v0, 1
+lb $t{}, ($v0)
+beq $t{}, 'x', {}
+beq $t{}, 'X', {}
+li $t{}, 10
+li $t{}, 0
+j {}
+{}:
+addi $v0, $v0, 1
+li $t{}, 16
+li $t{}, 0
+{}:
+lb $t{}, ($v0)   
+beq $t{}, $0, {} 
+blt $t{}, 48, {}  
+bgt $t{}, 102, {}  
+bgt $t{}, 96, {}
+blt $t{}, 97, {}
+{}:
+addi $t{}, $t{}, -87
+j {}
+{}:
+blt $t{}, 58, {}
+bgt $t{}, 57, {}
+{}:
+addi $t{}, $t{}, -48
+j {}
+{}:
+blt $t{}, 65, {}
+bgt $t{}, 70, {}
+addi $t{}, $t{}, -55 
+{}:
+mul $t{}, $t{}, $t{}  
+add $t{}, $t{}, $t{}   
+addi $v0, $v0, 1    
+j {}
+{}:
+li $t{}, 0
+{}:
         """.format(
-            t1
+                t1, t1, label1.name, t2, t3, t2, t3, label2.name, label1.name, label2.name, t2,
+                t2, hex_1.name, t2, result, loop_1.name, t1, t1, finish.name, t1,
+                error.name, t1, error.name, t1, t1, result, result, t2, result, result, t1, loop_1.name,
+                hex_1.name, t2, t2, hex_2.name, t2, hex_2.name, t2, result,
+                loop_1.name, hex_2.name, t2, result, lp3.name, t1, t1, finish.name,
+                t1, error.name, t1, error.name, t1, af.name, t1, p2.name, af.name, t1, t1, multiply.name, p2.name, t1,
+                integer.name, t1, p3.name, integer.name,
+                t1, t1, multiply.name, p3.name, t1, error.name, t1, error.name, t1, t1, multiply.name, result, result, t2,
+                result, result, t1, lp3.name, error.name, result,finish.name
+
+            )
         )
-        reg = Register("int", "t", t1)
-        reg.write_code(code)
+        self.t_registers[t1] = False
+        self.t_registers[t2] = False
+        self.t_registers[t3] = False
         return reg
 
     """
