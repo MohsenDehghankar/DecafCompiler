@@ -417,6 +417,7 @@ jr $ra;
             + total_param_size
         )
         new_offset = offset if offset % 8 == 0 else (offset + (8 - offset % 8))
+        new_offset += 8
 
         t1 = self.main_code_gen.get_a_free_t_register()
         self.main_code_gen.t_registers[t1] = True

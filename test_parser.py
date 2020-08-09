@@ -70,7 +70,7 @@ def main(argv):
         double b;
 
         void func(double y){
-            b = y;
+            this.b = y;
         }
 
     }
@@ -79,8 +79,10 @@ def main(argv):
         A a;
         a = new A;
         a.b = 3.4;
-        a.func(4.1);
+
+        a.func(20.5);
         print(a.b);
+        
 
     }
 

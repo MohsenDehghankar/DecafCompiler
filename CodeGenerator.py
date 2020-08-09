@@ -128,6 +128,7 @@ la $s1, global_pointer;
             variable.is_global = True
 
         self.get_last_variable_in_frame()
+
         if self.last_var_in_fp == None:
             variable.address_offset = 8
         else:
@@ -146,6 +147,8 @@ la $s1, global_pointer;
         return variable
 
     def create_class_field(self, field_name, is_ref, var_type):
+        # print("clas field: {}".format)
+
         variable = None
         if "[]" in var_type:
             variable = Array()
@@ -649,8 +652,18 @@ move $v0,$t{};
             #                     t1,
             #                     t3,
             #                 )
+            if left_value.is_reference and left_value.type == "string":
+                t2 = self.get_a_free_t_register()
+                current_code = self.append_code(
+                    current_code,
+                    """
+sw $v0, ($t{});
+                    """.format(
+                        left_value.number
+                    ),
+                )
 
-            if left_value.is_reference == True:
+            elif left_value.is_reference == True:
                 current_code = self.append_code(
                     current_code,
                     """

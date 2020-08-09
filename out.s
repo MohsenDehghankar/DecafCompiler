@@ -33,10 +33,6 @@ add $t1, $t1, $s0;
 sw $t2, ($t1);
                 
 
-li $v0, 1;
-move $a0, $t0;
-syscall
-                        
 
 # get address of obj
 li $t1, 8;
@@ -56,19 +52,9 @@ li.d $f0, 3.4;
 s.d $f0, ($t1);
                     
 
-li $v0, 9;
-li $a0, 8;
-syscall
-round.w.d $f0, $f0;
-mfc1 $t0, $f0;
-        
 
-li $v0, 1;
-move $a0, $t0;
-syscall
-                        
 
-li $t2, 24;
+li $t2, 32;
                     
 
 li $t3, -4;
@@ -81,25 +67,25 @@ sw $t4, ($t3);
                     
 
 
-li $t2, 24;
+li $t2, 32;
                     
 
 li $t3, -16;
 add $t3, $t3, $t2;
             
 
-li.d $f0, 4.1;
+li.d $f0, 20.5;
 add $t3, $t3, $s0;
 s.d $f0, ($t3);
                     
 
-li $t4, 24;
+li $t4, 32;
 add $t4, $t4, $s0;
 sw $s0, ($t4);
         
 
 move $t4, $s0;
-add $t4, $t4, 24
+add $t4, $t4, 32
 move $s0, $t4;
 jal A.func;
         
