@@ -65,22 +65,10 @@ def main(argv):
     #     """
     decaf_code = """
 
-    class A{
-
-        double b;
-
-        void func(double y){
-            b = y;
-        }
-
-    }
     int main(){
-
-        A a;
-        a = new A;
-        a.b = 3.4;
-        a.func(4.1);
-        print(a.b);
+        int x;
+        x = dtoi(-1.2);
+        print(x);
 
     }
 
