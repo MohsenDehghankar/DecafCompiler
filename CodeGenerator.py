@@ -932,7 +932,6 @@ mflo $t{};
         else:
             pass
 
-        
         return args
 
     def code_for_loading_opr(self, t_reg, opr):
@@ -1913,23 +1912,22 @@ b {};
             ),
         )
 
-        if(len(args) == 4
+        if (
+            len(args) == 4
             or len(args) == 2
-            or (len(args) == 3 and isinstance(args[1], Immediate))):
-                current_code = self.append_code(current_code, args[1].code)
-                t = self.get_a_free_t_register()
-                current_code = self.append_code(
-                        current_code,
-                            """
+            or (len(args) == 3 and isinstance(args[1], Immediate))
+        ):
+            current_code = self.append_code(current_code, args[1].code)
+            t = self.get_a_free_t_register()
+            current_code = self.append_code(
+                current_code,
+                """
 li $t{}, {};
 beq $t{},$zero,{};
                                             """.format(
-                                t, 
-                                args[1].value, 
-                                t,
-                                end_label.name
-                            ),
-                        )
+                    t, args[1].value, t, end_label.name
+                ),
+            )
         elif (
             len(args) == 4
             or len(args) == 2
@@ -2675,17 +2673,31 @@ cvt.d.w $f{}, $f{};
         self.t_registers[t1] = True
         opr = args[0]
         f1 = self.load_double_to_reg(opr)
+        f2 = self.get_a_free_f_register()
+        label = self.get_new_label()
         code = self.append_code(opr.code, f1.code)
         code = self.append_code(
             code,
             """
-li $v0, 9;
-li $a0, 8;
-syscall
-round.w.d $f{}, $f{};
-mfc1 $t{}, $f{};
+li.d $f{}, 0.0
+c.le.d $f{}, $f{}
+round.w.d $f{}, $f{}
+mfc1  $t{},$f{}
+bc1f {} 
+sub $t{}, $t{}, 1
+{}:
         """.format(
-                f1.number, f1.number, t1, f1.number
+                f2,
+                f1.number,
+                f2,
+                f1.number,
+                f1.number,
+                t1,
+                f1.number,
+                label.name,
+                t1,
+                t1,
+                label.name,
             ),
         )
         self.f_registers[f1.number] = False
